@@ -1,23 +1,25 @@
 import { Link } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const colors = {
-  ink: '#0b1a2b',
-  muted: '#5a6a7d',
-  blue: '#2b6cb0',
-  coral: '#ff6b5a',
-  surface: '#ffffff',
-  background: '#f7f8fb',
-  border: '#d6dbe3',
-};
+import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
+import { colors, radii, spacing, typography } from '../../src/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const emailValid = useMemo(() => email.includes('@') && email.includes('.'), [email]);
   const passwordValid = useMemo(() => password.length >= 8, [password]);
@@ -26,6 +28,28 @@ export default function LoginScreen() {
   const helperText = submitted && !canSubmit
     ? 'Enter a valid email and at least 8 characters.'
     : 'Use the email you registered with.';
+
+  const handleSignIn = async () => {
+    setSubmitted(true);
+    setError('');
+
+    if (!canSubmit) return;
+    if (!isSupabaseConfigured || !supabase) {
+      setError('Supabase is not configured yet. Add your keys to run auth.');
+      return;
+    }
+
+    setLoading(true);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    setLoading(false);
+
+    if (signInError) {
+      setError(signInError.message);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -78,14 +102,16 @@ export default function LoginScreen() {
 
           <Pressable
             style={[styles.primary, !canSubmit && styles.primaryDisabled]}
-            onPress={() => setSubmitted(true)}
+            onPress={handleSignIn}
           >
-            <Text style={styles.primaryText}>Sign in</Text>
+            {loading ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={styles.primaryText}>Sign in</Text>
+            )}
           </Pressable>
 
-          <Link href="/(auth)/login" style={styles.resetLink}>
-            Forgot password?
-          </Link>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
 
         <Link href="/(auth)/register" style={styles.link}>
@@ -103,19 +129,20 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 28,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
     justifyContent: 'space-between',
   },
   header: {
     gap: 8,
   },
   title: {
-    fontSize: 28,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
     color: colors.ink,
-    fontWeight: '700',
   },
   subtitle: {
+    fontSize: typography.sizes.base,
     color: colors.muted,
   },
   form: {
@@ -125,16 +152,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: colors.muted,
-    fontSize: 12,
-    textTransform: 'uppercase',
+    fontSize: typography.sizes.sm,
+    textTransform: 'uppercase' as const,
     letterSpacing: 0.8,
+    color: colors.muted,
   },
   input: {
     backgroundColor: colors.surface,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
     color: colors.ink,
@@ -148,9 +175,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   passwordToggle: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radii.sm,
     backgroundColor: '#eef2f7',
   },
   passwordToggleText: {
@@ -169,8 +196,8 @@ const styles = StyleSheet.create({
   },
   primary: {
     backgroundColor: colors.blue,
-    borderRadius: 16,
-    paddingVertical: 14,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.sm + 2,
     alignItems: 'center',
     marginTop: 8,
   },
@@ -182,12 +209,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
-  resetLink: {
-    color: colors.blue,
-    textAlign: 'center',
-  },
   link: {
     color: colors.blue,
     textAlign: 'center',
+  },
+  errorText: {
+    color: colors.coral,
+    textAlign: 'center',
+    fontSize: 12,
   },
 });

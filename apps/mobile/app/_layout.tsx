@@ -1,16 +1,22 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
+import AuthGate from '../src/components/AuthGate';
+import { AuthProvider } from '../src/state/auth';
+import { colors } from '../src/theme';
+
 export default function RootLayout() {
   return (
-    <>
-      <StatusBar style="dark" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: '#f7f8fb' },
-        }}
-      />
-    </>
+    <AuthProvider>
+      <AuthGate>
+        <StatusBar style="dark" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        />
+      </AuthGate>
+    </AuthProvider>
   );
 }

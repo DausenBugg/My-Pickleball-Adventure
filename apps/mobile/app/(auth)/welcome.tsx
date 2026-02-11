@@ -2,13 +2,7 @@ import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const colors = {
-  ink: '#0b1a2b',
-  muted: '#5a6a7d',
-  blue: '#2b6cb0',
-  coral: '#ff6b5a',
-  surface: '#ffffff',
-};
+import { colors, radii, spacing, typography } from '../../src/theme';
 
 export default function WelcomeScreen() {
   return (
@@ -45,12 +39,12 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f7f8fb',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
     justifyContent: 'space-between',
   },
   hero: {
@@ -59,8 +53,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
+    fontWeight: typography.weights.bold,
     color: colors.ink,
-    fontWeight: '700',
   },
   subtitle: {
     fontSize: 16,
@@ -72,8 +66,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   button: {
-    borderRadius: 16,
-    paddingVertical: 14,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.sm + 2,
     alignItems: 'center',
   },
   primary: {
@@ -82,7 +76,7 @@ const styles = StyleSheet.create({
   secondary: {
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#d6dbe3',
+    borderColor: colors.border,
   },
   buttonText: {
     fontSize: 16,

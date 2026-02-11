@@ -1,17 +1,17 @@
 import { Link } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const colors = {
-  ink: '#0b1a2b',
-  muted: '#5a6a7d',
-  blue: '#2b6cb0',
-  coral: '#ff6b5a',
-  surface: '#ffffff',
-  background: '#f7f8fb',
-  border: '#d6dbe3',
-};
+import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
+import { colors, radii, spacing, typography } from '../../src/theme';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -21,6 +21,9 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const nameValid = useMemo(() => name.trim().length >= 2, [name]);
   const emailValid = useMemo(() => email.includes('@') && email.includes('.'), [email]);
@@ -31,6 +34,39 @@ export default function RegisterScreen() {
   const helperText = submitted && !canSubmit
     ? 'Fill all fields. Passwords must match and be 8+ characters.'
     : 'Create a password with at least 8 characters.';
+
+  const handleRegister = async () => {
+    setSubmitted(true);
+    setError('');
+    setNotice('');
+
+    if (!canSubmit) return;
+    if (!isSupabaseConfigured || !supabase) {
+      setError('Supabase is not configured yet. Add your keys to run auth.');
+      return;
+    }
+
+    setLoading(true);
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+        },
+      },
+    });
+    setLoading(false);
+
+    if (signUpError) {
+      setError(signUpError.message);
+      return;
+    }
+
+    if (data.user && !data.session) {
+      setNotice('Check your email to confirm your account.');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -114,13 +150,19 @@ export default function RegisterScreen() {
 
           <Pressable
             style={[styles.primary, !canSubmit && styles.primaryDisabled]}
-            onPress={() => setSubmitted(true)}
+            onPress={handleRegister}
           >
-            <Text style={styles.primaryText}>Create account</Text>
+            {loading ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={styles.primaryText}>Create account</Text>
+            )}
           </Pressable>
           <Text style={styles.termsText}>
             By continuing you agree to our Terms and Privacy Policy.
           </Text>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {notice ? <Text style={styles.noticeText}>{notice}</Text> : null}
         </View>
 
         <Link href="/(auth)/login" style={styles.link}>
@@ -138,19 +180,20 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 28,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
     justifyContent: 'space-between',
   },
   header: {
     gap: 8,
   },
   title: {
-    fontSize: 28,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
     color: colors.ink,
-    fontWeight: '700',
   },
   subtitle: {
+    fontSize: typography.sizes.base,
     color: colors.muted,
   },
   form: {
@@ -160,16 +203,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: colors.muted,
-    fontSize: 12,
-    textTransform: 'uppercase',
+    fontSize: typography.sizes.sm,
+    textTransform: 'uppercase' as const,
     letterSpacing: 0.8,
+    color: colors.muted,
   },
   input: {
     backgroundColor: colors.surface,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
     color: colors.ink,
@@ -183,9 +226,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   passwordToggle: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radii.sm,
     backgroundColor: '#eef2f7',
   },
   passwordToggleText: {
@@ -204,8 +247,8 @@ const styles = StyleSheet.create({
   },
   primary: {
     backgroundColor: colors.coral,
-    borderRadius: 16,
-    paddingVertical: 14,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.sm + 2,
     alignItems: 'center',
     marginTop: 8,
   },
@@ -226,5 +269,15 @@ const styles = StyleSheet.create({
   link: {
     color: colors.blue,
     textAlign: 'center',
+  },
+  errorText: {
+    color: colors.coral,
+    textAlign: 'center',
+    fontSize: 12,
+  },
+  noticeText: {
+    color: colors.blue,
+    textAlign: 'center',
+    fontSize: 12,
   },
 });
