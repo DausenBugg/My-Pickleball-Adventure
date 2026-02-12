@@ -16,7 +16,7 @@ import { supabase } from '../lib/supabase';
  * - Add "test" script
  * - Add jest.config.js
  * 
- * For more details, see docs/edge-case-final-report.md
+ * For more details, see docs/edge-case-testing.md
  */
 
 // Test 1: Profile Upload with Missing Extension
