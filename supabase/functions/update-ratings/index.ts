@@ -56,11 +56,11 @@ serve(async (req) => {
     }
 
     // Calculate team ratings
-    const teamA = participants.filter((p) => p.team === 'team_a');
-    const teamB = participants.filter((p) => p.team === 'team_b');
+    const teamA = participants.filter((p: any) => p.team === 'team_a');
+    const teamB = participants.filter((p: any) => p.team === 'team_b');
 
-    const teamARating = teamA.reduce((sum, p) => sum + (p.ratings?.rating || 1200), 0) / teamA.length;
-    const teamBRating = teamB.reduce((sum, p) => sum + (p.ratings?.rating || 1200), 0) / teamB.length;
+    const teamARating = teamA.reduce((sum: number, p: any) => sum + (p.ratings?.rating || 1200), 0) / teamA.length;
+    const teamBRating = teamB.reduce((sum: number, p: any) => sum + (p.ratings?.rating || 1200), 0) / teamB.length;
 
     // Calculate expected scores using Elo formula
     const expectedA = 1 / (1 + Math.pow(10, (teamBRating - teamARating) / 400));
@@ -88,7 +88,35 @@ serve(async (req) => {
       // Calculate rating change
       const expected = participant.team === 'team_a' ? expectedA : expectedB;
       const actual = participant.team === 'team_a' ? actualA : actualB;
-      const ratingChange = Math.round(kFactor * (actual - expected));
+      let ratingChange = Math.round(kFactor * (actual - expected));
+
+      // Get opponent IDs for this participant
+      const opponentTeam = participant.team === 'team_a' ? 'team_b' : 'team_a';
+      const opponentIds = participants
+        .filter((p: any) => p.team === opponentTeam)
+        .map((p: any) => p.user_id);
+
+      // Apply repeat-opponent dampening
+      const { data: dampenedChange } = await supabaseClient.rpc(
+        'check_repeat_opponent_dampening',
+        {
+          p_user_id: participant.user_id,
+          p_opponent_ids: opponentIds,
+          p_rating_change: ratingChange,
+        }
+      );
+      if (dampenedChange !== null) {
+        ratingChange = dampenedChange;
+      }
+
+      // Apply daily rating gain cap
+      const { data: cappedChange } = await supabaseClient.rpc('check_daily_rating_gain', {
+        p_user_id: participant.user_id,
+        p_new_change: ratingChange,
+      });
+      if (cappedChange !== null) {
+        ratingChange = cappedChange;
+      }
 
       const newRating = Math.max(100, currentRating + ratingChange); // Floor at 100
 
@@ -108,6 +136,16 @@ serve(async (req) => {
           games_played: gamesPlayed,
         })
         .eq('user_id', participant.user_id);
+
+      // Insert rating history record
+      await supabaseClient.from('rating_history').insert({
+        user_id: participant.user_id,
+        match_id: matchId,
+        old_rating: currentRating,
+        new_rating: newRating,
+        rating_change: ratingChange,
+        opponent_ids: opponentIds,
+      });
     }
 
     // Update win/loss counts in profiles
@@ -126,9 +164,9 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch (error: any) {
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error?.message || 'Unknown error' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
   }

@@ -58,8 +58,8 @@ serve(async (req) => {
       .select('*')
       .eq('match_id', matchId);
 
-    const approvedCount = approvals?.filter((a) => a.approved).length || 0;
-    const rejectedCount = approvals?.filter((a) => !a.approved).length || 0;
+    const approvedCount = approvals?.filter((a: any) => a.approved).length || 0;
+    const rejectedCount = approvals?.filter((a: any) => !a.approved).length || 0;
 
     // Check if match meets approval threshold
     const requiredApprovals = match.match_type === 'singles' ? 2 : 3;
@@ -149,8 +149,15 @@ serve(async (req) => {
       .update({ status: 'approved', finalized_at: new Date().toISOString() })
       .eq('id', matchId);
 
+    // If this is a ranked match, update ratings
+    if (match.match_mode === 'ranked') {
+      await supabaseClient.functions.invoke('update-ratings', {
+        body: { matchId },
+      });
+    }
+
     // Check achievements for all participants
-    const achievementChecks = participants.map((p) =>
+    const achievementChecks = participants.map((p: any) =>
       supabaseClient.functions.invoke('check-achievements', {
         body: { userId: p.user_id },
       })
@@ -165,9 +172,9 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch (error: any) {
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error?.message || 'Unknown error' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
   }

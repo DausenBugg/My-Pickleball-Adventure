@@ -19,7 +19,7 @@ This guide explains how to deploy the Edge Functions for My Pickleball Adventure
 We have three Edge Functions:
 
 ### 1. `process-match-approval`
-**Purpose**: Handles match approval/rejection workflow, awards XP, updates levels, and triggers achievement checks.
+**Purpose**: Handles match approval/rejection workflow, awards XP, updates levels, triggers achievement checks, and calls update-ratings for ranked matches.
 
 **Called when**: A player approves or rejects a match.
 
@@ -28,12 +28,13 @@ We have three Edge Functions:
 - Awards XP to participants (120 for win, 70 for loss, +20 for ranked)
 - Updates player levels based on XP formula: XP(N) = 100 * N^1.6
 - Updates match status to 'approved' or 'rejected'
+- **Automatically calls update-ratings for ranked matches**
 - Calls check-achievements for all participants
 
 ### 2. `update-ratings`
-**Purpose**: Calculates and applies Elo rating updates for approved ranked matches.
+**Purpose**: Calculates and applies Elo rating updates for approved ranked matches with anti-abuse protections.
 
-**Called when**: A ranked match is approved (called automatically after process-match-approval).
+**Called when**: A ranked match is approved (called automatically by process-match-approval).
 
 **What it does**:
 - Calculates team ratings (average for doubles)
@@ -41,8 +42,11 @@ We have three Edge Functions:
   - 0-10 games: K = 40
   - 11-30 games: K = 28
   - 31+ games: K = 20
+- **Applies repeat-opponent dampening**: 50% rating change for matches vs same opponent within 7 days
+- **Applies daily rating gain cap**: Maximum +80 rating per day (losses not capped)
 - Updates player ratings
 - Increments games_played, wins, and losses
+- **Records rating history for anti-abuse tracking**
 
 ### 3. `check-achievements`
 **Purpose**: Checks if a player has unlocked any new achievements.
@@ -89,10 +93,11 @@ Use the mobile app - approve a match and check that:
 
 ## Required Database Functions
 
-Make sure you've run migration `20260211000009_add_helper_functions.sql` which creates:
+Make sure you've run these migrations which create required functions and tables:
 
-- `increment_wins(user_id UUID)` - Increments profile.wins
-- `increment_losses(user_id UUID)` - Increments profile.losses
+- `20260211000009_add_helper_functions.sql` - Creates `increment_wins()` and `increment_losses()`
+- `20260211000010_create_rating_history.sql` - Creates rating_history table and anti-abuse functions
+- `20260211000011_add_self_play_prevention.sql` - Prevents users from playing themselves
 
 ## Environment Variables
 
