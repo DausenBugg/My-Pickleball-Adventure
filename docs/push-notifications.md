@@ -1,6 +1,6 @@
 # App Configuration for Push Notifications
 
-To enable push notifications in your Expo app, you need to add configuration to `app.json`:
+Push notifications are configured in `app.json` with the following setup:
 
 ```json
 {
@@ -9,14 +9,12 @@ To enable push notifications in your Expo app, you need to add configuration to 
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
-          "color": "#FF6B6B",
-          "sounds": ["./assets/notification-sound.wav"]
+          "icon": "./assets/icon.png",
+          "color": "#FF6B6B"
         }
       ]
     ],
     "android": {
-      "googleServicesFile": "./google-services.json",
       "useNextNotificationsApi": true
     },
     "ios": {
@@ -27,6 +25,8 @@ To enable push notifications in your Expo app, you need to add configuration to 
   }
 }
 ```
+
+**Note**: The app uses the existing app icon for notifications. Custom notification sounds are not currently configured.
 
 ## For Development
 

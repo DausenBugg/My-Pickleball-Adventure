@@ -1,8 +1,22 @@
 import { supabase } from '../lib/supabase';
 
 /**
- * Test suite for edge cases - Run these tests to verify robustness
- * This is a manual test file - run functions individually to test
+ * Edge Case Test Suite
+ * 
+ * This is a manual test file for validating edge case handling across the app.
+ * 
+ * USAGE:
+ * 1. Import this file in your app: import edgeCaseTests from '@/tests/edge-cases.test'
+ * 2. Run all tests: await edgeCaseTests.runAllEdgeCaseTests()
+ * 3. Or run individual tests: await edgeCaseTests.testMissingFileExtension()
+ * 
+ * NOTE: This uses console.log/console.assert for output since no test runner is configured.
+ * To add a proper test runner (Jest/Vitest), update package.json with:
+ * - Add test dependencies (jest, @types/jest, etc.)
+ * - Add "test" script
+ * - Add jest.config.js
+ * 
+ * For more details, see docs/edge-case-final-report.md
  */
 
 // Test 1: Profile Upload with Missing Extension
