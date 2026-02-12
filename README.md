@@ -5,7 +5,7 @@ Gamify your pickleball progress. Every match played levels up your pickleball le
 ## Project Status
 
 **Mobile app:** ✅ Auth flow, navigation, and UI screens complete
-**Backend:** 🚧 Supabase schema and functions pending
+**Backend:** ✅ Database schema + migrations created (ready to run)
 **Docs:** ✅ Design system, ranking, and leveling rules documented
 
 ## Stack
@@ -79,12 +79,28 @@ The app requires a Supabase project for authentication and data:
 - ✅ Settings with sign out
 - ✅ Design system tokens (colors, spacing, typography)
 
-### Pending
-- 🚧 Supabase database schema + migrations
-- 🚧 Match approval workflow (backend logic)
-- 🚧 Real data wiring for matches, friends, rankings
-- 🚧 Achievements and notifications
-- 🚧 Edge Functions for rating/XP calculations
+### Backend (Supabase)
+- ✅ Database schema (8 migrations)
+- ✅ Row Level Security policies
+- ✅ Auto-profile creation on signup
+- ✅ Auto-rating creation on profile creation
+- ✅ Achievement seeds (9 achievements)
+- 🚧 Edge Functions (match approval, rating updates)
+- 🚧 Real-time subscriptions
+
+### PRun database migrations** (Required to use the app):
+   - Open Supabase Dashboard → SQL Editor
+   - Copy/paste each file from `supabase/migrations/` in order
+   - Execute one by one (see [supabase/README.md](supabase/README.md))
+
+2. **Test the app:**
+   - Run `npm run start` in `apps/mobile`
+   - Open in Expo Go or emulator
+   - Register a new user
+   - Verify profile is created in Supabase Dashboard
+- 🚧 Match approval workflow (backend + UI)
+- 🚧 Implement rating calculation Edge Function
+- 🚧 Wire achievements system
 
 ## What You Need to Do
 
