@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
+import { usePendingMatches } from '../../src/hooks/usePendingMatches';
+import { useNotifications } from '../../src/hooks/useNotifications';
 import {
   calculateLevelProgress,
   calculateXPForLevel,
@@ -12,8 +15,11 @@ import {
 import { colors, radii, spacing, typography } from '../../src/theme';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { profile, loading: profileLoading, error: profileError } = useProfile();
   const { rating, loading: ratingLoading } = useRating();
+  const { matches: pendingMatches } = usePendingMatches();
+  const { unreadCount } = useNotifications();
 
   const loading = profileLoading || ratingLoading;
 
@@ -156,6 +162,43 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
+
+        {pendingMatches.length > 0 && (
+          <Pressable
+            style={styles.approvalsButton}
+            onPress={() => router.push('/approvals')}
+          >
+            <View style={styles.approvalsBadge}>
+              <Text style={styles.approvalsBadgeText}>{pendingMatches.length}</Text>
+            </View>
+            <View style={styles.approvalsContent}>
+              <Text style={styles.approvalsTitle}>Pending Approvals</Text>
+              <Text style={styles.approvalsSubtitle}>
+                {pendingMatches.length} {pendingMatches.length === 1 ? 'match' : 'matches'}{' '}
+                waiting for your approval
+              </Text>
+            </View>
+            <Text style={styles.approvalsChevron}>›</Text>
+          </Pressable>
+        )}
+
+        {unreadCount > 0 && (
+          <Pressable
+            style={styles.notificationsButton}
+            onPress={() => router.push('/notifications')}
+          >
+            <View style={styles.notificationsBadge}>
+              <Text style={styles.notificationsBadgeText}>{unreadCount}</Text>
+            </View>
+            <View style={styles.notificationsContent}>
+              <Text style={styles.notificationsTitle}>New Notifications</Text>
+              <Text style={styles.notificationsSubtitle}>
+                You have {unreadCount} unread {unreadCount === 1 ? 'notification' : 'notifications'}
+              </Text>
+            </View>
+            <Text style={styles.notificationsChevron}>›</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -340,5 +383,87 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+  },
+  approvalsButton: {
+    backgroundColor: '#fff4e6',
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: '#ffe0b2',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  approvalsBadge: {
+    backgroundColor: colors.coral,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  approvalsBadgeText: {
+    color: '#ffffff',
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.bold,
+  },
+  approvalsContent: {
+    flex: 1,
+  },
+  approvalsTitle: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
+    color: colors.ink,
+    marginBottom: 2,
+  },
+  approvalsSubtitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.muted,
+  },
+  approvalsChevron: {
+    fontSize: 32,
+    color: colors.muted,
+  },
+  notificationsButton: {
+    backgroundColor: '#e6f4ff',
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: '#b3d9ff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  notificationsBadge: {
+    backgroundColor: colors.blue,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationsBadgeText: {
+    color: '#ffffff',
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.bold,
+  },
+  notificationsContent: {
+    flex: 1,
+  },
+  notificationsTitle: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
+    color: colors.ink,
+    marginBottom: 2,
+  },
+  notificationsSubtitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.muted,
+  },
+  notificationsChevron: {
+    fontSize: 32,
+    color: colors.muted,
   },
 });

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 import { useProfile, useRating } from '../../src/hooks/useProfile';
 import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
 import { colors, radii, spacing, typography } from '../../src/theme';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { profile, loading: profileLoading } = useProfile();
   const { rating } = useRating();
   const [loading, setLoading] = useState(false);
@@ -88,6 +90,13 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           <View style={styles.card}>
+            <Pressable 
+              style={styles.cardRow} 
+              onPress={() => router.push('/achievements')}
+            >
+              <Text style={styles.cardLabel}>🏆 Achievements</Text>
+              <Text style={styles.cardChevron}>›</Text>
+            </Pressable>
             <View style={styles.cardRow}>
               <Text style={styles.cardLabel}>Edit profile</Text>
               <Text style={styles.cardValue}>Coming soon</Text>
@@ -238,6 +247,11 @@ const styles = StyleSheet.create({
   cardValue: {
     fontSize: typography.sizes.sm,
     color: colors.muted,
+  },
+  cardChevron: {
+    fontSize: typography.sizes.xl,
+    color: colors.blue,
+    fontWeight: typography.weights.normal,
   },
   signOutButton: {
     backgroundColor: colors.coral,
