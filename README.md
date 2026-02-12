@@ -61,11 +61,18 @@ The app requires a Supabase project for authentication and data:
 
 ## Docs
 
+### Core Documentation
 - [Stack & Architecture](docs/stack.md)
+- [Data Model](docs/data-model.md)
 - [Ranking System (Elo)](docs/ranking.md)
 - [Leveling System (XP)](docs/leveling.md)
-- [Data Model](docs/data-model.md)
 - [Roadmap](docs/roadmap.md)
+
+### Implementation Guides
+- [New Features Summary](docs/new-features.md)
+- [Edge Functions Deployment](docs/edge-functions.md)
+- [Push Notifications Setup](docs/push-notifications.md)
+- [Edge Case Testing](docs/edge-case-testing.md)
 
 ## Features Implemented
 
