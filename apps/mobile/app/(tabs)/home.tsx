@@ -1,58 +1,143 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useMemo } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const colors = {
-  ink: '#0b1a2b',
-  muted: '#5a6a7d',
-  blue: '#2b6cb0',
-  coral: '#ff6b5a',
-  surface: '#ffffff',
-  background: '#f7f8fb',
-};
+import {
+  calculateLevelProgress,
+  calculateXPForLevel,
+  calculateXPToNextLevel,
+  useProfile,
+  useRating,
+} from '../../src/hooks/useProfile';
+import { colors, radii, spacing, typography } from '../../src/theme';
 
 export default function HomeScreen() {
+  const { profile, loading: profileLoading, error: profileError } = useProfile();
+  const { rating, loading: ratingLoading } = useRating();
+
+  const loading = profileLoading || ratingLoading;
+
+  const xpToNext = useMemo(() => {
+    if (!profile) return 0;
+    return calculateXPToNextLevel(profile.level, profile.total_xp);
+  }, [profile]);
+
+  const levelProgress = useMemo(() => {
+    if (!profile) return 0;
+    return calculateLevelProgress(profile.level, profile.total_xp);
+  }, [profile]);
+
+  const xpForCurrentLevel = useMemo(() => {
+    if (!profile) return 0;
+    return calculateXPForLevel(profile.level);
+  }, [profile]);
+
+  const xpForNextLevel = useMemo(() => {
+    if (!profile) return 0;
+    return calculateXPForLevel(profile.level + 1);
+  }, [profile]);
+
+  const xpInCurrentLevel = useMemo(() => {
+    if (!profile) return 0;
+    return profile.total_xp - xpForCurrentLevel;
+  }, [profile, xpForCurrentLevel]);
+
+  const xpNeededForLevel = useMemo(() => {
+    if (!profile) return 0;
+    return xpForNextLevel - xpForCurrentLevel;
+  }, [xpForCurrentLevel, xpForNextLevel]);
+
+  // Estimate wins needed (assuming 120 XP per win)
+  const winsToNext = useMemo(() => Math.ceil(xpToNext / 120), [xpToNext]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.blue} />
+          <Text style={styles.loadingText}>Loading your stats...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Failed to load profile data</Text>
+          <Text style={styles.errorHint}>
+            Make sure you've run the database migrations
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>No profile found</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={loading} colors={[colors.blue]} />
+        }
+      >
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>Your KPIs</Text>
-            <Text style={styles.subtitle}>Last 7 days overview</Text>
+            <Text style={styles.subtitle}>
+              {profile.full_name || 'Player'}'s overview
+            </Text>
           </View>
           <View style={styles.rankPill}>
-            <Text style={styles.rankLabel}>Ranking</Text>
-            <Text style={styles.rankValue}>1200</Text>
+            <Text style={styles.rankLabel}>Rating</Text>
+            <Text style={styles.rankValue}>{rating?.rating ?? 1200}</Text>
           </View>
         </View>
 
         <View style={styles.grid}>
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Wins</Text>
-            <Text style={styles.cardValue}>0</Text>
+            <Text style={styles.cardValue}>{profile.wins}</Text>
           </View>
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Losses</Text>
-            <Text style={styles.cardValue}>0</Text>
+            <Text style={styles.cardValue}>{profile.losses}</Text>
           </View>
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Level</Text>
-            <Text style={styles.cardValue}>1</Text>
+            <Text style={styles.cardValue}>{profile.level}</Text>
           </View>
           <View style={styles.card}>
             <Text style={styles.cardLabel}>XP to next</Text>
-            <Text style={styles.cardValue}>80</Text>
+            <Text style={styles.cardValue}>{xpToNext}</Text>
           </View>
         </View>
 
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>Level progress</Text>
-            <Text style={styles.progressMeta}>120 / 200 XP</Text>
+            <Text style={styles.progressTitle}>Level {profile.level} progress</Text>
+            <Text style={styles.progressMeta}>
+              {xpInCurrentLevel} / {xpNeededForLevel} XP
+            </Text>
           </View>
           <View style={styles.progressTrack}>
-            <View style={styles.progressFill} />
+            <View style={[styles.progressFill, { width: `${levelProgress}%` }]} />
           </View>
-          <Text style={styles.progressHint}>2 wins away from Level 2</Text>
+          <Text style={styles.progressHint}>
+            {winsToNext} {winsToNext === 1 ? 'win' : 'wins'} away from Level{' '}
+            {profile.level + 1}
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -71,7 +156,7 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -82,76 +167,105 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   container: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: 40,
+  },
+  loadingContainer: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  loadingText: {
+    fontSize: typography.sizes.base,
+    color: colors.muted,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
+  },
+  errorText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.coral,
+    textAlign: 'center',
+  },
+  errorHint: {
+    fontSize: typography.sizes.sm,
+    color: colors.muted,
+    textAlign: 'center',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
     color: colors.ink,
   },
   subtitle: {
+    fontSize: typography.sizes.base,
     color: colors.muted,
     marginTop: 4,
   },
   rankPill: {
     backgroundColor: colors.blue,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radii.pill,
     alignItems: 'center',
   },
   rankLabel: {
     color: '#d7e7ff',
-    fontSize: 10,
+    fontSize: typography.sizes.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   rankValue: {
     color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 16,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.md,
     marginTop: 2,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: spacing.sm,
   },
   card: {
     width: '48%',
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: radii.lg,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: '#e0e4ec',
+    borderColor: colors.border,
   },
   cardLabel: {
     color: colors.muted,
-    fontSize: 12,
+    fontSize: typography.sizes.sm,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   cardValue: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: typography.weights.bold,
     color: colors.ink,
     marginTop: 8,
   },
   progressCard: {
     marginTop: 18,
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: radii.lg,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: '#e0e4ec',
+    borderColor: colors.border,
   },
   progressHeader: {
     flexDirection: 'row',
@@ -159,56 +273,55 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   progressTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
     color: colors.ink,
   },
   progressMeta: {
     color: colors.muted,
-    fontSize: 12,
+    fontSize: typography.sizes.sm,
   },
   progressTrack: {
     height: 10,
     backgroundColor: '#e7ecf4',
-    borderRadius: 999,
+    borderRadius: radii.pill,
     overflow: 'hidden',
   },
   progressFill: {
-    width: '60%',
     height: '100%',
     backgroundColor: colors.coral,
-    borderRadius: 999,
+    borderRadius: radii.pill,
   },
   progressHint: {
     marginTop: 10,
     color: colors.muted,
-    fontSize: 12,
+    fontSize: typography.sizes.sm,
   },
   section: {
     marginTop: 28,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
     color: colors.ink,
-    marginBottom: 12,
+    marginBottom: spacing.sm,
   },
   matchList: {
-    gap: 12,
+    gap: spacing.sm,
   },
   matchCard: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: radii.lg,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: '#e0e4ec',
+    borderColor: colors.border,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   matchTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
     color: colors.ink,
   },
   matchSubtitle: {
@@ -217,14 +330,14 @@ const styles = StyleSheet.create({
   },
   matchBadge: {
     backgroundColor: '#eaf1ff',
-    borderRadius: 999,
+    borderRadius: radii.pill,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   matchBadgeText: {
     color: colors.blue,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: typography.weights.semibold,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },

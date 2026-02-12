@@ -31,9 +31,16 @@ export default function RegisterScreen() {
   const confirmValid = useMemo(() => confirmPassword === password && password.length > 0, [confirmPassword, password]);
   const canSubmit = nameValid && emailValid && passwordValid && confirmValid;
 
-  const helperText = submitted && !canSubmit
-    ? 'Fill all fields. Passwords must match and be 8+ characters.'
-    : 'Create a password with at least 8 characters.';
+  const validationErrors = useMemo(() => {
+    if (!submitted) return [];
+    const errors: string[] = [];
+    if (!nameValid) errors.push('Name must be at least 2 characters');
+    if (!emailValid) errors.push('Enter a valid email address');
+    if (!passwordValid) errors.push('Password must be at least 8 characters');
+    if (!confirmValid && confirmPassword.length > 0) errors.push('Passwords must match');
+    if (confirmPassword.length === 0 && password.length > 0) errors.push('Confirm your password');
+    return errors;
+  }, [submitted, nameValid, emailValid, passwordValid, confirmValid, confirmPassword, password]);
 
   const handleRegister = async () => {
     setSubmitted(true);
@@ -47,24 +54,46 @@ export default function RegisterScreen() {
     }
 
     setLoading(true);
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: name,
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name.trim(),
+          },
         },
-      },
-    });
-    setLoading(false);
+      });
 
-    if (signUpError) {
-      setError(signUpError.message);
-      return;
-    }
+      console.log('Signup response:', { data, error: signUpError });
 
-    if (data.user && !data.session) {
-      setNotice('Check your email to confirm your account.');
+      if (signUpError) {
+        setError(signUpError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data.user) {
+        if (data.session) {
+          // User is logged in immediately (email confirmation disabled)
+          setNotice('Account created successfully! Logging you in...');
+        } else {
+          // Email confirmation required
+          setNotice('Check your email to confirm your account before signing in.');
+        }
+        
+        // Clear form
+        setName('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setSubmitted(false);
+      }
+    } catch (err) {
+      console.error('Signup error:', err);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -144,9 +173,15 @@ export default function RegisterScreen() {
             </View>
           </View>
 
-          <Text style={[styles.helper, submitted && !canSubmit && styles.helperError]}>
-            {helperText}
-          </Text>
+          {validationErrors.length > 0 ? (
+            <View style={styles.validationErrors}>
+              {validationErrors.map((err, idx) => (
+                <Text key={idx} style={styles.validationError}>
+                  • {err}
+                </Text>
+              ))}
+            </View>
+          ) : null}
 
           <Pressable
             style={[styles.primary, !canSubmit && styles.primaryDisabled]}
@@ -244,6 +279,18 @@ const styles = StyleSheet.create({
   },
   helperError: {
     color: colors.coral,
+  },
+  validationErrors: {
+    backgroundColor: '#fff4f2',
+    borderRadius: radii.md,
+    padding: spacing.sm,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#ffd6d1',
+  },
+  validationError: {
+    color: colors.coral,
+    fontSize: typography.sizes.sm,
   },
   primary: {
     backgroundColor: colors.coral,
