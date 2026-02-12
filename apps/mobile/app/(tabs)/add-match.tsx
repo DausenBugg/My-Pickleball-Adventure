@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,26 +11,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const colors = {
-  ink: '#0b1a2b',
-  muted: '#5a6a7d',
-  blue: '#2b6cb0',
-  coral: '#ff6b5a',
-  surface: '#ffffff',
-  background: '#f7f8fb',
-  border: '#e0e4ec',
-};
-
-const sampleUsers = [
-  'Avery Johnson',
-  'Blake Carter',
-  'Casey Morgan',
-  'Drew Sanchez',
-  'Emery Patel',
-  'Jordan Lee',
-  'Kai Howard',
-  'Riley Brooks',
-];
+import { Player, usePlayerSearch } from '../../src/hooks/usePlayerSearch';
+import { MatchParticipant, useSubmitMatch } from '../../src/hooks/useSubmitMatch';
+import { useAuth } from '../../src/state/auth';
+import { colors, radii, spacing, typography } from '../../src/theme';
 
 type MatchType = 'singles' | 'doubles';
 type MatchMode = 'casual' | 'ranked';
@@ -38,16 +24,43 @@ type SearchFieldProps = {
   placeholder: string;
   value: string;
   onChangeText: (text: string) => void;
+  selectedPlayer: Player | null;
+  onSelectPlayer: (player: Player) => void;
+  onClearPlayer: () => void;
 };
 
-function SearchField({ label, placeholder, value, onChangeText }: SearchFieldProps) {
-  const matches = useMemo(() => {
-    if (!value.trim()) return [];
-    const query = value.trim().toLowerCase();
-    return sampleUsers
-      .filter((name) => name.toLowerCase().includes(query))
-      .slice(0, 5);
-  }, [value]);
+function SearchField({
+  label,
+  placeholder,
+  value,
+  onChangeText,
+  selectedPlayer,
+  onSelectPlayer,
+  onClearPlayer,
+}: SearchFieldProps) {
+  const { players, loading } = usePlayerSearch(value);
+
+  if (selectedPlayer) {
+    return (
+      <View style={styles.field}>
+        <Text style={styles.label}>{label}</Text>
+        <View style={styles.selectedPlayer}>
+          <View>
+            <Text style={styles.selectedPlayerName}>
+              {selectedPlayer.full_name || 'Player'}
+            </Text>
+            <Text style={styles.selectedPlayerMeta}>
+              Level {selectedPlayer.level} • {selectedPlayer.wins}W -{' '}
+              {selectedPlayer.losses}L
+            </Text>
+          </View>
+          <Pressable onPress={onClearPlayer} style={styles.clearButton}>
+            <Text style={styles.clearButtonText}>Change</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.field}>
@@ -57,17 +70,33 @@ function SearchField({ label, placeholder, value, onChangeText }: SearchFieldPro
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
+        autoCapitalize="words"
       />
-      {value.trim().length > 1 && matches.length > 0 ? (
+      {loading && value.trim().length > 1 ? (
+        <View style={styles.searchLoading}>
+          <ActivityIndicator size="small" color={colors.blue} />
+          <Text style={styles.searchLoadingText}>Searching...</Text>
+        </View>
+      ) : null}
+      {!loading && value.trim().length > 1 && players.length > 0 ? (
         <View style={styles.suggestions}>
-          {matches.map((name) => (
-            <Pressable key={name} onPress={() => onChangeText(name)}>
-              <Text style={styles.suggestionItem}>{name}</Text>
+          {players.map((player) => (
+            <Pressable key={player.id} onPress={() => onSelectPlayer(player)}>
+              <View style={styles.suggestionItem}>
+                <View>
+                  <Text style={styles.suggestionName}>
+                    {player.full_name || 'Player'}
+                  </Text>
+                  <Text style={styles.suggestionMeta}>
+                    Level {player.level} • {player.wins}W - {player.losses}L
+                  </Text>
+                </View>
+              </View>
             </Pressable>
           ))}
         </View>
       ) : null}
-      {value.trim().length > 1 && matches.length === 0 ? (
+      {!loading && value.trim().length > 1 && players.length === 0 ? (
         <Text style={styles.noMatch}>No matching players</Text>
       ) : null}
     </View>
@@ -75,13 +104,23 @@ function SearchField({ label, placeholder, value, onChangeText }: SearchFieldPro
 }
 
 export default function AddMatchScreen() {
+  const { session } = useAuth();
+  const { submitMatch, loading: submitting, error: submitError } = useSubmitMatch();
+
   const [matchType, setMatchType] = useState<MatchType>('singles');
   const [matchMode, setMatchMode] = useState<MatchMode>('casual');
   const [userScore, setUserScore] = useState('');
   const [opponentScore, setOpponentScore] = useState('');
-  const [opponentName, setOpponentName] = useState('');
-  const [allyName, setAllyName] = useState('');
-  const [opponentTwoName, setOpponentTwoName] = useState('');
+
+  // Player search states
+  const [opponentSearch, setOpponentSearch] = useState('');
+  const [allySearch, setAllySearch] = useState('');
+  const [opponent2Search, setOpponent2Search] = useState('');
+
+  // Selected players
+  const [opponent, setOpponent] = useState<Player | null>(null);
+  const [ally, setAlly] = useState<Player | null>(null);
+  const [opponent2, setOpponent2] = useState<Player | null>(null);
 
   const parsedUserScore = Number.parseInt(userScore, 10);
   const parsedOpponentScore = Number.parseInt(opponentScore, 10);
@@ -114,13 +153,86 @@ export default function AddMatchScreen() {
       return { valid: false, message: 'Winner must lead by 2 points.' };
     }
 
-    return { valid: true, message: 'Score looks valid.' };
-  }, [opponentScore, parsedOpponentScore, parsedUserScore, userScore]);
+    // Check player selection
+    if (!opponent) {
+      return { valid: false, message: 'Select an opponent to continue.' };
+    }
+
+    if (matchType === 'doubles' && (!ally || !opponent2)) {
+      return { valid: false, message: 'Select all players for doubles match.' };
+    }
+
+    return { valid: true, message: 'Ready to submit!' };
+  }, [
+    opponentScore,
+    parsedOpponentScore,
+    parsedUserScore,
+    userScore,
+    opponent,
+    matchType,
+    ally,
+    opponent2,
+  ]);
 
   const winnerLabel = useMemo(() => {
     if (!validation.valid) return 'Pending';
     return parsedUserScore > parsedOpponentScore ? 'You' : 'Opponent';
   }, [parsedOpponentScore, parsedUserScore, validation.valid]);
+
+  const handleSubmit = async () => {
+    if (!validation.valid || !session?.user?.id || !opponent) return;
+
+    // Build participants list
+    const userTeam: 'team_a' | 'team_b' =
+      parsedUserScore > parsedOpponentScore ? 'team_a' : 'team_b';
+    const opponentTeam: 'team_a' | 'team_b' =
+      userTeam === 'team_a' ? 'team_b' : 'team_a';
+
+    const participants: MatchParticipant[] = [
+      { userId: session.user.id, team: userTeam },
+      { userId: opponent.id, team: opponentTeam },
+    ];
+
+    if (matchType === 'doubles' && ally && opponent2) {
+      participants.push(
+        { userId: ally.id, team: userTeam },
+        { userId: opponent2.id, team: opponentTeam }
+      );
+    }
+
+    const result = await submitMatch({
+      matchType,
+      matchMode,
+      teamAScore: parsedUserScore,
+      teamBScore: parsedOpponentScore,
+      participants,
+    });
+
+    if (result) {
+      Alert.alert(
+        'Match submitted!',
+        'Your match has been submitted and is awaiting approval from other players.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Reset form
+              setUserScore('');
+              setOpponentScore('');
+              setOpponent(null);
+              setAlly(null);
+              setOpponent2(null);
+              setOpponentSearch('');
+              setAllySearch('');
+              setOpponent2Search('');
+            },
+          },
+        ]
+      );
+    } else if (submitError) {
+      Alert.alert('Error', submitError);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -275,8 +387,14 @@ export default function AddMatchScreen() {
           <SearchField
             label="Opponent"
             placeholder="Search players"
-            value={opponentName}
-            onChangeText={setOpponentName}
+            value={opponentSearch}
+            onChangeText={setOpponentSearch}
+            selectedPlayer={opponent}
+            onSelectPlayer={(player) => {
+              setOpponent(player);
+              setOpponentSearch('');
+            }}
+            onClearPlayer={() => setOpponent(null)}
           />
 
           {matchType === 'doubles' ? (
@@ -284,14 +402,26 @@ export default function AddMatchScreen() {
               <SearchField
                 label="Your ally"
                 placeholder="Search teammates"
-                value={allyName}
-                onChangeText={setAllyName}
+                value={allySearch}
+                onChangeText={setAllySearch}
+                selectedPlayer={ally}
+                onSelectPlayer={(player) => {
+                  setAlly(player);
+                  setAllySearch('');
+                }}
+                onClearPlayer={() => setAlly(null)}
               />
               <SearchField
                 label="Opponent 2"
                 placeholder="Search players"
-                value={opponentTwoName}
-                onChangeText={setOpponentTwoName}
+                value={opponent2Search}
+                onChangeText={setOpponent2Search}
+                selectedPlayer={opponent2}
+                onSelectPlayer={(player) => {
+                  setOpponent2(player);
+                  setOpponent2Search('');
+                }}
+                onClearPlayer={() => setOpponent2(null)}
               />
             </>
           ) : null}
@@ -308,10 +438,18 @@ export default function AddMatchScreen() {
         </View>
 
         <Pressable
-          style={[styles.submitButton, !validation.valid && styles.submitDisabled]}
-          disabled={!validation.valid}
+          style={[
+            styles.submitButton,
+            (!validation.valid || submitting) && styles.submitDisabled,
+          ]}
+          disabled={!validation.valid || submitting}
+          onPress={handleSubmit}
         >
-          <Text style={styles.submitText}>Submit match</Text>
+          {submitting ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <Text style={styles.submitText}>Submit match</Text>
+          )}
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -324,7 +462,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   container: {
-    padding: 20,
+    padding: spacing.lg,
     paddingBottom: 40,
     gap: 18,
   },
@@ -332,32 +470,32 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
     color: colors.ink,
   },
   subtitle: {
     color: colors.muted,
   },
   section: {
-    gap: 12,
+    gap: spacing.sm,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
     color: colors.ink,
   },
   segment: {
     flexDirection: 'row',
     backgroundColor: '#eef2f7',
-    borderRadius: 16,
+    borderRadius: radii.lg,
     padding: 4,
     gap: 6,
   },
   segmentButton: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: radii.sm,
     alignItems: 'center',
   },
   segmentActive: {
@@ -369,18 +507,18 @@ const styles = StyleSheet.create({
   },
   segmentText: {
     color: colors.muted,
-    fontWeight: '600',
+    fontWeight: typography.weights.semibold,
   },
   segmentTextActive: {
     color: colors.ink,
   },
   helperText: {
     color: colors.muted,
-    fontSize: 12,
+    fontSize: typography.sizes.sm,
   },
   row: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.sm,
   },
   field: {
     flex: 1,
@@ -388,15 +526,15 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.muted,
-    fontSize: 12,
+    fontSize: typography.sizes.sm,
     textTransform: 'uppercase',
     letterSpacing: 0.7,
   },
   input: {
     backgroundColor: colors.surface,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
     color: colors.ink,
@@ -405,25 +543,75 @@ const styles = StyleSheet.create({
     color: colors.muted,
     backgroundColor: '#f1f4f8',
   },
+  searchLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: spacing.sm,
+  },
+  searchLoadingText: {
+    color: colors.muted,
+    fontSize: typography.sizes.sm,
+  },
   suggestions: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: 6,
+    overflow: 'hidden',
   },
   suggestionItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  suggestionName: {
     color: colors.ink,
+    fontWeight: typography.weights.semibold,
+    marginBottom: 2,
+  },
+  suggestionMeta: {
+    color: colors.muted,
+    fontSize: typography.sizes.sm,
+  },
+  selectedPlayer: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.blue,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  selectedPlayerName: {
+    color: colors.ink,
+    fontWeight: typography.weights.semibold,
+    marginBottom: 2,
+  },
+  selectedPlayerMeta: {
+    color: colors.muted,
+    fontSize: typography.sizes.sm,
+  },
+  clearButton: {
+    backgroundColor: '#eef2f7',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.sm,
+  },
+  clearButtonText: {
+    color: colors.ink,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
   },
   noMatch: {
     color: colors.muted,
-    fontSize: 12,
+    fontSize: typography.sizes.sm,
   },
   validationBanner: {
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: radii.md,
+    padding: spacing.sm,
     gap: 4,
   },
   validationOk: {
@@ -434,21 +622,21 @@ const styles = StyleSheet.create({
   },
   validationText: {
     color: colors.ink,
-    fontWeight: '600',
+    fontWeight: typography.weights.semibold,
   },
   validationMeta: {
     color: colors.muted,
-    fontSize: 12,
+    fontSize: typography.sizes.sm,
   },
   approvalCard: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: radii.lg,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
   approvalTitle: {
-    fontWeight: '600',
+    fontWeight: typography.weights.semibold,
     color: colors.ink,
     marginBottom: 6,
   },
@@ -458,7 +646,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     backgroundColor: colors.coral,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     paddingVertical: 14,
     alignItems: 'center',
   },
@@ -467,7 +655,7 @@ const styles = StyleSheet.create({
   },
   submitText: {
     color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 16,
+    fontWeight: typography.weights.semibold,
+    fontSize: typography.sizes.md,
   },
 });

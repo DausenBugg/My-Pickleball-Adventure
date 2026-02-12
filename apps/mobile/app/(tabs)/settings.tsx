@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useProfile, useRating } from '../../src/hooks/useProfile';
 import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
 import { colors, radii, spacing, typography } from '../../src/theme';
 
 export default function SettingsScreen() {
+  const { profile, loading: profileLoading } = useProfile();
+  const { rating } = useRating();
   const [loading, setLoading] = useState(false);
 
   const handleSignOut = async () => {
@@ -44,11 +47,49 @@ export default function SettingsScreen() {
           </Text>
         </View>
 
+        {profileLoading ? (
+          <View style={styles.profileLoading}>
+            <ActivityIndicator size="small" color={colors.blue} />
+          </View>
+        ) : profile ? (
+          <View style={styles.profileCard}>
+            <View style={styles.profileHeader}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {(profile.full_name || 'P')[0].toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>
+                  {profile.full_name || 'Player'}
+                </Text>
+                <Text style={styles.profileEmail}>{profile.email}</Text>
+              </View>
+            </View>
+            <View style={styles.profileStats}>
+              <View style={styles.profileStat}>
+                <Text style={styles.profileStatValue}>{profile.level}</Text>
+                <Text style={styles.profileStatLabel}>Level</Text>
+              </View>
+              <View style={styles.profileStat}>
+                <Text style={styles.profileStatValue}>
+                  {rating?.rating ?? 1200}
+                </Text>
+                <Text style={styles.profileStatLabel}>Rating</Text>
+              </View>
+              <View style={styles.profileStat}>
+                <Text style={styles.profileStatValue}>{profile.wins}</Text>
+                <Text style={styles.profileStatLabel}>Wins</Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           <View style={styles.card}>
             <View style={styles.cardRow}>
-              <Text style={styles.cardLabel}>Profile</Text>
+              <Text style={styles.cardLabel}>Edit profile</Text>
               <Text style={styles.cardValue}>Coming soon</Text>
             </View>
           </View>
@@ -96,6 +137,69 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: 6,
+  },
+  profileLoading: {
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  profileCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.blue,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: '#ffffff',
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.ink,
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: typography.sizes.sm,
+    color: colors.muted,
+  },
+  profileStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  profileStat: {
+    alignItems: 'center',
+  },
+  profileStatValue: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.ink,
+    marginBottom: 4,
+  },
+  profileStatLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.muted,
   },
   title: {
     fontSize: typography.sizes.lg,

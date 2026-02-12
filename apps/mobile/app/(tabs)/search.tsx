@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,63 +10,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const colors = {
-  ink: '#0b1a2b',
-  muted: '#5a6a7d',
-  blue: '#2b6cb0',
-  coral: '#ff6b5a',
-  surface: '#ffffff',
-  background: '#f7f8fb',
-  border: '#e0e4ec',
-};
-
-const mockPlayers = [
-  {
-    id: '1',
-    name: 'Avery Johnson',
-    level: 12,
-    rating: 1480,
-    wins: 34,
-    losses: 18,
-    status: 'friend',
-  },
-  {
-    id: '2',
-    name: 'Blake Carter',
-    level: 7,
-    rating: 1320,
-    wins: 21,
-    losses: 14,
-    status: 'none',
-  },
-  {
-    id: '3',
-    name: 'Casey Morgan',
-    level: 18,
-    rating: 1585,
-    wins: 49,
-    losses: 22,
-    status: 'pending',
-  },
-  {
-    id: '4',
-    name: 'Drew Sanchez',
-    level: 4,
-    rating: 1210,
-    wins: 9,
-    losses: 11,
-    status: 'none',
-  },
-  {
-    id: '5',
-    name: 'Emery Patel',
-    level: 15,
-    rating: 1512,
-    wins: 41,
-    losses: 19,
-    status: 'friend',
-  },
-];
+import { useFriends } from '../../src/hooks/useFriends';
+import { usePlayerSearch } from '../../src/hooks/usePlayerSearch';
+import { colors, radii, spacing, typography } from '../../src/theme';
 
 type Filter = 'all' | 'friends';
 
@@ -73,18 +20,37 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
 
+  const { players,  loading: searchLoading } = usePlayerSearch(query);
+  const {
+    friends,
+    pendingSent,
+    loading: friendsLoading,
+    sendFriendRequest,
+  } = useFriends();
+
   const results = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return mockPlayers.filter((player) => {
-      const matchesQuery = normalizedQuery.length === 0
-        ? true
-        : player.name.toLowerCase().includes(normalizedQuery);
-      const matchesFilter = filter === 'friends'
-        ? player.status === 'friend'
-        : true;
-      return matchesQuery && matchesFilter;
-    });
-  }, [filter, query]);
+    if (filter === 'friends') {
+      // Only show friends
+      return players.filter((player) => friends.includes(player.id));
+    }
+    return players;
+  }, [filter, players, friends]);
+
+  const loading = searchLoading || friendsLoading;
+
+  const handleAddFriend = async (userId: string) => {
+    const success = await sendFriendRequest(userId);
+    if (success) {
+      // Optionally show a success message
+      console.log('Friend request sent');
+    }
+  };
+
+  const getFriendStatus = (userId: string): 'friend' | 'pending' | 'none' => {
+    if (friends.includes(userId)) return 'friend';
+    if (pendingSent.includes(userId)) return 'pending';
+    return 'none';
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -98,10 +64,11 @@ export default function SearchScreen() {
 
         <View style={styles.searchBox}>
           <TextInput
-            placeholder="Search by name"
+            placeholder="Search by name or email"
             style={styles.input}
             value={query}
             onChangeText={setQuery}
+            autoCapitalize="none"
           />
         </View>
 
@@ -137,50 +104,70 @@ export default function SearchScreen() {
           </Pressable>
         </View>
 
+        {loading && query.length > 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.blue} />
+            <Text style={styles.loadingText}>Searching...</Text>
+          </View>
+        ) : null}
+
         <View style={styles.results}>
-          {results.length === 0 ? (
+          {!loading && query.length < 2 ? (
+            <Text style={styles.emptyText}>
+              Enter at least 2 characters to search
+            </Text>
+          ) : !loading && results.length === 0 && query.length >= 2 ? (
             <Text style={styles.emptyText}>No players found.</Text>
           ) : (
-            results.map((player) => (
-              <View key={player.id} style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <View>
-                    <Text style={styles.name}>{player.name}</Text>
-                    <Text style={styles.meta}>Level {player.level}</Text>
+            results.map((player) => {
+              const status = getFriendStatus(player.id);
+              return (
+                <View key={player.id} style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <View>
+                      <Text style={styles.name}>
+                        {player.full_name || 'Player'}
+                      </Text>
+                      <Text style={styles.meta}>Level {player.level}</Text>
+                    </View>
+                    <View style={styles.ratingPill}>
+                      <Text style={styles.ratingLabel}>Rating</Text>
+                      <Text style={styles.ratingValue}>1200</Text>
+                    </View>
                   </View>
-                  <View style={styles.ratingPill}>
-                    <Text style={styles.ratingLabel}>Rating</Text>
-                    <Text style={styles.ratingValue}>{player.rating}</Text>
+
+                  <View style={styles.statsRow}>
+                    <Text style={styles.stat}>Wins {player.wins}</Text>
+                    <Text style={styles.stat}>Losses {player.losses}</Text>
                   </View>
-                </View>
 
-                <View style={styles.statsRow}>
-                  <Text style={styles.stat}>Wins {player.wins}</Text>
-                  <Text style={styles.stat}>Losses {player.losses}</Text>
-                </View>
-
-                <Pressable
-                  style={[
-                    styles.actionButton,
-                    player.status === 'friend' && styles.actionMuted,
-                    player.status === 'pending' && styles.actionPending,
-                  ]}
-                >
-                  <Text
+                  <Pressable
                     style={[
-                      styles.actionText,
-                      player.status !== 'none' && styles.actionTextMuted,
+                      styles.actionButton,
+                      status === 'friend' && styles.actionMuted,
+                      status === 'pending' && styles.actionPending,
                     ]}
+                    onPress={() =>
+                      status === 'none' ? handleAddFriend(player.id) : null
+                    }
+                    disabled={status !== 'none'}
                   >
-                    {player.status === 'friend'
-                      ? 'Friends'
-                      : player.status === 'pending'
-                        ? 'Pending'
-                        : 'Add friend'}
-                  </Text>
-                </Pressable>
-              </View>
-            ))
+                    <Text
+                      style={[
+                        styles.actionText,
+                        status !== 'none' && styles.actionTextMuted,
+                      ]}
+                    >
+                      {status === 'friend'
+                        ? 'Friends'
+                        : status === 'pending'
+                          ? 'Pending'
+                          : 'Add friend'}
+                    </Text>
+                  </Pressable>
+                </View>
+              );
+            })
           )}
         </View>
       </ScrollView>
@@ -194,16 +181,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   container: {
-    padding: 20,
+    padding: spacing.lg,
     paddingBottom: 40,
-    gap: 16,
+    gap: spacing.md,
   },
   header: {
     gap: 6,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
     color: colors.ink,
   },
   subtitle: {
@@ -211,14 +198,15 @@ const styles = StyleSheet.create({
   },
   searchBox: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.sm,
   },
   input: {
     height: 48,
     color: colors.ink,
+    fontSize: typography.sizes.base,
   },
   filters: {
     flexDirection: 'row',
@@ -227,7 +215,7 @@ const styles = StyleSheet.create({
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: radii.pill,
     backgroundColor: '#eef2f7',
   },
   filterActive: {
@@ -235,27 +223,38 @@ const styles = StyleSheet.create({
   },
   filterText: {
     color: colors.muted,
-    fontWeight: '600',
-    fontSize: 12,
+    fontWeight: typography.weights.semibold,
+    fontSize: typography.sizes.sm,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   filterTextActive: {
     color: '#ffffff',
   },
+  loadingContainer: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  loadingText: {
+    color: colors.muted,
+    fontSize: typography.sizes.base,
+  },
   results: {
     gap: 14,
   },
   emptyText: {
     color: colors.muted,
+    textAlign: 'center',
+    paddingVertical: spacing.xl,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: radii.lg,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: 12,
+    gap: spacing.sm,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -263,8 +262,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   name: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
     color: colors.ink,
   },
   meta: {
@@ -273,20 +272,20 @@ const styles = StyleSheet.create({
   },
   ratingPill: {
     backgroundColor: '#eaf1ff',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     alignItems: 'center',
   },
   ratingLabel: {
     color: colors.blue,
-    fontSize: 10,
+    fontSize: typography.sizes.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   ratingValue: {
     color: colors.blue,
-    fontWeight: '700',
+    fontWeight: typography.weights.bold,
     marginTop: 2,
   },
   statsRow: {
@@ -295,11 +294,11 @@ const styles = StyleSheet.create({
   },
   stat: {
     color: colors.muted,
-    fontSize: 12,
+    fontSize: typography.sizes.sm,
   },
   actionButton: {
     backgroundColor: colors.coral,
-    borderRadius: 14,
+    borderRadius: radii.md,
     paddingVertical: 10,
     alignItems: 'center',
   },
@@ -311,7 +310,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     color: '#ffffff',
-    fontWeight: '600',
+    fontWeight: typography.weights.semibold,
   },
   actionTextMuted: {
     color: colors.muted,

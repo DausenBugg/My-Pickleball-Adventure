@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,50 +9,24 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const colors = {
-  ink: '#0b1a2b',
-  muted: '#5a6a7d',
-  blue: '#2b6cb0',
-  coral: '#ff6b5a',
-  surface: '#ffffff',
-  background: '#f7f8fb',
-  border: '#e0e4ec',
-};
-
-const mockPlayers = [
-  { id: '1', name: 'Avery Johnson', rating: 1680, level: 19, wins: 62 },
-  { id: '2', name: 'Emery Patel', rating: 1642, level: 17, wins: 58 },
-  { id: '3', name: 'Casey Morgan', rating: 1601, level: 16, wins: 54 },
-  { id: '4', name: 'Jordan Lee', rating: 1555, level: 14, wins: 48 },
-  { id: '5', name: 'Blake Carter', rating: 1522, level: 13, wins: 44 },
-  { id: '6', name: 'Drew Sanchez', rating: 1490, level: 11, wins: 39 },
-  { id: '7', name: 'Kai Howard', rating: 1458, level: 10, wins: 34 },
-  { id: '8', name: 'Riley Brooks', rating: 1432, level: 9, wins: 30 },
-];
+import { useLeaderboard } from '../../src/hooks/useLeaderboard';
+import { colors, radii, spacing, typography } from '../../src/theme';
 
 type BoardType = 'global' | 'friends';
 
 export default function LeaderboardScreen() {
   const [boardType, setBoardType] = useState<BoardType>('global');
+  const { entries, loading } = useLeaderboard(boardType);
 
-  const players = useMemo(() => {
-    if (boardType === 'friends') {
-      return mockPlayers.slice(2, 8);
-    }
-    return mockPlayers;
-  }, [boardType]);
-
-  const podium = players.slice(0, 3);
-  const rest = players.slice(3);
+  const podium = useMemo(() => entries.slice(0, 3), [entries]);
+  const rest = useMemo(() => entries.slice(3), [entries]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Leaderboard</Text>
-          <Text style={styles.subtitle}>
-            Top players by ranking points.
-          </Text>
+          <Text style={styles.subtitle}>Top players by ranking points.</Text>
         </View>
 
         <View style={styles.segment}>
@@ -89,36 +64,60 @@ export default function LeaderboardScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.podiumRow}>
-          {podium.map((player, index) => (
-            <View
-              key={player.id}
-              style={[
-                styles.podiumCard,
-                index === 0 && styles.podiumTop,
-              ]}
-            >
-              <Text style={styles.podiumRank}>#{index + 1}</Text>
-              <Text style={styles.podiumName}>{player.name}</Text>
-              <Text style={styles.podiumMeta}>Rating {player.rating}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.list}>
-          {rest.map((player, index) => (
-            <View key={player.id} style={styles.listItem}>
-              <Text style={styles.listRank}>#{index + 4}</Text>
-              <View style={styles.listInfo}>
-                <Text style={styles.listName}>{player.name}</Text>
-                <Text style={styles.listMeta}>
-                  Level {player.level} · Wins {player.wins}
-                </Text>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.blue} />
+            <Text style={styles.loadingText}>Loading rankings...</Text>
+          </View>
+        ) : entries.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              {boardType === 'friends'
+                ? 'No friends on the leaderboard yet'
+                : 'No players ranked yet'}
+            </Text>
+          </View>
+        ) : (
+          <>
+            {podium.length > 0 ? (
+              <View style={styles.podiumRow}>
+                {podium.map((player, index) => (
+                  <View
+                    key={player.id}
+                    style={[styles.podiumCard, index === 0 && styles.podiumTop]}
+                  >
+                    <Text style={styles.podiumRank}>#{index + 1}</Text>
+                    <Text style={styles.podiumName}>
+                      {player.full_name || 'Player'}
+                    </Text>
+                    <Text style={styles.podiumMeta}>
+                      Rating {player.rating}
+                    </Text>
+                  </View>
+                ))}
               </View>
-              <Text style={styles.listRating}>{player.rating}</Text>
-            </View>
-          ))}
-        </View>
+            ) : null}
+
+            {rest.length > 0 ? (
+              <View style={styles.list}>
+                {rest.map((player, index) => (
+                  <View key={player.id} style={styles.listItem}>
+                    <Text style={styles.listRank}>#{index + 4}</Text>
+                    <View style={styles.listInfo}>
+                      <Text style={styles.listName}>
+                        {player.full_name || 'Player'}
+                      </Text>
+                      <Text style={styles.listMeta}>
+                        Level {player.level} · Wins {player.wins}
+                      </Text>
+                    </View>
+                    <Text style={styles.listRating}>{player.rating}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -130,16 +129,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   container: {
-    padding: 20,
+    padding: spacing.lg,
     paddingBottom: 40,
-    gap: 16,
+    gap: spacing.md,
   },
   header: {
     gap: 6,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
     color: colors.ink,
   },
   subtitle: {
@@ -148,14 +147,14 @@ const styles = StyleSheet.create({
   segment: {
     flexDirection: 'row',
     backgroundColor: '#eef2f7',
-    borderRadius: 16,
+    borderRadius: radii.lg,
     padding: 4,
     gap: 6,
   },
   segmentButton: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: radii.sm,
     alignItems: 'center',
   },
   segmentActive: {
@@ -167,72 +166,101 @@ const styles = StyleSheet.create({
   },
   segmentText: {
     color: colors.muted,
-    fontWeight: '600',
+    fontWeight: typography.weights.semibold,
   },
   segmentTextActive: {
     color: colors.ink,
   },
+  loadingContainer: {
+    paddingVertical: spacing.xxl,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  loadingText: {
+    color: colors.muted,
+    fontSize: typography.sizes.base,
+  },
+  emptyContainer: {
+    paddingVertical: spacing.xxl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: colors.muted,
+    fontSize: typography.sizes.base,
+    textAlign: 'center',
+  },
   podiumRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   podiumCard: {
     flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: radii.lg,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
-    gap: 4,
   },
   podiumTop: {
-    borderColor: colors.coral,
+    borderColor: '#ffd700',
+    borderWidth: 2,
+    backgroundColor: '#fffef7',
   },
   podiumRank: {
-    color: colors.coral,
-    fontWeight: '700',
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.blue,
+    marginBottom: 8,
   },
   podiumName: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
     color: colors.ink,
-    fontWeight: '600',
     textAlign: 'center',
+    marginBottom: 4,
   },
   podiumMeta: {
+    fontSize: typography.sizes.xs,
     color: colors.muted,
-    fontSize: 12,
   },
   list: {
-    gap: 12,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: radii.md,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   listRank: {
-    width: 36,
-    color: colors.muted,
-    fontWeight: '600',
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.blue,
+    width: 40,
   },
   listInfo: {
     flex: 1,
   },
   listName: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
     color: colors.ink,
-    fontWeight: '600',
+    marginBottom: 2,
   },
   listMeta: {
+    fontSize: typography.sizes.sm,
     color: colors.muted,
-    fontSize: 12,
-    marginTop: 4,
   },
   listRating: {
-    color: colors.blue,
-    fontWeight: '700',
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.ink,
   },
 });
