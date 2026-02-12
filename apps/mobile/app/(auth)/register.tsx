@@ -74,13 +74,8 @@ export default function RegisterScreen() {
       }
 
       if (data.user) {
-        if (data.session) {
-          // User is logged in immediately (email confirmation disabled)
-          setNotice('Account created successfully! Logging you in...');
-        } else {
-          // Email confirmation required
-          setNotice('Check your email to confirm your account before signing in.');
-        }
+        // Account created successfully
+        setNotice('Account created successfully! Logging you in...');
         
         // Clear form
         setName('');
