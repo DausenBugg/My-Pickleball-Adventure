@@ -40,9 +40,18 @@ serve(async (req) => {
 
     const { notificationIds } = await req.json();
 
+    // Validate input
     if (!notificationIds || !Array.isArray(notificationIds) || notificationIds.length === 0) {
       return new Response(
         JSON.stringify({ error: 'notificationIds array is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate notification IDs are strings
+    if (!notificationIds.every((id) => typeof id === 'string')) {
+      return new Response(
+        JSON.stringify({ error: 'All notification IDs must be strings' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -105,11 +114,17 @@ serve(async (req) => {
     notifications.forEach((notification) => {
       const userPushTokens = userTokens.get(notification.user_id) || [];
       userPushTokens.forEach((token) => {
+        // Validate token format (Expo push tokens start with ExponentPushToken)
+        if (!token || typeof token !== 'string' || token.trim().length === 0) {
+          console.warn('Invalid push token format:', token);
+          return;
+        }
+        
         pushNotifications.push({
           to: token,
           sound: 'default',
-          title: notification.title,
-          body: notification.body,
+          title: notification.title || 'New Notification',
+          body: notification.body || '',
           data: notification.data || {},
         });
       });

@@ -156,6 +156,11 @@ export default function MatchHistoryScreen() {
         ) : (
           <View style={styles.matchList}>
             {matches.map((match) => {
+              // Safety checks
+              if (!match || !match.team1_player1 || !match.team2_player1) {
+                return null;
+              }
+
               const team1Ids = [
                 match.team1_player1?.id,
                 match.team1_player2?.id,
@@ -207,70 +212,74 @@ export default function MatchHistoryScreen() {
 
                   <View style={styles.matchTeams}>
                     {/* Team 1 */}
-                    <View style={styles.team}>
-                      <View style={styles.teamPlayers}>
-                        <Avatar
-                          url={match.team1_player1?.avatar_url}
-                          name={match.team1_player1?.full_name || 'Player'}
-                        />
-                        <Text style={styles.playerName}>
-                          {match.team1_player1?.full_name || 'Player'}
+                    {match.team1_player1 && (
+                      <View style={styles.team}>
+                        <View style={styles.teamPlayers}>
+                          <Avatar
+                            url={match.team1_player1.avatar_url}
+                            name={match.team1_player1.full_name || 'Player'}
+                          />
+                          <Text style={styles.playerName} numberOfLines={1}>
+                            {match.team1_player1.full_name || 'Player'}
+                          </Text>
+                          {match.team1_player2 && (
+                            <>
+                              <Avatar
+                                url={match.team1_player2.avatar_url}
+                                name={match.team1_player2.full_name || 'Player'}
+                              />
+                              <Text style={styles.playerName} numberOfLines={1}>
+                                {match.team1_player2.full_name || 'Player'}
+                              </Text>
+                            </>
+                          )}
+                        </View>
+                        <Text
+                          style={[
+                            styles.teamScore,
+                            match.winning_team === 1 && styles.teamScoreWin,
+                          ]}
+                        >
+                          {match.score_team1}
                         </Text>
-                        {match.team1_player2 && (
-                          <>
-                            <Avatar
-                              url={match.team1_player2.avatar_url}
-                              name={match.team1_player2.full_name || 'Player'}
-                            />
-                            <Text style={styles.playerName}>
-                              {match.team1_player2.full_name || 'Player'}
-                            </Text>
-                          </>
-                        )}
                       </View>
-                      <Text
-                        style={[
-                          styles.teamScore,
-                          match.winning_team === 1 && styles.teamScoreWin,
-                        ]}
-                      >
-                        {match.score_team1}
-                      </Text>
-                    </View>
+                    )}
 
                     <Text style={styles.vs}>vs</Text>
 
                     {/* Team 2 */}
-                    <View style={styles.team}>
-                      <View style={styles.teamPlayers}>
-                        <Avatar
-                          url={match.team2_player1?.avatar_url}
-                          name={match.team2_player1?.full_name || 'Player'}
-                        />
-                        <Text style={styles.playerName}>
-                          {match.team2_player1?.full_name || 'Player'}
+                    {match.team2_player1 && (
+                      <View style={styles.team}>
+                        <View style={styles.teamPlayers}>
+                          <Avatar
+                            url={match.team2_player1.avatar_url}
+                            name={match.team2_player1.full_name || 'Player'}
+                          />
+                          <Text style={styles.playerName} numberOfLines={1}>
+                            {match.team2_player1.full_name || 'Player'}
+                          </Text>
+                          {match.team2_player2 && (
+                            <>
+                              <Avatar
+                                url={match.team2_player2.avatar_url}
+                                name={match.team2_player2.full_name || 'Player'}
+                              />
+                              <Text style={styles.playerName} numberOfLines={1}>
+                                {match.team2_player2.full_name || 'Player'}
+                              </Text>
+                            </>
+                          )}
+                        </View>
+                        <Text
+                          style={[
+                            styles.teamScore,
+                            match.winning_team === 2 && styles.teamScoreWin,
+                          ]}
+                        >
+                          {match.score_team2}
                         </Text>
-                        {match.team2_player2 && (
-                          <>
-                            <Avatar
-                              url={match.team2_player2.avatar_url}
-                              name={match.team2_player2.full_name || 'Player'}
-                            />
-                            <Text style={styles.playerName}>
-                              {match.team2_player2.full_name || 'Player'}
-                            </Text>
-                          </>
-                        )}
                       </View>
-                      <Text
-                        style={[
-                          styles.teamScore,
-                          match.winning_team === 2 && styles.teamScoreWin,
-                        ]}
-                      >
-                        {match.score_team2}
-                      </Text>
-                    </View>
+                    )}
                   </View>
 
                   <Text style={styles.matchDate}>
@@ -497,6 +506,7 @@ const styles = StyleSheet.create({
   playerName: {
     fontSize: typography.sizes.sm,
     color: colors.ink,
+    flex: 1,
   },
   teamScore: {
     fontSize: typography.sizes.lg,

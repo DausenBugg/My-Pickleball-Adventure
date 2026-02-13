@@ -109,51 +109,91 @@ export function useMatches(filters: MatchFilters = {}) {
         if (matchesError) throw matchesError;
 
         // Enrich with player data
+        const supabaseClient = supabase; // Capture for type checking
         const enrichedMatches = await Promise.all(
           matchesData.map(async (match) => {
-            const { data: parts } = await supabase
-              .from('match_participants')
-              .select(
+            try {
+              if (!supabaseClient) return null;
+              
+              const { data: parts, error: partsError } = await supabaseClient
+                .from('match_participants')
+                .select(
+                  `
+                  player_id,
+                  team,
+                  profiles!inner (
+                    id,
+                    full_name,
+                    avatar_url
+                  )
                 `
-                player_id,
-                team,
-                profiles!inner (
-                  id,
-                  full_name,
-                  avatar_url
                 )
-              `
-              )
-              .eq('match_id', match.id);
+                .eq('match_id', match.id);
 
-            const team1 = parts?.filter((p) => p.team === 1) || [];
-            const team2 = parts?.filter((p) => p.team === 2) || [];
+              if (partsError) {
+                console.error('Error fetching participants:', partsError);
+                return null;
+              }
 
-            return {
-              ...match,
-              team1_player1: team1[0]?.profiles,
-              team1_player2: team1[1]?.profiles,
-              team2_player1: team2[0]?.profiles,
-              team2_player2: team2[1]?.profiles,
-            };
+              const team1 = parts?.filter((p) => p.team === 1) || [];
+              const team2 = parts?.filter((p) => p.team === 2) || [];
+
+              // Validate that we have at least one player per team
+              if (team1.length === 0 || team2.length === 0) {
+                console.warn('Match missing team data:', match.id);
+                return null;
+              }
+
+              // Create safe player objects with fallbacks
+              const createPlayerObject = (part: any) => ({
+                id: part?.profiles?.id || part?.player_id || '',
+                full_name: part?.profiles?.full_name || 'Unknown Player',
+                avatar_url: part?.profiles?.avatar_url || null,
+              });
+
+              return {
+                ...match,
+                score_team1: match.score_team1 ?? 0,
+                score_team2: match.score_team2 ?? 0,
+                team1_player1: team1[0] ? createPlayerObject(team1[0]) : null,
+                team1_player2: team1[1] ? createPlayerObject(team1[1]) : undefined,
+                team2_player1: team2[0] ? createPlayerObject(team2[0]) : null,
+                team2_player2: team2[1] ? createPlayerObject(team2[1]) : undefined,
+              };
+            } catch (err) {
+              console.error('Error enriching match:', err);
+              return null;
+            }
           })
         );
 
+        // Filter out null matches (errors during enrichment)
+        const validMatches = enrichedMatches.filter((m) => m !== null);
+
         // Filter by result if needed
-        let finalMatches = enrichedMatches;
+        let finalMatches = validMatches;
         if (filters.result && filters.result !== 'all') {
-          finalMatches = enrichedMatches.filter((match) => {
+          finalMatches = validMatches.filter((match) => {
+            if (!match) return false;
+            
             const team1Ids = [
               match.team1_player1?.id,
               match.team1_player2?.id,
-            ].filter(Boolean);
+            ].filter(Boolean) as string[];
             const team2Ids = [
               match.team2_player1?.id,
               match.team2_player2?.id,
-            ].filter(Boolean);
+            ].filter(Boolean) as string[];
 
+            // Check if user is in any team
             const userInTeam1 = team1Ids.includes(session.user.id);
             const userInTeam2 = team2Ids.includes(session.user.id);
+            
+            // User should be in exactly one team
+            if (!userInTeam1 && !userInTeam2) {
+              console.warn('User not in any team for match:', match.id);
+              return false;
+            }
 
             const userWon =
               (userInTeam1 && match.winning_team === 1) ||

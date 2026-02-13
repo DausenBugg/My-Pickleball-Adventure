@@ -7,8 +7,8 @@ import { useAuth } from '../state/auth';
 export function usePushNotificationHandler() {
   const router = useRouter();
   const { session } = useAuth();
-  const notificationListener = useRef<any>();
-  const responseListener = useRef<any>();
+  const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
+  const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -23,15 +23,27 @@ export function usePushNotificationHandler() {
     // Handle notification taps
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
       (response) => {
-        const data = response.notification.request.content.data;
-        
-        // Navigate based on notification type
-        if (data.achievement_id) {
-          router.push('/achievements');
-        } else if (data.match_id) {
-          router.push('/approvals');
-        } else if (data.friend_request_id) {
-          router.push('/(tabs)/search');
+        try {
+          const data = response.notification.request.content.data;
+          
+          // Validate data exists
+          if (!data || typeof data !== 'object') {
+            console.log('No valid data in notification');
+            return;
+          }
+          
+          // Navigate based on notification type with validation
+          if (data.achievement_id && typeof data.achievement_id === 'string') {
+            router.push('/achievements');
+          } else if (data.match_id && typeof data.match_id === 'string') {
+            router.push('/approvals');
+          } else if (data.friend_request_id && typeof data.friend_request_id === 'string') {
+            router.push('/(tabs)/search');
+          } else {
+            console.log('Unknown notification type or invalid data:', data);
+          }
+        } catch (error) {
+          console.error('Error handling notification tap:', error);
         }
       }
     );

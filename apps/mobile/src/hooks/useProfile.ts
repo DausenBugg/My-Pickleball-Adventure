@@ -112,15 +112,33 @@ export function useProfile() {
       const response = await fetch(image.uri);
       const blob = await response.blob();
       
-      // Create file path
-      const fileExt = image.uri.split('.').pop();
+      // Validate file size (max 5MB)
+      if (blob.size > 5 * 1024 * 1024) {
+        return { error: 'Image size must be less than 5MB' };
+      }
+      
+      // Create file path with fallback extension
+      const fileExt = image.uri.split('.').pop() || 'jpg';
       const fileName = `${session.user.id}/${Date.now()}.${fileExt}`;
+
+      // Delete old avatar if exists
+      if (profile?.avatar_url) {
+        try {
+          const oldPath = profile.avatar_url.split('/avatars/').pop();
+          if (oldPath) {
+            await supabase.storage.from('avatars').remove([oldPath]);
+          }
+        } catch (cleanupError) {
+          console.log('Could not delete old avatar:', cleanupError);
+          // Continue anyway
+        }
+      }
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(fileName, blob, {
-          contentType: `image/${fileExt}`,
+          contentType: `image/${fileExt || 'jpeg'}`,
           upsert: true,
         });
 

@@ -100,7 +100,7 @@ export default function LeaderboardScreen() {
                   >
                     <Text style={styles.podiumRank}>#{index + 1}</Text>
                     <Avatar url={player.avatar_url} name={player.full_name || 'Player'} />
-                    <Text style={styles.podiumName}>
+                    <Text style={styles.podiumName} numberOfLines={2}>
                       {player.full_name || 'Player'}
                     </Text>
                     <Text style={styles.podiumMeta}>
@@ -118,7 +118,7 @@ export default function LeaderboardScreen() {
                     <Text style={styles.listRank}>#{index + 4}</Text>
                     <Avatar url={player.avatar_url} name={player.full_name || 'Player'} />
                     <View style={styles.listInfo}>
-                      <Text style={styles.listName}>
+                      <Text style={styles.listName} numberOfLines={1}>
                         {player.full_name || 'Player'}
                       </Text>
                       <Text style={styles.listMeta}>
