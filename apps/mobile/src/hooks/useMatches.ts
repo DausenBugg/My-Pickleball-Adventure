@@ -64,7 +64,7 @@ export function useMatches(filters: MatchFilters = {}) {
         const { data: participants, error: participantsError } = await supabase
           .from('match_participants')
           .select('match_id')
-          .eq('player_id', session.user.id);
+          .eq('user_id', session.user.id);
 
         if (participantsError) throw participantsError;
         if (!participants || participants.length === 0) {
@@ -82,11 +82,11 @@ export function useMatches(filters: MatchFilters = {}) {
             `
             id,
             match_type,
-            is_ranked,
-            winning_team,
+            match_mode,
+            winner_team,
             status,
-            score_team1,
-            score_team2,
+            team_a_score,
+            team_b_score,
             created_at
           `
           )
@@ -98,7 +98,7 @@ export function useMatches(filters: MatchFilters = {}) {
           query = query.eq('match_type', filters.matchType);
         }
         if (filters.isRanked !== undefined && filters.isRanked !== 'all') {
-          query = query.eq('is_ranked', filters.isRanked);
+          query = query.eq('match_mode', filters.isRanked ? 'ranked' : 'casual');
         }
         if (filters.status && filters.status !== 'all') {
           query = query.eq('status', filters.status);
@@ -114,12 +114,22 @@ export function useMatches(filters: MatchFilters = {}) {
           matchesData.map(async (match) => {
             try {
               if (!supabaseClient) return null;
+              const mappedMatch = {
+                id: match.id,
+                match_type: match.match_type,
+                is_ranked: match.match_mode === 'ranked',
+                winning_team: match.winner_team === 'team_a' ? 1 : 2,
+                status: match.status,
+                score_team1: match.team_a_score ?? 0,
+                score_team2: match.team_b_score ?? 0,
+                created_at: match.created_at,
+              };
               
               const { data: parts, error: partsError } = await supabaseClient
                 .from('match_participants')
                 .select(
                   `
-                  player_id,
+                  user_id,
                   team,
                   profiles!inner (
                     id,
@@ -135,8 +145,8 @@ export function useMatches(filters: MatchFilters = {}) {
                 return null;
               }
 
-              const team1 = parts?.filter((p) => p.team === 1) || [];
-              const team2 = parts?.filter((p) => p.team === 2) || [];
+              const team1 = parts?.filter((p) => p.team === 'team_a') || [];
+              const team2 = parts?.filter((p) => p.team === 'team_b') || [];
 
               // Validate that we have at least one player per team
               if (team1.length === 0 || team2.length === 0) {
@@ -146,15 +156,13 @@ export function useMatches(filters: MatchFilters = {}) {
 
               // Create safe player objects with fallbacks
               const createPlayerObject = (part: any) => ({
-                id: part?.profiles?.id || part?.player_id || '',
+                id: part?.profiles?.id || part?.user_id || '',
                 full_name: part?.profiles?.full_name || 'Unknown Player',
                 avatar_url: part?.profiles?.avatar_url || null,
               });
 
               return {
-                ...match,
-                score_team1: match.score_team1 ?? 0,
-                score_team2: match.score_team2 ?? 0,
+                ...mappedMatch,
                 team1_player1: team1[0] ? createPlayerObject(team1[0]) : null,
                 team1_player2: team1[1] ? createPlayerObject(team1[1]) : undefined,
                 team2_player1: team2[0] ? createPlayerObject(team2[0]) : null,

@@ -1,18 +1,66 @@
-import { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useProfile, useRating } from '../../src/hooks/useProfile';
 import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
+import { registerForPushNotificationsAsync, savePushToken } from '../../src/lib/notifications';
 import { colors, radii, spacing, typography } from '../../src/theme';
+import { useAuth } from '../../src/state/auth';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { session } = useAuth();
   const { profile, loading: profileLoading, uploadAvatar } = useProfile();
   const { rating } = useRating();
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationsSaving, setNotificationsSaving] = useState(false);
+
+  useEffect(() => {
+    const loadNotificationPreference = async () => {
+      const stored = await AsyncStorage.getItem('notifications_enabled');
+      if (stored === 'false') {
+        setNotificationsEnabled(false);
+      }
+    };
+
+    loadNotificationPreference();
+  }, []);
+
+  const handleToggleNotifications = async (value: boolean) => {
+    setNotificationsEnabled(value);
+    setNotificationsSaving(true);
+
+    try {
+      await AsyncStorage.setItem('notifications_enabled', value ? 'true' : 'false');
+
+      if (!session?.user?.id || !supabase) return;
+
+      if (value) {
+        const token = await registerForPushNotificationsAsync();
+        if (token && typeof token === 'string') {
+          await savePushToken(session.user.id, token);
+        }
+      } else {
+        const { error: deleteError } = await supabase
+          .from('push_tokens')
+          .delete()
+          .eq('user_id', session.user.id);
+
+        if (deleteError) {
+          console.warn('Failed to remove push tokens:', deleteError);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to update notification preference:', err);
+    } finally {
+      setNotificationsSaving(false);
+    }
+  };
 
   const handleSignOut = async () => {
     if (!isSupabaseConfigured || !supabase) {
@@ -144,7 +192,17 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <View style={styles.cardRow}>
               <Text style={styles.cardLabel}>Notifications</Text>
-              <Text style={styles.cardValue}>Coming soon</Text>
+              <View style={styles.notificationsToggle}>
+                <Text style={styles.cardValue}>
+                  {notificationsSaving ? 'Saving...' : notificationsEnabled ? 'On' : 'Off'}
+                </Text>
+                <Switch
+                  value={notificationsEnabled}
+                  onValueChange={handleToggleNotifications}
+                  trackColor={{ false: '#e0e0e0', true: '#9bbcff' }}
+                  thumbColor={notificationsEnabled ? colors.blue : '#f4f4f4'}
+                />
+              </View>
             </View>
             <View style={styles.cardRow}>
               <Text style={styles.cardLabel}>Privacy</Text>
@@ -285,6 +343,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  notificationsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   cardLabel: {
     fontSize: typography.sizes.base,

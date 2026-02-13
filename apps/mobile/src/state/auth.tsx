@@ -1,6 +1,7 @@
 import { Session } from '@supabase/supabase-js';
 import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import {
@@ -42,9 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Register for push notifications when user logs in
         if (nextSession?.user && !session) {
           try {
-            const token = await registerForPushNotificationsAsync();
-            if (token && typeof token === 'string') {
-              await savePushToken(nextSession.user.id, token);
+            const preference = await AsyncStorage.getItem('notifications_enabled');
+            if (preference !== 'false') {
+              const token = await registerForPushNotificationsAsync();
+              if (token && typeof token === 'string') {
+                await savePushToken(nextSession.user.id, token);
+              }
             }
           } catch (error) {
             console.error('Error registering push notifications:', error);

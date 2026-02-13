@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../state/auth';
@@ -95,30 +96,47 @@ export function useProfile() {
 
     // Pick image
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images,
+      mediaTypes: ['images'] as ImagePicker.MediaType[],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: true,
     });
 
     if (result.canceled) {
       return { error: 'Cancelled' };
     }
 
-    const image = result.assets[0];
+    const image = result.assets?.[0];
+    if (!image) {
+      return { error: 'No image selected' };
+    }
     
     try {
-      // Convert image to blob
-      const response = await fetch(image.uri);
-      const blob = await response.blob();
+      const fileExt =
+        image.fileName?.split('.').pop() || image.uri.split('.').pop() || 'jpg';
+      const mimeType = image.mimeType || `image/${fileExt}`;
+
+      const base64Data = image.base64
+        ? image.base64
+        : await FileSystem.readAsStringAsync(image.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+
+      const binaryString = globalThis.atob
+        ? globalThis.atob(base64Data)
+        : atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i += 1) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
       
       // Validate file size (max 5MB)
-      if (blob.size > 5 * 1024 * 1024) {
+      if (bytes.length > 5 * 1024 * 1024) {
         return { error: 'Image size must be less than 5MB' };
       }
       
       // Create file path with fallback extension
-      const fileExt = image.uri.split('.').pop() || 'jpg';
       const fileName = `${session.user.id}/${Date.now()}.${fileExt}`;
 
       // Delete old avatar if exists
@@ -137,8 +155,8 @@ export function useProfile() {
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, blob, {
-          contentType: `image/${fileExt || 'jpeg'}`,
+        .upload(fileName, bytes, {
+          contentType: mimeType,
           upsert: true,
         });
 
@@ -203,15 +221,18 @@ export function useRating() {
 }
 
 // Calculate XP needed for a given level based on the leveling formula
-// XP(N) = 100 * N^1.6
+// XP(N) = 100 * N^1.6, rounded up to the nearest 10.
 export function calculateXPForLevel(level: number): number {
-  return Math.floor(100 * Math.pow(level, 1.6));
+  const rawXp = 100 * Math.pow(level, 1.6);
+  return Math.ceil(rawXp / 10) * 10;
 }
 
 // Calculate XP needed to reach next level
 export function calculateXPToNextLevel(currentLevel: number, currentXP: number): number {
+  const xpForCurrentLevel = calculateXPForLevel(currentLevel);
   const xpForNextLevel = calculateXPForLevel(currentLevel + 1);
-  return Math.max(0, xpForNextLevel - currentXP);
+  const clampedXP = Math.max(currentXP, xpForCurrentLevel);
+  return Math.max(0, xpForNextLevel - clampedXP);
 }
 
 // Calculate progress percentage for current level

@@ -29,6 +29,7 @@ export function useSubmitMatch() {
 
     setLoading(true);
     setError(null);
+    console.log('Submitting match payload:', data);
 
     try {
       // Determine winner
@@ -50,6 +51,7 @@ export function useSubmitMatch() {
         .single();
 
       if (matchError || !match) {
+        console.error('Match insert failed:', matchError);
         setError(matchError?.message || 'Failed to create match');
         setLoading(false);
         return null;
@@ -68,9 +70,33 @@ export function useSubmitMatch() {
         .insert(participantsData);
 
       if (participantsError) {
+        console.error('Participants insert failed:', participantsError);
         setError(participantsError.message);
         setLoading(false);
         return null;
+      }
+
+      const recipientIds = Array.from(
+        new Set(participantsData.map((participant) => participant.user_id))
+      ).filter((id) => id !== session.user.id);
+
+      if (recipientIds.length > 0) {
+        const notifications = recipientIds.map((userId) => ({
+          user_id: userId,
+          type: 'match_approval',
+          title: 'Match awaiting approval',
+          message: 'You were added to a match. Review and approve it.',
+          data: { match_id: match.id },
+        }));
+
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert(notifications);
+
+        if (notificationError) {
+          console.error('Failed to create match notifications:', notificationError);
+        }
+        console.log('Match notifications inserted:', recipientIds);
       }
 
       // 3. Add submitter's approval automatically
@@ -88,6 +114,7 @@ export function useSubmitMatch() {
       }
 
       setLoading(false);
+      console.log('Match submitted:', match.id);
       return match;
     } catch (err) {
       console.error('Submit match error:', err);

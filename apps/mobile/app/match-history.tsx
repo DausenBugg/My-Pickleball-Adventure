@@ -144,7 +144,16 @@ export default function MatchHistoryScreen() {
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>Error: {error}</Text>
+            {error.includes('does not exist') && error.includes('match_participants') ? (
+              <>
+                <Text style={styles.errorText}>No matches logged yet</Text>
+                <Text style={styles.errorHint}>
+                  Play your first match to start tracking your history.
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.errorText}>Error: {error}</Text>
+            )}
           </View>
         ) : matches.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -390,6 +399,11 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.coral,
     fontSize: typography.sizes.sm,
+  },
+  errorHint: {
+    color: colors.muted,
+    fontSize: typography.sizes.sm,
+    marginTop: spacing.xs,
   },
   emptyContainer: {
     padding: spacing.xl,

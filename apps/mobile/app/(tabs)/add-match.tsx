@@ -180,7 +180,16 @@ export default function AddMatchScreen() {
   }, [parsedOpponentScore, parsedUserScore, validation.valid]);
 
   const handleSubmit = async () => {
-    if (!validation.valid || !session?.user?.id || !opponent) return;
+    console.log('Submit match pressed');
+    if (!validation.valid) {
+      Alert.alert('Unable to submit', validation.message);
+      return;
+    }
+
+    if (!session?.user?.id || !opponent) {
+      Alert.alert('Unable to submit', 'Missing required player or session data.');
+      return;
+    }
 
     // Build participants list
     const userTeam: 'team_a' | 'team_b' =
@@ -231,6 +240,8 @@ export default function AddMatchScreen() {
       );
     } else if (submitError) {
       Alert.alert('Error', submitError);
+    } else {
+      Alert.alert('Error', 'Match submission failed. Please try again.');
     }
   };
 
@@ -442,7 +453,7 @@ export default function AddMatchScreen() {
             styles.submitButton,
             (!validation.valid || submitting) && styles.submitDisabled,
           ]}
-          disabled={!validation.valid || submitting}
+          disabled={submitting}
           onPress={handleSubmit}
         >
           {submitting ? (

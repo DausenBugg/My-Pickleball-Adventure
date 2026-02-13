@@ -5,10 +5,15 @@ import { useAuth } from '../state/auth';
 
 export type Friendship = {
   id: string;
-  user_id: string;
-  friend_id: string;
-  status: 'pending' | 'accepted';
+  requester_id: string;
+  addressee_id: string;
+  status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
+};
+
+export type PendingFriend = {
+  id: string;
+  full_name: string | null;
 };
 
 export function useFriends() {
@@ -16,6 +21,7 @@ export function useFriends() {
   const [friends, setFriends] = useState<string[]>([]);
   const [pendingSent, setPendingSent] = useState<string[]>([]);
   const [pendingReceived, setPendingReceived] = useState<string[]>([]);
+  const [pendingReceivedUsers, setPendingReceivedUsers] = useState<PendingFriend[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,11 +37,11 @@ export function useFriends() {
 
       if (!supabase) return;
 
-      // Get friendships where user is either user_id or friend_id
+      // Get friendships where user is either requester or addressee
       const { data, error: fetchError } = await supabase
         .from('friendships')
         .select('*')
-        .or(`user_id.eq.${session.user.id},friend_id.eq.${session.user.id}`);
+        .or(`requester_id.eq.${session.user.id},addressee_id.eq.${session.user.id}`);
 
       if (fetchError) {
         setError(fetchError.message);
@@ -50,17 +56,17 @@ export function useFriends() {
       data?.forEach((friendship) => {
         if (friendship.status === 'accepted') {
           // Add the other user as friend
-          if (friendship.user_id === session.user.id) {
-            acceptedFriends.push(friendship.friend_id);
+          if (friendship.requester_id === session.user.id) {
+            acceptedFriends.push(friendship.addressee_id);
           } else {
-            acceptedFriends.push(friendship.user_id);
+            acceptedFriends.push(friendship.requester_id);
           }
         } else if (friendship.status === 'pending') {
           // Separate sent vs received pending requests
-          if (friendship.user_id === session.user.id) {
-            sentPending.push(friendship.friend_id);
+          if (friendship.requester_id === session.user.id) {
+            sentPending.push(friendship.addressee_id);
           } else {
-            receivedPending.push(friendship.user_id);
+            receivedPending.push(friendship.requester_id);
           }
         }
       });
@@ -68,6 +74,22 @@ export function useFriends() {
       setFriends(acceptedFriends);
       setPendingSent(sentPending);
       setPendingReceived(receivedPending);
+
+      if (receivedPending.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', receivedPending);
+
+        const resolvedProfiles = profiles?.map((profile) => ({
+          id: profile.id,
+          full_name: profile.full_name,
+        })) || [];
+
+        setPendingReceivedUsers(resolvedProfiles);
+      } else {
+        setPendingReceivedUsers([]);
+      }
       setLoading(false);
     };
 
@@ -78,8 +100,8 @@ export function useFriends() {
     if (!session?.user?.id || !supabase) return false;
 
     const { error: insertError } = await supabase.from('friendships').insert({
-      user_id: session.user.id,
-      friend_id: friendId,
+      requester_id: session.user.id,
+      addressee_id: friendId,
       status: 'pending',
     });
 
@@ -99,8 +121,8 @@ export function useFriends() {
     const { error: updateError } = await supabase
       .from('friendships')
       .update({ status: 'accepted' })
-      .eq('user_id', userId)
-      .eq('friend_id', session.user.id);
+      .eq('requester_id', userId)
+      .eq('addressee_id', session.user.id);
 
     if (updateError) {
       console.error('Failed to accept friend request:', updateError);
@@ -109,7 +131,27 @@ export function useFriends() {
 
     // Update local state
     setPendingReceived((prev) => prev.filter((id) => id !== userId));
+    setPendingReceivedUsers((prev) => prev.filter((item) => item.id !== userId));
     setFriends((prev) => [...prev, userId]);
+    return true;
+  };
+
+  const rejectFriendRequest = async (userId: string) => {
+    if (!session?.user?.id || !supabase) return false;
+
+    const { error: updateError } = await supabase
+      .from('friendships')
+      .update({ status: 'rejected' })
+      .eq('requester_id', userId)
+      .eq('addressee_id', session.user.id);
+
+    if (updateError) {
+      console.error('Failed to reject friend request:', updateError);
+      return false;
+    }
+
+    setPendingReceived((prev) => prev.filter((id) => id !== userId));
+    setPendingReceivedUsers((prev) => prev.filter((item) => item.id !== userId));
     return true;
   };
 
@@ -117,9 +159,11 @@ export function useFriends() {
     friends,
     pendingSent,
     pendingReceived,
+    pendingReceivedUsers,
     loading,
     error,
     sendFriendRequest,
     acceptFriendRequest,
+    rejectFriendRequest,
   };
 }
