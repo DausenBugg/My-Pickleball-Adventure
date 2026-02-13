@@ -180,7 +180,6 @@ export default function AddMatchScreen() {
   }, [parsedOpponentScore, parsedUserScore, validation.valid]);
 
   const handleSubmit = async () => {
-    console.log('Submit match pressed');
     if (!validation.valid) {
       Alert.alert('Unable to submit', validation.message);
       return;
@@ -217,7 +216,7 @@ export default function AddMatchScreen() {
       participants,
     });
 
-    if (result) {
+    if (result?.data) {
       Alert.alert(
         'Match submitted!',
         'Your match has been submitted and is awaiting approval from other players.',
@@ -238,10 +237,8 @@ export default function AddMatchScreen() {
           },
         ]
       );
-    } else if (submitError) {
-      Alert.alert('Error', submitError);
     } else {
-      Alert.alert('Error', 'Match submission failed. Please try again.');
+      Alert.alert('Error', result?.error || submitError || 'Match submission failed. Please try again.');
     }
   };
 

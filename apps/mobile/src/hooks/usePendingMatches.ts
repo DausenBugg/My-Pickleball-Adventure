@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
 import { useAuth } from '../state/auth';
 
 export type PendingMatch = {
@@ -149,7 +149,6 @@ export function usePendingMatches() {
     if (!session?.user?.id || !supabase) return false;
 
     try {
-      console.log('Approving match:', matchId, 'user:', session.user.id);
       const { error: insertError } = await supabase
         .from('match_approvals')
         .insert({
@@ -159,7 +158,6 @@ export function usePendingMatches() {
         });
 
       if (insertError) {
-        console.error('Approval insert failed:', insertError);
         throw insertError;
       }
 
@@ -177,35 +175,47 @@ export function usePendingMatches() {
         return false;
       }
 
-      // Call Edge Function to process approval (XP and status)
-      const { data: approvalResult, error: approvalError } =
-        await supabase.functions.invoke('process-match-approval', {
-          body: { matchId },
+      if (!supabaseUrl || !supabaseAnonKey) {
+        console.error('Supabase not configured for edge function calls');
+        return false;
+      }
+
+      const approvalResponse = await fetch(
+        `${supabaseUrl}/functions/v1/process-match-approval`,
+        {
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${accessToken}`,
+            apikey: supabaseAnonKey,
+            'Content-Type': 'application/json',
           },
-        });
+          body: JSON.stringify({ matchId }),
+        }
+      );
 
-      if (approvalError) {
-        console.error('process-match-approval failed:', approvalError);
-        console.error('process-match-approval details:', approvalError.context);
-      } else {
-        console.log('process-match-approval result:', approvalResult);
+      if (!approvalResponse.ok) {
+        const errorText = await approvalResponse.text();
+        console.error('process-match-approval failed:', errorText);
       }
 
       // If ranked match, also update ratings
       if (matchData?.match_mode === 'ranked') {
-        const { data: ratingResult, error: ratingError } =
-          await supabase.functions.invoke('update-ratings', {
-            body: { matchId },
+        const ratingResponse = await fetch(
+          `${supabaseUrl}/functions/v1/update-ratings`,
+          {
+            method: 'POST',
             headers: {
               Authorization: `Bearer ${accessToken}`,
+              apikey: supabaseAnonKey,
+              'Content-Type': 'application/json',
             },
-          });
-        if (ratingError) {
-          console.error('update-ratings failed:', ratingError);
-        } else {
-          console.log('update-ratings result:', ratingResult);
+            body: JSON.stringify({ matchId }),
+          }
+        );
+
+        if (!ratingResponse.ok) {
+          const errorText = await ratingResponse.text();
+          console.error('update-ratings failed:', errorText);
         }
       }
 
@@ -235,17 +245,30 @@ export function usePendingMatches() {
       // Call Edge Function to process rejection (update status)
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
-      if (!accessToken) {
-        console.error('Missing access token for rejection invoke');
+      if (!accessToken) return false;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        console.error('Supabase not configured for edge function calls');
         return false;
       }
 
-      await supabase.functions.invoke('process-match-approval', {
-        body: { matchId },
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      const rejectionResponse = await fetch(
+        `${supabaseUrl}/functions/v1/process-match-approval`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            apikey: supabaseAnonKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ matchId }),
+        }
+      );
+
+      if (!rejectionResponse.ok) {
+        const errorText = await rejectionResponse.text();
+        console.error('process-match-approval failed:', errorText);
+      }
 
       // Refresh matches
       await fetchMatches();

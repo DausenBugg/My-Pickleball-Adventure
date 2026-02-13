@@ -23,31 +23,14 @@ export function useSubmitMatch() {
 
   const submitMatch = async (data: SubmitMatchData) => {
     if (!session?.user?.id || !supabase) {
-      setError('Not authenticated');
-      console.error('Submit match blocked: no session user id');
-      return null;
+      const message = 'Not authenticated';
+      setError(message);
+      return { data: null, error: message };
     }
 
     setLoading(true);
     setError(null);
-    console.log('Submitting match payload:', data);
-    console.log('Submit match session user id:', session.user.id);
-    try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        console.warn('Submit match getUser error:', userError);
-      } else {
-        console.log('Submit match getUser id:', userData.user?.id || 'none');
-      }
-    } catch (userError) {
-      console.warn('Submit match getUser exception:', userError);
-    }
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      console.log('Submit match session id:', sessionData.session?.user?.id || 'none');
-    } catch (sessionError) {
-      console.warn('Unable to read session before submit:', sessionError);
-    }
+    // Intentionally no verbose logging in production paths.
 
     try {
       // Determine winner
@@ -66,10 +49,10 @@ export function useSubmitMatch() {
       );
 
       if (matchError || !matchId) {
-        console.error('Match insert failed:', matchError);
-        setError(matchError?.message || 'Failed to create match');
+        const message = matchError?.message || 'Failed to create match';
+        setError(message);
         setLoading(false);
-        return null;
+        return { data: null, error: message };
       }
 
       // 2. Add all participants
@@ -85,10 +68,10 @@ export function useSubmitMatch() {
         .insert(participantsData);
 
       if (participantsError) {
-        console.error('Participants insert failed:', participantsError);
-        setError(participantsError.message);
+        const message = participantsError.message;
+        setError(message);
         setLoading(false);
-        return null;
+        return { data: null, error: message };
       }
 
       const recipientIds = Array.from(
@@ -111,7 +94,6 @@ export function useSubmitMatch() {
         if (notificationError) {
           console.error('Failed to create match notifications:', notificationError);
         }
-        console.log('Match notifications inserted:', recipientIds);
       }
 
       // 3. Add submitter's approval automatically
@@ -129,13 +111,13 @@ export function useSubmitMatch() {
       }
 
       setLoading(false);
-      console.log('Match submitted:', matchId);
-      return { id: matchId } as { id: string };
+      return { data: { id: matchId }, error: null };
     } catch (err) {
       console.error('Submit match error:', err);
-      setError('An unexpected error occurred');
+      const message = 'An unexpected error occurred';
+      setError(message);
       setLoading(false);
-      return null;
+      return { data: null, error: message };
     }
   };
 
