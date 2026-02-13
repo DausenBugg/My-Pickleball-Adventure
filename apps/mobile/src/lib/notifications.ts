@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 import { supabase } from './supabase';
@@ -14,9 +15,13 @@ Notifications.setNotificationHandler({
 });
 
 export async function registerForPushNotificationsAsync() {
-  let token;
+  let token: string | null = null;
 
   try {
+    if (Constants.appOwnership === 'expo') {
+      return null;
+    }
+
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',
@@ -42,8 +47,7 @@ export async function registerForPushNotificationsAsync() {
       }
       
       if (finalStatus !== 'granted') {
-        console.log('Failed to get push token for push notification!');
-        return undefined;
+        return null;
       }
       
       try {
@@ -56,14 +60,14 @@ export async function registerForPushNotificationsAsync() {
         }
       } catch (tokenError) {
         console.error('Error getting expo push token:', tokenError);
-        return undefined;
+        return null;
       }
     } else {
       console.log('Must use physical device for Push Notifications');
     }
   } catch (error) {
     console.error('Error in registerForPushNotificationsAsync:', error);
-    return undefined;
+    return null;
   }
 
   return token;

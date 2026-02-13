@@ -44,7 +44,7 @@ export function useAchievements() {
       // Get user's unlocked achievements
       const { data: userAchievements, error: userAchError } = await supabase
         .from('user_achievements')
-        .select('achievement_id, unlocked_at')
+        .select('achievement_id, earned_at')
         .eq('user_id', session.user.id);
 
       if (userAchError) throw userAchError;
@@ -53,7 +53,7 @@ export function useAchievements() {
         userAchievements?.map((ua) => ua.achievement_id) || []
       );
       const unlockedMap = new Map(
-        userAchievements?.map((ua) => [ua.achievement_id, ua.unlocked_at]) || []
+        userAchievements?.map((ua) => [ua.achievement_id, ua.earned_at]) || []
       );
 
       // Get user's current stats for progress
@@ -65,9 +65,15 @@ export function useAchievements() {
 
       const { data: rating } = await supabase
         .from('ratings')
-        .select('games_played')
+        .select('games_played, rating')
         .eq('user_id', session.user.id)
         .single();
+
+      const { count: friendCount } = await supabase
+        .from('friendships')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'accepted')
+        .or(`requester_id.eq.${session.user.id},addressee_id.eq.${session.user.id}`);
 
       // Merge data and calculate progress
       const enrichedAchievements: UserAchievement[] =
@@ -93,6 +99,18 @@ export function useAchievements() {
               case 'level':
                 progress = Math.min(
                   ((profile?.level || 1) / ach.requirement_value) * 100,
+                  100
+                );
+                break;
+              case 'rating':
+                progress = Math.min(
+                  ((rating?.rating || 0) / ach.requirement_value) * 100,
+                  100
+                );
+                break;
+              case 'friends':
+                progress = Math.min(
+                  ((friendCount || 0) / ach.requirement_value) * 100,
                   100
                 );
                 break;

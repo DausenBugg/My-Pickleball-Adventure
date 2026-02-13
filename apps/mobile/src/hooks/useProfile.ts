@@ -95,7 +95,7 @@ export function useProfile() {
 
     // Pick image
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaType.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -219,8 +219,8 @@ export function calculateLevelProgress
 (currentLevel: number, currentXP: number): number {
   const xpForCurrentLevel = calculateXPForLevel(currentLevel);
   const xpForNextLevel = calculateXPForLevel(currentLevel + 1);
-  const xpInCurrentLevel = currentXP - xpForCurrentLevel;
-  const xpNeededForLevel = xpForNextLevel - xpForCurrentLevel;
+  const xpInCurrentLevel = Math.max(0, currentXP - xpForCurrentLevel);
+  const xpNeededForLevel = Math.max(1, xpForNextLevel - xpForCurrentLevel);
   
   if (xpNeededForLevel === 0) return 100;
   

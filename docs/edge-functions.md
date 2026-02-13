@@ -74,10 +74,10 @@ We have four Edge Functions:
 
 ### Deploy all functions:
 ```powershell
-supabase functions deploy process-match-approval
-supabase functions deploy update-ratings
-supabase functions deploy check-achievements
-supabase functions deploy send-push-notifications
+npx supabase functions deploy process-match-approval
+npx supabase functions deploy update-ratings
+npx supabase functions deploy check-achievements
+npx supabase functions deploy send-push-notifications
 ```
 
 ### Deploy a single function:

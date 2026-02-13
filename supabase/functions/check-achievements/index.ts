@@ -32,9 +32,15 @@ serve(async (req) => {
 
     const { data: rating } = await supabaseClient
       .from('ratings')
-      .select('games_played')
+      .select('games_played, rating')
       .eq('user_id', userId)
       .single();
+
+    const { count: friendCount } = await supabaseClient
+      .from('friendships')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'accepted')
+      .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
 
     if (!profile) {
       throw new Error('Profile not found');
@@ -78,6 +84,12 @@ serve(async (req) => {
         case 'level':
           shouldUnlock = profile.level >= achievement.requirement_value;
           break;
+        case 'rating':
+          shouldUnlock = (rating?.rating || 0) >= achievement.requirement_value;
+          break;
+        case 'friends':
+          shouldUnlock = (friendCount || 0) >= achievement.requirement_value;
+          break;
       }
 
       if (shouldUnlock) {
@@ -94,7 +106,7 @@ serve(async (req) => {
             user_id: userId,
             type: 'achievement',
             title: 'Achievement Unlocked!',
-            body: `You've unlocked "${achievement.name}"`,
+            message: `You've unlocked "${achievement.name}"`,
             data: { achievement_id: achievement.id },
           })
           .select()

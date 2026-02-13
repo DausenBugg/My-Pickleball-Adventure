@@ -45,8 +45,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const token = await registerForPushNotificationsAsync();
             if (token && typeof token === 'string') {
               await savePushToken(nextSession.user.id, token);
-            } else {
-              console.log('No valid push token received');
             }
           } catch (error) {
             console.error('Error registering push notifications:', error);
