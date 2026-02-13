@@ -16,7 +16,7 @@ This guide explains how to deploy the Edge Functions for My Pickleball Adventure
 
 ## Edge Functions
 
-We have three Edge Functions:
+We have four Edge Functions:
 
 ### 1. `process-match-approval`
 **Purpose**: Handles match approval/rejection workflow, awards XP, updates levels, triggers achievement checks, and calls update-ratings for ranked matches.
@@ -57,6 +57,18 @@ We have three Edge Functions:
 - Checks player stats (games_played, wins, level) against achievement requirements
 - Unlocks achievements if requirements are met
 - Creates notifications for newly unlocked achievements
+- **Automatically calls send-push-notifications to alert users**
+
+### 4. `send-push-notifications`
+**Purpose**: Sends push notifications to users via Expo Push Notification service.
+
+**Called when**: Automatically by check-achievements or other functions that create notifications.
+
+**What it does**:
+- Fetches notification details from database
+- Retrieves user push tokens
+- Sends notifications through Expo's push service
+- Handles multiple device tokens per user
 
 ## Deployment
 
@@ -65,6 +77,7 @@ We have three Edge Functions:
 supabase functions deploy process-match-approval
 supabase functions deploy update-ratings
 supabase functions deploy check-achievements
+supabase functions deploy send-push-notifications
 ```
 
 ### Deploy a single function:

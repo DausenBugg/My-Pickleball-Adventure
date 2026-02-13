@@ -10,6 +10,7 @@ export type LeaderboardEntry = {
   rating: number;
   games_played: number;
   full_name: string | null;
+  avatar_url: string | null;
   level: number;
   wins: number;
   losses: number;
@@ -44,6 +45,7 @@ export function useLeaderboard(type: 'global' | 'friends') {
           games_played,
           profiles (
             full_name,
+            avatar_url,
             level,
             wins,
             losses
@@ -74,6 +76,7 @@ export function useLeaderboard(type: 'global' | 'friends') {
           rating: row.rating,
           games_played: row.games_played,
           full_name: row.profiles?.full_name || null,
+          avatar_url: row.profiles?.avatar_url || null,
           level: row.profiles?.level || 1,
           wins: row.profiles?.wins || 0,
           losses: row.profiles?.losses || 0,

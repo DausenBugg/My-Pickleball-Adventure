@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
@@ -9,9 +9,10 @@ import { colors, radii, spacing, typography } from '../../src/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, loading: profileLoading, uploadAvatar } = useProfile();
   const { rating } = useRating();
   const [loading, setLoading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const handleSignOut = async () => {
     if (!isSupabaseConfigured || !supabase) {
@@ -39,6 +40,18 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleAvatarUpload = async () => {
+    if (!uploadAvatar) return;
+    
+    setUploadingAvatar(true);
+    const result = await uploadAvatar();
+    setUploadingAvatar(false);
+
+    if (result.error && result.error !== 'Cancelled') {
+      Alert.alert('Upload Error', result.error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -56,11 +69,22 @@ export default function SettingsScreen() {
         ) : profile ? (
           <View style={styles.profileCard}>
             <View style={styles.profileHeader}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {(profile.full_name || 'P')[0].toUpperCase()}
-                </Text>
-              </View>
+              <Pressable onPress={handleAvatarUpload} disabled={uploadingAvatar}>
+                {profile.avatar_url ? (
+                  <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+                ) : (
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                      {(profile.full_name || 'P')[0].toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                {uploadingAvatar && (
+                  <View style={styles.avatarLoading}>
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  </View>
+                )}
+              </Pressable>
               <View style={styles.profileInfo}>
                 <Text style={styles.profileName}>
                   {profile.full_name || 'Player'}
@@ -97,10 +121,21 @@ export default function SettingsScreen() {
               <Text style={styles.cardLabel}>🏆 Achievements</Text>
               <Text style={styles.cardChevron}>›</Text>
             </Pressable>
-            <View style={styles.cardRow}>
-              <Text style={styles.cardLabel}>Edit profile</Text>
-              <Text style={styles.cardValue}>Coming soon</Text>
-            </View>
+            <Pressable 
+              style={styles.cardRow} 
+              onPress={() => router.push('/match-history')}
+            >
+              <Text style={styles.cardLabel}>📊 Match History</Text>
+              <Text style={styles.cardChevron}>›</Text>
+            </Pressable>
+            <Pressable 
+              style={styles.cardRow} 
+              onPress={handleAvatarUpload}
+              disabled={uploadingAvatar}
+            >
+              <Text style={styles.cardLabel}>📸 Change Profile Photo</Text>
+              <Text style={styles.cardChevron}>›</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -169,6 +204,17 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: colors.blue,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLoading: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
   },

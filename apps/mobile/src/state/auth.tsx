@@ -3,6 +3,10 @@ import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import {
+  registerForPushNotificationsAsync,
+  savePushToken,
+} from '../lib/notifications';
 
 type AuthContextValue = {
   session: Session | null;
@@ -32,8 +36,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
-      (_event, nextSession) => {
+      async (_event, nextSession) => {
         setSession(nextSession);
+        
+        // Register for push notifications when user logs in
+        if (nextSession?.user && !session) {
+          try {
+            const token = await registerForPushNotificationsAsync();
+            if (token) {
+              await savePushToken(nextSession.user.id, token);
+            }
+          } catch (error) {
+            console.error('Error registering push notifications:', error);
+          }
+        }
       }
     );
 

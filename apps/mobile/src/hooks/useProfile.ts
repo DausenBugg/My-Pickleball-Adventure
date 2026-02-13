@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../state/auth';
@@ -61,7 +62,87 @@ export function useProfile() {
     fetchProfile();
   }, [session?.user?.id]);
 
-  return { profile, loading, error };
+  const updateProfile = async (updates: Partial<Profile>) => {
+    if (!session?.user?.id || !supabase) return { error: 'Not authenticated' };
+
+    setLoading(true);
+    const { data, error: updateError } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', session.user.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      setError(updateError.message);
+      setLoading(false);
+      return { error: updateError.message };
+    }
+
+    setProfile(data);
+    setLoading(false);
+    return { data };
+  };
+
+  const uploadAvatar = async () => {
+    if (!session?.user?.id || !supabase) return { error: 'Not authenticated' };
+
+    // Request permission
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      return { error: 'Permission to access photos was denied' };
+    }
+
+    // Pick image
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled) {
+      return { error: 'Cancelled' };
+    }
+
+    const image = result.assets[0];
+    
+    try {
+      // Convert image to blob
+      const response = await fetch(image.uri);
+      const blob = await response.blob();
+      
+      // Create file path
+      const fileExt = image.uri.split('.').pop();
+      const fileName = `${session.user.id}/${Date.now()}.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, blob, {
+          contentType: `image/${fileExt}`,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        return { error: uploadError.message };
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      // Update profile with new avatar URL
+      const updateResult = await updateProfile({ avatar_url: urlData.publicUrl });
+      
+      return updateResult;
+    } catch (err: any) {
+      return { error: err.message };
+    }
+  };
+
+  return { profile, loading, error, updateProfile, uploadAvatar };
 }
 
 export function useRating() {

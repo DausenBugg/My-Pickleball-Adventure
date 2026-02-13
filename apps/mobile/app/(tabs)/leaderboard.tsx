@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,6 +21,17 @@ export default function LeaderboardScreen() {
 
   const podium = useMemo(() => entries.slice(0, 3), [entries]);
   const rest = useMemo(() => entries.slice(3), [entries]);
+
+  const Avatar = ({ url, name }: { url: string | null; name: string }) => {
+    if (url) {
+      return <Image source={{ uri: url }} style={styles.avatar} />;
+    }
+    return (
+      <View style={styles.avatarPlaceholder}>
+        <Text style={styles.avatarText}>{name[0]?.toUpperCase() || 'P'}</Text>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -87,6 +99,7 @@ export default function LeaderboardScreen() {
                     style={[styles.podiumCard, index === 0 && styles.podiumTop]}
                   >
                     <Text style={styles.podiumRank}>#{index + 1}</Text>
+                    <Avatar url={player.avatar_url} name={player.full_name || 'Player'} />
                     <Text style={styles.podiumName}>
                       {player.full_name || 'Player'}
                     </Text>
@@ -103,6 +116,7 @@ export default function LeaderboardScreen() {
                 {rest.map((player, index) => (
                   <View key={player.id} style={styles.listItem}>
                     <Text style={styles.listRank}>#{index + 4}</Text>
+                    <Avatar url={player.avatar_url} name={player.full_name || 'Player'} />
                     <View style={styles.listInfo}>
                       <Text style={styles.listName}>
                         {player.full_name || 'Player'}
@@ -213,6 +227,26 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
     color: colors.blue,
     marginBottom: 8,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginBottom: 8,
+  },
+  avatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.blue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  avatarText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: '#ffffff',
   },
   podiumName: {
     fontSize: typography.sizes.sm,

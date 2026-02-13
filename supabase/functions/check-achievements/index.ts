@@ -88,15 +88,30 @@ serve(async (req) => {
         });
 
         // Create notification
-        await supabaseClient.from('notifications').insert({
-          user_id: userId,
-          type: 'achievement',
-          title: 'Achievement Unlocked!',
-          message: `You've unlocked "${achievement.name}"`,
-          data: { achievement_id: achievement.id },
-        });
+        const { data: newNotification } = await supabaseClient
+          .from('notifications')
+          .insert({
+            user_id: userId,
+            type: 'achievement',
+            title: 'Achievement Unlocked!',
+            body: `You've unlocked "${achievement.name}"`,
+            data: { achievement_id: achievement.id },
+          })
+          .select()
+          .single();
 
         newUnlocks.push(achievement);
+
+        // Send push notification
+        if (newNotification) {
+          try {
+            await supabaseClient.functions.invoke('send-push-notifications', {
+              body: { notificationIds: [newNotification.id] },
+            });
+          } catch (pushError) {
+            console.error('Failed to send push notification:', pushError);
+          }
+        }
       }
     }
 

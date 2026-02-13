@@ -161,6 +161,13 @@ export default function HomeScreen() {
               </View>
             </View>
           </View>
+          <Pressable
+            style={styles.viewAllButton}
+            onPress={() => router.push('/match-history')}
+          >
+            <Text style={styles.viewAllText}>View Match History</Text>
+            <Text style={styles.viewAllChevron}>›</Text>
+          </Pressable>
         </View>
 
         {pendingMatches.length > 0 && (
@@ -351,6 +358,27 @@ const styles = StyleSheet.create({
   },
   matchList: {
     gap: spacing.sm,
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  viewAllText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.blue,
+  },
+  viewAllChevron: {
+    fontSize: typography.sizes.md,
+    color: colors.blue,
   },
   matchCard: {
     backgroundColor: colors.surface,
