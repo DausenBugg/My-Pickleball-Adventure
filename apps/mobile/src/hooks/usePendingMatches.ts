@@ -149,6 +149,7 @@ export function usePendingMatches() {
     if (!session?.user?.id || !supabase) return false;
 
     try {
+      console.log('Approving match:', matchId, 'user:', session.user.id);
       const { error: insertError } = await supabase
         .from('match_approvals')
         .insert({
@@ -157,7 +158,10 @@ export function usePendingMatches() {
           approved: true,
         });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Approval insert failed:', insertError);
+        throw insertError;
+      }
 
       // Get match mode to determine if we need rating updates
       const { data: matchData } = await supabase
@@ -166,16 +170,43 @@ export function usePendingMatches() {
         .eq('id', matchId)
         .single();
 
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        console.error('Missing access token for approval invoke');
+        return false;
+      }
+
       // Call Edge Function to process approval (XP and status)
-      await supabase.functions.invoke('process-match-approval', {
-        body: { matchId },
-      });
+      const { data: approvalResult, error: approvalError } =
+        await supabase.functions.invoke('process-match-approval', {
+          body: { matchId },
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+      if (approvalError) {
+        console.error('process-match-approval failed:', approvalError);
+        console.error('process-match-approval details:', approvalError.context);
+      } else {
+        console.log('process-match-approval result:', approvalResult);
+      }
 
       // If ranked match, also update ratings
       if (matchData?.match_mode === 'ranked') {
-        await supabase.functions.invoke('update-ratings', {
-          body: { matchId },
-        });
+        const { data: ratingResult, error: ratingError } =
+          await supabase.functions.invoke('update-ratings', {
+            body: { matchId },
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+        if (ratingError) {
+          console.error('update-ratings failed:', ratingError);
+        } else {
+          console.log('update-ratings result:', ratingResult);
+        }
       }
 
       // Refresh matches
@@ -202,8 +233,18 @@ export function usePendingMatches() {
       if (insertError) throw insertError;
 
       // Call Edge Function to process rejection (update status)
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        console.error('Missing access token for rejection invoke');
+        return false;
+      }
+
       await supabase.functions.invoke('process-match-approval', {
         body: { matchId },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
 
       // Refresh matches
