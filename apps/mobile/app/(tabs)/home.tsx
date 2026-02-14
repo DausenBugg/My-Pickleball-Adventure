@@ -16,11 +16,11 @@ import {
 import { colors, radii, spacing, typography } from '../../src/theme';
 
 export default function HomeScreen() {
-  const { profile, loading: profileLoading, error: profileError } = useProfile();
-  const { rating, loading: ratingLoading } = useRating();
+  const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useProfile();
+  const { rating, loading: ratingLoading, refresh: refreshRating } = useRating();
   const { matches: pendingMatches, approveMatch, rejectMatch, refresh: refreshPendingMatches } = usePendingMatches();
   const { pendingReceived, pendingReceivedUsers, acceptFriendRequest, rejectFriendRequest } = useFriends();
-  const { matches: recentMatchesRaw, loading: recentMatchesLoading } = useMatches({ status: 'approved' });
+  const { matches: recentMatchesRaw, loading: recentMatchesLoading, refresh: refreshRecentMatches } = useMatches({ status: 'approved' });
   const {
     notifications,
     unreadCount,
@@ -131,6 +131,9 @@ export default function HomeScreen() {
       if (notificationId) await markAsRead(notificationId);
       refreshPendingMatches();
       refreshNotifications();
+      refreshProfile();
+      refreshRating();
+      refreshRecentMatches();
     }
   };
 
@@ -140,6 +143,9 @@ export default function HomeScreen() {
       if (notificationId) await markAsRead(notificationId);
       refreshPendingMatches();
       refreshNotifications();
+      refreshProfile();
+      refreshRating();
+      refreshRecentMatches();
     }
   };
 

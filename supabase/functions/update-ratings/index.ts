@@ -12,12 +12,15 @@ serve(async (req) => {
   }
 
   try {
+    console.log('[update-ratings] Request received');
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const { matchId } = await req.json();
+
+    console.log('[update-ratings] Processing match:', matchId);
 
     if (!matchId) {
       throw new Error('Match ID is required');
@@ -43,24 +46,49 @@ serve(async (req) => {
     }
 
     // Get all participants with their ratings
-    const { data: participants } = await supabaseClient
+    const { data: participants, error: participantsError } = await supabaseClient
       .from('match_participants')
-      .select(`
-        *,
-        ratings (rating, games_played)
-      `)
+      .select('*')
       .eq('match_id', matchId);
+
+    if (participantsError) {
+      throw new Error(`Failed to load participants: ${participantsError.message}`);
+    }
 
     if (!participants || participants.length === 0) {
       throw new Error('No participants found');
     }
 
+    console.log('[update-ratings] Participants:', participants.length);
+
+    const participantIds = participants.map((p: any) => p.user_id);
+    const { data: ratingsData, error: ratingsError } = await supabaseClient
+      .from('ratings')
+      .select('user_id, rating, games_played')
+      .in('user_id', participantIds);
+
+    if (ratingsError) {
+      throw new Error(`Failed to load ratings: ${ratingsError.message}`);
+    }
+
+    console.log('[update-ratings] Ratings rows:', ratingsData?.length || 0);
+
+    const ratingsByUser = new Map(
+      (ratingsData || []).map((rating) => [rating.user_id, rating])
+    );
+
     // Calculate team ratings
     const teamA = participants.filter((p: any) => p.team === 'team_a');
     const teamB = participants.filter((p: any) => p.team === 'team_b');
 
-    const teamARating = teamA.reduce((sum: number, p: any) => sum + (p.ratings?.rating || 1200), 0) / teamA.length;
-    const teamBRating = teamB.reduce((sum: number, p: any) => sum + (p.ratings?.rating || 1200), 0) / teamB.length;
+    const teamARating = teamA.reduce((sum: number, p: any) => {
+      const rating = ratingsByUser.get(p.user_id)?.rating ?? 1200;
+      return sum + rating;
+    }, 0) / teamA.length;
+    const teamBRating = teamB.reduce((sum: number, p: any) => {
+      const rating = ratingsByUser.get(p.user_id)?.rating ?? 1200;
+      return sum + rating;
+    }, 0) / teamB.length;
 
     // Calculate expected scores using Elo formula
     const expectedA = 1 / (1 + Math.pow(10, (teamBRating - teamARating) / 400));
@@ -74,8 +102,9 @@ serve(async (req) => {
     const ratingUpdates = [];
 
     for (const participant of participants) {
-      const currentRating = participant.ratings?.rating || 1200;
-      const gamesPlayed = (participant.ratings?.games_played || 0) + 1;
+      const ratingRow = ratingsByUser.get(participant.user_id);
+      const currentRating = ratingRow?.rating ?? 1200;
+      const gamesPlayed = (ratingRow?.games_played ?? 0) + 1;
 
       // Determine K-factor based on games played
       let kFactor = 40;
@@ -129,7 +158,7 @@ serve(async (req) => {
       });
 
       // Update rating in database
-      await supabaseClient
+      const { error: ratingUpdateError } = await supabaseClient
         .from('ratings')
         .update({
           rating: newRating,
@@ -137,8 +166,12 @@ serve(async (req) => {
         })
         .eq('user_id', participant.user_id);
 
+      if (ratingUpdateError) {
+        console.error('[update-ratings] Rating update failed:', participant.user_id, ratingUpdateError);
+      }
+
       // Insert rating history record
-      await supabaseClient.from('rating_history').insert({
+      const { error: historyError } = await supabaseClient.from('rating_history').insert({
         user_id: participant.user_id,
         match_id: matchId,
         old_rating: currentRating,
@@ -146,6 +179,10 @@ serve(async (req) => {
         rating_change: ratingChange,
         opponent_ids: opponentIds,
       });
+
+      if (historyError) {
+        console.error('[update-ratings] Rating history insert failed:', participant.user_id, historyError);
+      }
     }
 
     // Update win/loss counts in profiles
@@ -157,6 +194,7 @@ serve(async (req) => {
       }
     }
 
+    console.log('[update-ratings] Completed updates:', ratingUpdates.length);
     return new Response(
       JSON.stringify({
         message: 'Ratings updated successfully',

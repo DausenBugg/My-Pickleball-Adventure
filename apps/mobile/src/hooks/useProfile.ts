@@ -33,34 +33,32 @@ export function useProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refresh = async () => {
     if (!session?.user?.id || !supabase) {
       setLoading(false);
       return;
     }
 
-    const fetchProfile = async () => {
-      if (!supabase) return;
+    setLoading(true);
+    setError(null);
 
-      setLoading(true);
-      setError(null);
+    const { data, error: fetchError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
 
-      const { data, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+    if (fetchError) {
+      setError(fetchError.message);
+    } else {
+      setProfile(data);
+    }
 
-      if (fetchError) {
-        setError(fetchError.message);
-      } else {
-        setProfile(data);
-      }
+    setLoading(false);
+  };
 
-      setLoading(false);
-    };
-
-    fetchProfile();
+  useEffect(() => {
+    refresh();
   }, [session?.user?.id]);
 
   const updateProfile = async (updates: Partial<Profile>) => {
@@ -178,7 +176,7 @@ export function useProfile() {
     }
   };
 
-  return { profile, loading, error, updateProfile, uploadAvatar };
+  return { profile, loading, error, updateProfile, uploadAvatar, refresh };
 }
 
 export function useRating() {
@@ -187,37 +185,35 @@ export function useRating() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refresh = async () => {
     if (!session?.user?.id || !supabase) {
       setLoading(false);
       return;
     }
 
-    const fetchRating = async () => {
-      if (!supabase) return;
+    setLoading(true);
+    setError(null);
 
-      setLoading(true);
-      setError(null);
+    const { data, error: fetchError } = await supabase
+      .from('ratings')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .single();
 
-      const { data, error: fetchError } = await supabase
-        .from('ratings')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .single();
+    if (fetchError) {
+      setError(fetchError.message);
+    } else {
+      setRating(data);
+    }
 
-      if (fetchError) {
-        setError(fetchError.message);
-      } else {
-        setRating(data);
-      }
+    setLoading(false);
+  };
 
-      setLoading(false);
-    };
-
-    fetchRating();
+  useEffect(() => {
+    refresh();
   }, [session?.user?.id]);
 
-  return { rating, loading, error };
+  return { rating, loading, error, refresh };
 }
 
 // Calculate XP needed for a given level based on the leveling formula

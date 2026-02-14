@@ -232,13 +232,30 @@ serve(async (req) => {
     }
 
     // If this is a ranked match, update ratings
+    let updateRatingsResult: { status: number; body: string } | null = null;
     if (match.match_mode === 'ranked') {
       console.log('[process-match-approval] Invoking update-ratings for ranked match');
       try {
-        await supabaseClient.functions.invoke('update-ratings', {
-          body: { matchId },
-        });
-        console.log('[process-match-approval] update-ratings invoked successfully');
+        const incomingAuth = req.headers.get('Authorization');
+        const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+        const authHeader = incomingAuth || (anonKey ? `Bearer ${anonKey}` : '');
+        console.log('[process-match-approval] update-ratings auth source:', incomingAuth ? 'incoming' : anonKey ? 'anon' : 'none');
+        const updateResponse = await fetch(
+          `${Deno.env.get('SUPABASE_URL')}/functions/v1/update-ratings`,
+          {
+            method: 'POST',
+            headers: {
+              ...(authHeader ? { Authorization: authHeader } : {}),
+              ...(anonKey ? { apikey: anonKey } : {}),
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ matchId }),
+          }
+        );
+
+        const updateBody = await updateResponse.text();
+        updateRatingsResult = { status: updateResponse.status, body: updateBody };
+        console.log('[process-match-approval] update-ratings response:', updateResponse.status, updateBody);
       } catch (ratingError) {
         console.error('[process-match-approval] Error invoking update-ratings:', ratingError);
       }
@@ -265,6 +282,7 @@ serve(async (req) => {
         message: 'Match approved and XP awarded',
         status: 'approved',
         xpAwarded: xpEvents,
+        updateRatings: updateRatingsResult,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
