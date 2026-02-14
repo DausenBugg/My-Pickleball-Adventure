@@ -161,13 +161,7 @@ export function usePendingMatches() {
         throw insertError;
       }
 
-      // Get match mode to determine if we need rating updates
-      const { data: matchData } = await supabase
-        .from('matches')
-        .select('match_mode')
-        .eq('id', matchId)
-        .single();
-
+      // Call Edge Function to process match approval
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) {
@@ -180,6 +174,7 @@ export function usePendingMatches() {
         return false;
       }
 
+      console.log('Calling process-match-approval for match:', matchId);
       const approvalResponse = await fetch(
         `${supabaseUrl}/functions/v1/process-match-approval`,
         {
@@ -196,27 +191,9 @@ export function usePendingMatches() {
       if (!approvalResponse.ok) {
         const errorText = await approvalResponse.text();
         console.error('process-match-approval failed:', errorText);
-      }
-
-      // If ranked match, also update ratings
-      if (matchData?.match_mode === 'ranked') {
-        const ratingResponse = await fetch(
-          `${supabaseUrl}/functions/v1/update-ratings`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              apikey: supabaseAnonKey,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ matchId }),
-          }
-        );
-
-        if (!ratingResponse.ok) {
-          const errorText = await ratingResponse.text();
-          console.error('update-ratings failed:', errorText);
-        }
+      } else {
+        const responseData = await approvalResponse.json();
+        console.log('process-match-approval succeeded:', responseData);
       }
 
       // Refresh matches

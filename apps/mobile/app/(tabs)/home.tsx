@@ -267,30 +267,6 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent matches</Text>
-          <View style={styles.matchList}>
-            <View style={styles.matchCard}>
-              <View>
-                <Text style={styles.matchTitle}>No matches logged yet</Text>
-                <Text style={styles.matchSubtitle}>
-                  Add your first match to get started.
-                </Text>
-              </View>
-              <View style={styles.matchBadge}>
-                <Text style={styles.matchBadgeText}>New</Text>
-              </View>
-            </View>
-          </View>
-          <Pressable
-            style={styles.viewAllButton}
-            onPress={() => router.push('/match-history')}
-          >
-            <Text style={styles.viewAllText}>View Match History</Text>
-            <Text style={styles.viewAllChevron}>›</Text>
-          </Pressable>
-        </View>
-
         {pendingMatches.length > 0 && (
           <Pressable
             style={styles.approvalsButton}
