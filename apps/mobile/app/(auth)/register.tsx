@@ -1,19 +1,16 @@
-import { Link } from 'expo-router';
-import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ReactNode, useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
-import { colors, radii, spacing, typography } from '../../src/theme';
+import { AppScreen, GlassCard, GradientHeader, PrimaryButton } from '../../src/components/ui';
+import { useAppTheme } from '../../src/theme';
 
 export default function RegisterScreen() {
+  const { theme } = useAppTheme();
+  const router = useRouter();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,17 +25,20 @@ export default function RegisterScreen() {
   const nameValid = useMemo(() => name.trim().length >= 2, [name]);
   const emailValid = useMemo(() => email.includes('@') && email.includes('.'), [email]);
   const passwordValid = useMemo(() => password.length >= 8, [password]);
-  const confirmValid = useMemo(() => confirmPassword === password && password.length > 0, [confirmPassword, password]);
+  const confirmValid = useMemo(
+    () => confirmPassword === password && password.length > 0,
+    [confirmPassword, password]
+  );
   const canSubmit = nameValid && emailValid && passwordValid && confirmValid;
 
   const validationErrors = useMemo(() => {
     if (!submitted) return [];
     const errors: string[] = [];
-    if (!nameValid) errors.push('Name must be at least 2 characters');
-    if (!emailValid) errors.push('Enter a valid email address');
-    if (!passwordValid) errors.push('Password must be at least 8 characters');
-    if (!confirmValid && confirmPassword.length > 0) errors.push('Passwords must match');
-    if (confirmPassword.length === 0 && password.length > 0) errors.push('Confirm your password');
+    if (!nameValid) errors.push('Name must be at least 2 characters.');
+    if (!emailValid) errors.push('Enter a valid email address.');
+    if (!passwordValid) errors.push('Password must be at least 8 characters.');
+    if (!confirmValid && confirmPassword.length > 0) errors.push('Passwords must match.');
+    if (confirmPassword.length === 0 && password.length > 0) errors.push('Confirm your password.');
     return errors;
   }, [submitted, nameValid, emailValid, passwordValid, confirmValid, confirmPassword, password]);
 
@@ -65,8 +65,6 @@ export default function RegisterScreen() {
         },
       });
 
-      console.log('Signup response:', { data, error: signUpError });
-
       if (signUpError) {
         setError(signUpError.message);
         setLoading(false);
@@ -74,10 +72,7 @@ export default function RegisterScreen() {
       }
 
       if (data.user) {
-        // Account created successfully
-        setNotice('Account created successfully! Logging you in...');
-        
-        // Clear form
+        setNotice('Account created successfully. Redirecting...');
         setName('');
         setEmail('');
         setPassword('');
@@ -85,241 +80,207 @@ export default function RegisterScreen() {
         setSubmitted(false);
       }
     } catch (err) {
-      console.error('Signup error:', err);
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Create your account</Text>
-          <Text style={styles.subtitle}>
-            Start logging matches and climbing the ranks.
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <View style={styles.field}>
-            <Text style={styles.label}>Name</Text>
-            <TextInput
-              placeholder="Jordan Lee"
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-            />
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              placeholder="you@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              textContentType="emailAddress"
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-            />
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordRow}>
-              <TextInput
-                placeholder="••••••••"
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-                textContentType="newPassword"
-                style={[styles.input, styles.passwordInput]}
-                value={password}
-                onChangeText={setPassword}
-              />
-              <Pressable
-                onPress={() => setShowPassword((prev) => !prev)}
-                style={styles.passwordToggle}
-              >
-                <Text style={styles.passwordToggleText}>
-                  {showPassword ? 'Hide' : 'Show'}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Confirm password</Text>
-            <View style={styles.passwordRow}>
-              <TextInput
-                placeholder="••••••••"
-                secureTextEntry={!showConfirm}
-                style={[styles.input, styles.passwordInput]}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
-              <Pressable
-                onPress={() => setShowConfirm((prev) => !prev)}
-                style={styles.passwordToggle}
-              >
-                <Text style={styles.passwordToggleText}>
-                  {showConfirm ? 'Hide' : 'Show'}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {validationErrors.length > 0 ? (
-            <View style={styles.validationErrors}>
-              {validationErrors.map((err, idx) => (
-                <Text key={idx} style={styles.validationError}>
-                  • {err}
-                </Text>
-              ))}
-            </View>
-          ) : null}
-
-          <Pressable
-            style={[styles.primary, !canSubmit && styles.primaryDisabled]}
-            onPress={handleRegister}
-          >
-            {loading ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={styles.primaryText}>Create account</Text>
-            )}
-          </Pressable>
-          <Text style={styles.termsText}>
-            By continuing you agree to our Terms and Privacy Policy.
-          </Text>
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          {notice ? <Text style={styles.noticeText}>{notice}</Text> : null}
-        </View>
-
-        <Link href="/(auth)/login" style={styles.link}>
-          Already have an account? Sign in
-        </Link>
+  const renderInput = (
+    label: string,
+    value: string,
+    onChangeText: (next: string) => void,
+    placeholder: string,
+    options?: {
+      secure?: boolean;
+      keyboardType?: 'default' | 'email-address';
+      autoCapitalize?: 'none' | 'words';
+      right?: ReactNode;
+      invalid?: boolean;
+    }
+  ) => (
+    <View style={styles.field}>
+      <Text style={[styles.label, { color: theme.color.role.textMuted, fontFamily: theme.type.family.bodySemi }]}>
+        {label}
+      </Text>
+      <View style={styles.passwordRow}>
+        <TextInput
+          placeholder={placeholder}
+          placeholderTextColor={theme.color.role.textMuted}
+          secureTextEntry={options?.secure}
+          keyboardType={options?.keyboardType}
+          autoCapitalize={options?.autoCapitalize ?? 'none'}
+          style={[
+            styles.input,
+            {
+              flex: 1,
+              borderColor: options?.invalid ? theme.color.role.secondary : theme.color.role.border,
+              backgroundColor: theme.color.role.surfaceAlt,
+              color: theme.color.role.textPrimary,
+              fontFamily: theme.type.family.body,
+            },
+          ]}
+          value={value}
+          onChangeText={onChangeText}
+        />
+        {options?.right}
       </View>
-    </SafeAreaView>
+    </View>
+  );
+
+  return (
+    <AppScreen>
+      <GradientHeader title="Create Your Account" subtitle="Start logging matches and climbing the rankings." />
+
+      <GlassCard style={{ gap: theme.spacing.md }}>
+        {renderInput('Name', name, setName, 'Jordan Lee', {
+          autoCapitalize: 'words',
+          invalid: submitted && !nameValid,
+        })}
+        {renderInput('Email', email, setEmail, 'you@example.com', {
+          keyboardType: 'email-address',
+          invalid: submitted && !emailValid,
+        })}
+        {renderInput('Password', password, setPassword, 'At least 8 characters', {
+          secure: !showPassword,
+          invalid: submitted && !passwordValid,
+          right: (
+            <Pressable
+              onPress={() => setShowPassword((prev) => !prev)}
+              style={[
+                styles.toggle,
+                {
+                  minHeight: 44,
+                  minWidth: 44,
+                  borderColor: theme.color.role.border,
+                  backgroundColor: theme.color.role.surfaceAlt,
+                  borderRadius: theme.radius.md,
+                },
+              ]}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={theme.color.role.textSecondary}
+              />
+            </Pressable>
+          ),
+        })}
+        {renderInput('Confirm Password', confirmPassword, setConfirmPassword, 'Re-enter password', {
+          secure: !showConfirm,
+          invalid: submitted && !confirmValid,
+          right: (
+            <Pressable
+              onPress={() => setShowConfirm((prev) => !prev)}
+              style={[
+                styles.toggle,
+                {
+                  minHeight: 44,
+                  minWidth: 44,
+                  borderColor: theme.color.role.border,
+                  backgroundColor: theme.color.role.surfaceAlt,
+                  borderRadius: theme.radius.md,
+                },
+              ]}
+            >
+              <Ionicons
+                name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={theme.color.role.textSecondary}
+              />
+            </Pressable>
+          ),
+        })}
+
+        {validationErrors.length > 0 ? (
+          <View
+            style={{
+              backgroundColor: theme.color.role.secondarySoft,
+              borderRadius: theme.radius.md,
+              padding: theme.spacing.sm,
+              gap: 6,
+            }}
+          >
+            {validationErrors.map((issue) => (
+              <Text
+                key={issue}
+                style={{
+                  color: theme.color.role.secondary,
+                  fontSize: theme.type.sizes.sm,
+                  fontFamily: theme.type.family.bodySemi,
+                }}
+              >
+                {issue}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+
+        <PrimaryButton label="Create account" loading={loading} onPress={handleRegister} />
+
+        <Text
+          style={{
+            color: theme.color.role.textMuted,
+            textAlign: 'center',
+            fontSize: theme.type.sizes.sm,
+            fontFamily: theme.type.family.body,
+          }}
+        >
+          By continuing you agree to our Terms and Privacy Policy.
+        </Text>
+
+        {error ? (
+          <Text style={{ color: theme.color.role.secondary, textAlign: 'center', fontFamily: theme.type.family.bodySemi }}>
+            {error}
+          </Text>
+        ) : null}
+        {notice ? (
+          <Text style={{ color: theme.color.role.primary, textAlign: 'center', fontFamily: theme.type.family.bodySemi }}>
+            {notice}
+          </Text>
+        ) : null}
+      </GlassCard>
+
+      <Pressable onPress={() => router.push('/(auth)/login')}>
+        <Text
+          style={{
+            textAlign: 'center',
+            color: theme.color.role.primary,
+            fontSize: theme.type.sizes.base,
+            fontFamily: theme.type.family.bodySemi,
+          }}
+        >
+          Already have an account? Sign in
+        </Text>
+      </Pressable>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xl,
-    justifyContent: 'space-between',
-  },
-  header: {
-    gap: 8,
-  },
-  title: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.ink,
-  },
-  subtitle: {
-    fontSize: typography.sizes.base,
-    color: colors.muted,
-  },
-  form: {
-    gap: 16,
-  },
   field: {
     gap: 8,
   },
   label: {
-    fontSize: typography.sizes.sm,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 0.8,
-    color: colors.muted,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   input: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.ink,
+    minHeight: 46,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   passwordRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  passwordInput: {
-    flex: 1,
-  },
-  passwordToggle: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radii.sm,
-    backgroundColor: '#eef2f7',
-  },
-  passwordToggleText: {
-    color: colors.ink,
-    fontWeight: '600',
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  helper: {
-    color: colors.muted,
-    fontSize: 12,
-  },
-  helperError: {
-    color: colors.coral,
-  },
-  validationErrors: {
-    backgroundColor: '#fff4f2',
-    borderRadius: radii.md,
-    padding: spacing.sm,
-    gap: 6,
+  toggle: {
     borderWidth: 1,
-    borderColor: '#ffd6d1',
-  },
-  validationError: {
-    color: colors.coral,
-    fontSize: typography.sizes.sm,
-  },
-  primary: {
-    backgroundColor: colors.coral,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.sm + 2,
     alignItems: 'center',
-    marginTop: 8,
-  },
-  primaryDisabled: {
-    backgroundColor: '#f0b2a9',
-  },
-  primaryText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  termsText: {
-    color: colors.muted,
-    textAlign: 'center',
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  link: {
-    color: colors.blue,
-    textAlign: 'center',
-  },
-  errorText: {
-    color: colors.coral,
-    textAlign: 'center',
-    fontSize: 12,
-  },
-  noticeText: {
-    color: colors.blue,
-    textAlign: 'center',
-    fontSize: 12,
+    justifyContent: 'center',
   },
 });

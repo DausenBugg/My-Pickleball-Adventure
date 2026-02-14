@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, Pressable, Switch, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useProfile, useRating } from '../../src/hooks/useProfile';
 import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
 import { registerForPushNotificationsAsync, savePushToken } from '../../src/lib/notifications';
-import { colors, radii, spacing, typography } from '../../src/theme';
 import { useAuth } from '../../src/state/auth';
+import { AppScreen, Avatar, GlassCard, GradientHeader, PrimaryButton, SegmentedControl } from '../../src/components/ui';
+import { ThemeMode, useAppTheme } from '../../src/theme';
 
 export default function SettingsScreen() {
+  const { theme, mode, setMode } = useAppTheme();
   const router = useRouter();
   const { session } = useAuth();
   const { profile, loading: profileLoading, uploadAvatar } = useProfile();
@@ -23,11 +25,8 @@ export default function SettingsScreen() {
   useEffect(() => {
     const loadNotificationPreference = async () => {
       const stored = await AsyncStorage.getItem('notifications_enabled');
-      if (stored === 'false') {
-        setNotificationsEnabled(false);
-      }
+      if (stored === 'false') setNotificationsEnabled(false);
     };
-
     loadNotificationPreference();
   }, []);
 
@@ -46,11 +45,7 @@ export default function SettingsScreen() {
           await savePushToken(session.user.id, token);
         }
       } else {
-        const { error: deleteError } = await supabase
-          .from('push_tokens')
-          .delete()
-          .eq('user_id', session.user.id);
-
+        const { error: deleteError } = await supabase.from('push_tokens').delete().eq('user_id', session.user.id);
         if (deleteError) {
           console.warn('Failed to remove push tokens:', deleteError);
         }
@@ -72,315 +67,166 @@ export default function SettingsScreen() {
     const { error } = await supabase.auth.signOut();
     setLoading(false);
 
-    if (error) {
-      Alert.alert('Error', error.message);
-    }
+    if (error) Alert.alert('Error', error.message);
   };
 
   const confirmSignOut = () => {
-    Alert.alert(
-      'Sign out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign out', style: 'destructive', onPress: handleSignOut },
-      ]
-    );
+    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: handleSignOut },
+    ]);
   };
 
   const handleAvatarUpload = async () => {
     if (!uploadAvatar) return;
-    
     setUploadingAvatar(true);
     const result = await uploadAvatar();
     setUploadingAvatar(false);
-
     if (result.error && result.error !== 'Cancelled') {
-      Alert.alert('Upload Error', result.error);
+      Alert.alert('Upload error', result.error);
     }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>
-            Manage your account and preferences.
-          </Text>
-        </View>
+    <AppScreen contentContainerStyle={{ gap: theme.spacing.md, paddingBottom: 120 }}>
+      <GradientHeader title="Settings" subtitle="Control your profile, preferences, and experience." />
 
-        {profileLoading ? (
-          <View style={styles.profileLoading}>
-            <ActivityIndicator size="small" color={colors.blue} />
-          </View>
-        ) : profile ? (
-          <View style={styles.profileCard}>
-            <View style={styles.profileHeader}>
-              <Pressable onPress={handleAvatarUpload} disabled={uploadingAvatar}>
-                {profile.avatar_url ? (
-                  <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
-                ) : (
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                      {(profile.full_name || 'P')[0].toUpperCase()}
-                    </Text>
-                  </View>
-                )}
-                {uploadingAvatar && (
-                  <View style={styles.avatarLoading}>
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  </View>
-                )}
-              </Pressable>
-              <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>
-                  {profile.full_name || 'Player'}
-                </Text>
-                <Text style={styles.profileEmail}>{profile.email}</Text>
-              </View>
-            </View>
-            <View style={styles.profileStats}>
-              <View style={styles.profileStat}>
-                <Text style={styles.profileStatValue}>{profile.level}</Text>
-                <Text style={styles.profileStatLabel}>Level</Text>
-              </View>
-              <View style={styles.profileStat}>
-                <Text style={styles.profileStatValue}>
-                  {rating?.rating ?? 1200}
-                </Text>
-                <Text style={styles.profileStatLabel}>Rating</Text>
-              </View>
-              <View style={styles.profileStat}>
-                <Text style={styles.profileStatValue}>{profile.wins}</Text>
-                <Text style={styles.profileStatLabel}>Wins</Text>
-              </View>
-            </View>
-          </View>
-        ) : null}
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
-          <View style={styles.card}>
-            <Pressable 
-              style={styles.cardRow} 
-              onPress={() => router.push('/achievements')}
-            >
-              <Text style={styles.cardLabel}>🏆 Achievements</Text>
-              <Text style={styles.cardChevron}>›</Text>
+      {profileLoading ? (
+        <GlassCard style={{ alignItems: 'center', paddingVertical: theme.spacing.xl }}>
+          <ActivityIndicator size="large" color={theme.color.role.primary} />
+        </GlassCard>
+      ) : profile ? (
+        <GlassCard>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+            <Pressable onPress={handleAvatarUpload} disabled={uploadingAvatar}>
+              <Avatar uri={profile.avatar_url} name={profile.full_name || 'Player'} size={66} />
+              {uploadingAvatar ? (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    borderRadius: 33,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'rgba(0,0,0,0.35)',
+                  }}
+                >
+                  <ActivityIndicator color="#FFFFFF" />
+                </View>
+              ) : null}
             </Pressable>
-            <Pressable 
-              style={styles.cardRow} 
-              onPress={() => router.push('/match-history')}
-            >
-              <Text style={styles.cardLabel}>📊 Match History</Text>
-              <Text style={styles.cardChevron}>›</Text>
-            </Pressable>
-            <Pressable 
-              style={styles.cardRow} 
-              onPress={handleAvatarUpload}
-              disabled={uploadingAvatar}
-            >
-              <Text style={styles.cardLabel}>📸 Change Profile Photo</Text>
-              <Text style={styles.cardChevron}>›</Text>
-            </Pressable>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.headingSemi, fontSize: theme.type.sizes.md }}>
+                {profile.full_name || 'Player'}
+              </Text>
+              <Text style={{ color: theme.color.role.textMuted, fontFamily: theme.type.family.body, marginTop: 4 }}>
+                {profile.email}
+              </Text>
+            </View>
           </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
-          <View style={styles.card}>
-            <View style={styles.cardRow}>
-              <Text style={styles.cardLabel}>Notifications</Text>
-              <View style={styles.notificationsToggle}>
-                <Text style={styles.cardValue}>
-                  {notificationsSaving ? 'Saving...' : notificationsEnabled ? 'On' : 'Off'}
+          <View style={{ marginTop: theme.spacing.md, flexDirection: 'row', justifyContent: 'space-between' }}>
+            {[
+              { label: 'Level', value: profile.level },
+              { label: 'Rating', value: rating?.rating ?? 1200 },
+              { label: 'Wins', value: profile.wins },
+            ].map((item) => (
+              <View key={item.label} style={{ alignItems: 'center' }}>
+                <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.headingSemi, fontSize: theme.type.sizes.lg }}>
+                  {item.value}
                 </Text>
-                <Switch
-                  value={notificationsEnabled}
-                  onValueChange={handleToggleNotifications}
-                  trackColor={{ false: '#e0e0e0', true: '#9bbcff' }}
-                  thumbColor={notificationsEnabled ? colors.blue : '#f4f4f4'}
-                />
+                <Text style={{ color: theme.color.role.textMuted, fontFamily: theme.type.family.body, fontSize: theme.type.sizes.sm }}>
+                  {item.label}
+                </Text>
               </View>
-            </View>
-            <View style={styles.cardRow}>
-              <Text style={styles.cardLabel}>Privacy</Text>
-              <Text style={styles.cardValue}>Public</Text>
-            </View>
+            ))}
           </View>
-        </View>
+        </GlassCard>
+      ) : null}
 
+      <GlassCard style={{ gap: theme.spacing.sm }}>
+        <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.headingSemi }}>Theme Mode</Text>
+        <SegmentedControl<ThemeMode>
+          value={mode}
+          onChange={(value) => setMode(value)}
+          options={[
+            { value: 'system', label: 'System' },
+            { value: 'light', label: 'Light' },
+            { value: 'dark', label: 'Dark' },
+          ]}
+        />
+      </GlassCard>
+
+      <GlassCard style={{ gap: theme.spacing.sm }}>
         <Pressable
-          style={[styles.signOutButton, loading && styles.signOutDisabled]}
-          onPress={confirmSignOut}
-          disabled={loading}
+          accessibilityRole="button"
+          onPress={() => router.push('/achievements')}
+          style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
         >
-          <Text style={styles.signOutText}>
-            {loading ? 'Signing out...' : 'Sign out'}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name="trophy-outline" size={18} color={theme.color.role.primary} />
+            <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.bodySemi }}>Achievements</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.color.role.textMuted} />
         </Pressable>
 
-        <Text style={styles.version}>Version 1.0.0</Text>
-      </ScrollView>
-    </SafeAreaView>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/match-history')}
+          style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name="stats-chart-outline" size={18} color={theme.color.role.primary} />
+            <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.bodySemi }}>Match history</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.color.role.textMuted} />
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={handleAvatarUpload}
+          disabled={uploadingAvatar}
+          style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name="camera-outline" size={18} color={theme.color.role.primary} />
+            <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.bodySemi }}>Change profile photo</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.color.role.textMuted} />
+        </Pressable>
+      </GlassCard>
+
+      <GlassCard style={{ gap: theme.spacing.sm }}>
+        <View style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.bodySemi }}>Notifications</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={{ color: theme.color.role.textMuted, fontFamily: theme.type.family.body }}>
+              {notificationsSaving ? 'Saving...' : notificationsEnabled ? 'On' : 'Off'}
+            </Text>
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={handleToggleNotifications}
+              trackColor={{ false: '#D4DCE4', true: theme.color.role.primarySoft }}
+              thumbColor={notificationsEnabled ? theme.color.role.primary : '#F8FAFC'}
+            />
+          </View>
+        </View>
+      </GlassCard>
+
+      <PrimaryButton label={loading ? 'Signing out...' : 'Sign out'} onPress={confirmSignOut} loading={loading} />
+
+      <Text
+        style={{
+          textAlign: 'center',
+          color: theme.color.role.textMuted,
+          fontFamily: theme.type.family.body,
+          fontSize: theme.type.sizes.xs,
+        }}
+      >
+        Version 1.0.0
+      </Text>
+    </AppScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    padding: spacing.lg,
-    paddingBottom: 40,
-    gap: spacing.lg,
-  },
-  header: {
-    gap: 6,
-  },
-  profileLoading: {
-    padding: spacing.lg,
-    alignItems: 'center',
-  },
-  profileCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.md,
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.blue,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarLoading: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: '#ffffff',
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.ink,
-    marginBottom: 4,
-  },
-  profileEmail: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-  },
-  profileStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  profileStat: {
-    alignItems: 'center',
-  },
-  profileStatValue: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.ink,
-    marginBottom: 4,
-  },
-  profileStatLabel: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-  },
-  title: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.ink,
-  },
-  subtitle: {
-    fontSize: typography.sizes.base,
-    color: colors.muted,
-  },
-  section: {
-    gap: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.ink,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.md,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  notificationsToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  cardLabel: {
-    fontSize: typography.sizes.base,
-    color: colors.ink,
-  },
-  cardValue: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-  },
-  cardChevron: {
-    fontSize: typography.sizes.xl,
-    color: colors.blue,
-    fontWeight: typography.weights.normal,
-  },
-  signOutButton: {
-    backgroundColor: colors.coral,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.sm + 2,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  signOutDisabled: {
-    backgroundColor: '#f0b2a9',
-  },
-  signOutText: {
-    color: '#ffffff',
-    fontWeight: typography.weights.semibold,
-    fontSize: typography.sizes.md,
-  },
-  version: {
-    textAlign: 'center',
-    color: colors.muted,
-    fontSize: typography.sizes.xs,
-    marginTop: spacing.xl,
-  },
-});

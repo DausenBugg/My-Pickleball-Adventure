@@ -1,300 +1,121 @@
 import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useLeaderboard } from '../../src/hooks/useLeaderboard';
-import { colors, radii, spacing, typography } from '../../src/theme';
+import { AppScreen, Avatar, EmptyState, GlassCard, GradientHeader, SegmentedControl } from '../../src/components/ui';
+import { useAppTheme } from '../../src/theme';
 
 type BoardType = 'global' | 'friends';
 
 export default function LeaderboardScreen() {
+  const { theme } = useAppTheme();
   const [boardType, setBoardType] = useState<BoardType>('global');
   const { entries, loading } = useLeaderboard(boardType);
 
   const podium = useMemo(() => entries.slice(0, 3), [entries]);
   const rest = useMemo(() => entries.slice(3), [entries]);
 
-  const Avatar = ({ url, name }: { url: string | null; name: string }) => {
-    if (url) {
-      return <Image source={{ uri: url }} style={styles.avatar} />;
-    }
-    return (
-      <View style={styles.avatarPlaceholder}>
-        <Text style={styles.avatarText}>{name[0]?.toUpperCase() || 'P'}</Text>
-      </View>
-    );
-  };
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Leaderboard</Text>
-          <Text style={styles.subtitle}>Top players by ranking points.</Text>
-        </View>
+    <AppScreen contentContainerStyle={{ gap: theme.spacing.md, paddingBottom: 120 }}>
+      <GradientHeader title="Leaderboard" subtitle="Top players ranked by rating points." />
 
-        <View style={styles.segment}>
-          <Pressable
-            style={[
-              styles.segmentButton,
-              boardType === 'global' && styles.segmentActive,
-            ]}
-            onPress={() => setBoardType('global')}
-          >
-            <Text
-              style={[
-                styles.segmentText,
-                boardType === 'global' && styles.segmentTextActive,
-              ]}
-            >
-              Global
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.segmentButton,
-              boardType === 'friends' && styles.segmentActive,
-            ]}
-            onPress={() => setBoardType('friends')}
-          >
-            <Text
-              style={[
-                styles.segmentText,
-                boardType === 'friends' && styles.segmentTextActive,
-              ]}
-            >
-              Friends
-            </Text>
-          </Pressable>
-        </View>
+      <SegmentedControl
+        value={boardType}
+        onChange={setBoardType}
+        options={[
+          { value: 'global', label: 'Global' },
+          { value: 'friends', label: 'Friends' },
+        ]}
+      />
 
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.blue} />
-            <Text style={styles.loadingText}>Loading rankings...</Text>
+      {loading ? (
+        <GlassCard style={{ alignItems: 'center', paddingVertical: theme.spacing.xl }}>
+          <ActivityIndicator size="large" color={theme.color.role.primary} />
+          <Text style={{ marginTop: theme.spacing.sm, color: theme.color.role.textMuted, fontFamily: theme.type.family.body }}>
+            Loading rankings...
+          </Text>
+        </GlassCard>
+      ) : entries.length === 0 ? (
+        <EmptyState
+          title={boardType === 'friends' ? 'No friends ranked yet' : 'No ranked players yet'}
+          subtitle="Play ranked matches to populate this board."
+          icon="trophy-outline"
+        />
+      ) : (
+        <>
+          <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+            {podium.map((player, index) => (
+              <GlassCard
+                key={player.id}
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  borderColor: index === 0 ? theme.color.role.secondary : theme.color.role.border,
+                  borderWidth: index === 0 ? 2 : 1,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons
+                    name={index === 0 ? 'trophy' : 'medal-outline'}
+                    size={16}
+                    color={index === 0 ? theme.color.role.secondary : theme.color.role.primary}
+                  />
+                  <Text style={{ color: theme.color.role.textSecondary, fontFamily: theme.type.family.bodySemi }}>#{index + 1}</Text>
+                </View>
+                <View style={{ marginVertical: theme.spacing.sm }}>
+                  <Avatar uri={player.avatar_url} name={player.full_name || 'Player'} />
+                </View>
+                <Text
+                  numberOfLines={2}
+                  style={{
+                    textAlign: 'center',
+                    color: theme.color.role.textPrimary,
+                    fontFamily: theme.type.family.bodySemi,
+                    fontSize: theme.type.sizes.sm,
+                  }}
+                >
+                  {player.full_name || 'Player'}
+                </Text>
+                <Text style={{ marginTop: 4, color: theme.color.role.primary, fontFamily: theme.type.family.headingSemi }}>
+                  {player.rating}
+                </Text>
+              </GlassCard>
+            ))}
           </View>
-        ) : entries.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {boardType === 'friends'
-                ? 'No friends on the leaderboard yet'
-                : 'No players ranked yet'}
-            </Text>
-          </View>
-        ) : (
-          <>
-            {podium.length > 0 ? (
-              <View style={styles.podiumRow}>
-                {podium.map((player, index) => (
-                  <View
-                    key={player.id}
-                    style={[styles.podiumCard, index === 0 && styles.podiumTop]}
+
+          <View style={{ gap: theme.spacing.sm }}>
+            {rest.map((player, index) => (
+              <GlassCard key={player.id}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <Text
+                    style={{
+                      width: 34,
+                      color: theme.color.role.primary,
+                      fontFamily: theme.type.family.headingSemi,
+                      fontSize: theme.type.sizes.md,
+                    }}
                   >
-                    <Text style={styles.podiumRank}>#{index + 1}</Text>
-                    <Avatar url={player.avatar_url} name={player.full_name || 'Player'} />
-                    <Text style={styles.podiumName} numberOfLines={2}>
+                    #{index + 4}
+                  </Text>
+                  <Avatar uri={player.avatar_url} name={player.full_name || 'Player'} size={40} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.bodySemi }}>
                       {player.full_name || 'Player'}
                     </Text>
-                    <Text style={styles.podiumMeta}>
-                      Rating {player.rating}
+                    <Text style={{ color: theme.color.role.textMuted, fontFamily: theme.type.family.body, fontSize: theme.type.sizes.sm }}>
+                      Level {player.level} | Wins {player.wins}
                     </Text>
                   </View>
-                ))}
-              </View>
-            ) : null}
-
-            {rest.length > 0 ? (
-              <View style={styles.list}>
-                {rest.map((player, index) => (
-                  <View key={player.id} style={styles.listItem}>
-                    <Text style={styles.listRank}>#{index + 4}</Text>
-                    <Avatar url={player.avatar_url} name={player.full_name || 'Player'} />
-                    <View style={styles.listInfo}>
-                      <Text style={styles.listName} numberOfLines={1}>
-                        {player.full_name || 'Player'}
-                      </Text>
-                      <Text style={styles.listMeta}>
-                        Level {player.level} · Wins {player.wins}
-                      </Text>
-                    </View>
-                    <Text style={styles.listRating}>{player.rating}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-          </>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+                  <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.headingSemi }}>
+                    {player.rating}
+                  </Text>
+                </View>
+              </GlassCard>
+            ))}
+          </View>
+        </>
+      )}
+    </AppScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    padding: spacing.lg,
-    paddingBottom: 40,
-    gap: spacing.md,
-  },
-  header: {
-    gap: 6,
-  },
-  title: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.ink,
-  },
-  subtitle: {
-    color: colors.muted,
-  },
-  segment: {
-    flexDirection: 'row',
-    backgroundColor: '#eef2f7',
-    borderRadius: radii.lg,
-    padding: 4,
-    gap: 6,
-  },
-  segmentButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-  },
-  segmentActive: {
-    backgroundColor: colors.surface,
-    shadowColor: '#000000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  segmentText: {
-    color: colors.muted,
-    fontWeight: typography.weights.semibold,
-  },
-  segmentTextActive: {
-    color: colors.ink,
-  },
-  loadingContainer: {
-    paddingVertical: spacing.xxl,
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  loadingText: {
-    color: colors.muted,
-    fontSize: typography.sizes.base,
-  },
-  emptyContainer: {
-    paddingVertical: spacing.xxl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: colors.muted,
-    fontSize: typography.sizes.base,
-    textAlign: 'center',
-  },
-  podiumRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  podiumCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-  },
-  podiumTop: {
-    borderColor: '#ffd700',
-    borderWidth: 2,
-    backgroundColor: '#fffef7',
-  },
-  podiumRank: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.blue,
-    marginBottom: 8,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginBottom: 8,
-  },
-  avatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.blue,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  avatarText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: '#ffffff',
-  },
-  podiumName: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.ink,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  podiumMeta: {
-    fontSize: typography.sizes.xs,
-    color: colors.muted,
-  },
-  list: {
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  listItem: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  listRank: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.blue,
-    width: 40,
-  },
-  listInfo: {
-    flex: 1,
-  },
-  listName: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
-    color: colors.ink,
-    marginBottom: 2,
-  },
-  listMeta: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-  },
-  listRating: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.ink,
-  },
-});

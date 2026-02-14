@@ -2,20 +2,19 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
-  StyleSheet,
   Text,
   View,
-  Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useMatches, MatchFilters } from '../src/hooks/useMatches';
-import { colors, radii, spacing, typography } from '../src/theme';
 import { useAuth } from '../src/state/auth';
+import { AppScreen, Avatar, EmptyState, GlassCard, GradientHeader, SegmentedControl } from '../src/components/ui';
+import { useAppTheme } from '../src/theme';
 
 export default function MatchHistoryScreen() {
+  const { theme } = useAppTheme();
   const router = useRouter();
   const { session } = useAuth();
   const [filters, setFilters] = useState<MatchFilters>({
@@ -27,518 +26,219 @@ export default function MatchHistoryScreen() {
 
   const { matches, loading, error } = useMatches(filters);
 
-  const FilterButton = ({
-    label,
-    active,
-    onPress,
-  }: {
-    label: string;
-    active: boolean;
-    onPress: () => void;
-  }) => (
-    <Pressable
-      style={[styles.filterButton, active && styles.filterButtonActive]}
-      onPress={onPress}
-    >
-      <Text
-        style={[styles.filterText, active && styles.filterTextActive]}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-
-  const Avatar = ({ url, name }: { url: string | null; name: string }) => {
-    if (url) {
-      return <Image source={{ uri: url }} style={styles.playerAvatar} />;
-    }
-    return (
-      <View style={styles.playerAvatarPlaceholder}>
-        <Text style={styles.playerAvatarText}>{name[0]?.toUpperCase() || 'P'}</Text>
-      </View>
-    );
-  };
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backText}>‹ Back</Text>
+    <AppScreen contentContainerStyle={{ gap: theme.spacing.md, paddingBottom: 60 }}>
+      <GradientHeader
+        title="Match History"
+        subtitle="Your complete match record with filters."
+        right={
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.back()}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: theme.color.role.border,
+              backgroundColor: theme.color.role.surface,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="arrow-back" size={20} color={theme.color.role.textPrimary} />
           </Pressable>
-          <Text style={styles.title}>Match History</Text>
-          <Text style={styles.subtitle}>Your complete match record</Text>
-        </View>
+        }
+      />
 
-        {/* Filters */}
-        <View style={styles.filters}>
-          <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Type:</Text>
-            <View style={styles.filterButtons}>
-              <FilterButton
-                label="All"
-                active={filters.matchType === 'all'}
-                onPress={() => setFilters({ ...filters, matchType: 'all' })}
-              />
-              <FilterButton
-                label="Singles"
-                active={filters.matchType === 'singles'}
-                onPress={() => setFilters({ ...filters, matchType: 'singles' })}
-              />
-              <FilterButton
-                label="Doubles"
-                active={filters.matchType === 'doubles'}
-                onPress={() => setFilters({ ...filters, matchType: 'doubles' })}
-              />
-            </View>
-          </View>
+      <GlassCard style={{ gap: theme.spacing.sm }}>
+        <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.headingSemi }}>
+          Filter by type
+        </Text>
+        <SegmentedControl
+          value={filters.matchType || 'all'}
+          onChange={(value) => setFilters({ ...filters, matchType: value })}
+          options={[
+            { value: 'all', label: 'All' },
+            { value: 'singles', label: 'Singles' },
+            { value: 'doubles', label: 'Doubles' },
+          ]}
+        />
+        <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.headingSemi }}>
+          Filter by mode
+        </Text>
+        <SegmentedControl
+          value={filters.isRanked === 'all' ? 'all' : filters.isRanked ? 'ranked' : 'casual'}
+          onChange={(value) =>
+            setFilters({
+              ...filters,
+              isRanked: value === 'all' ? 'all' : value === 'ranked',
+            })
+          }
+          options={[
+            { value: 'all', label: 'All' },
+            { value: 'ranked', label: 'Ranked' },
+            { value: 'casual', label: 'Casual' },
+          ]}
+        />
+        <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.headingSemi }}>
+          Filter by result
+        </Text>
+        <SegmentedControl
+          value={filters.result || 'all'}
+          onChange={(value) => setFilters({ ...filters, result: value })}
+          options={[
+            { value: 'all', label: 'All' },
+            { value: 'wins', label: 'Wins' },
+            { value: 'losses', label: 'Losses' },
+          ]}
+        />
+      </GlassCard>
 
-          <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Mode:</Text>
-            <View style={styles.filterButtons}>
-              <FilterButton
-                label="All"
-                active={filters.isRanked === 'all'}
-                onPress={() => setFilters({ ...filters, isRanked: 'all' })}
-              />
-              <FilterButton
-                label="Ranked"
-                active={filters.isRanked === true}
-                onPress={() => setFilters({ ...filters, isRanked: true })}
-              />
-              <FilterButton
-                label="Casual"
-                active={filters.isRanked === false}
-                onPress={() => setFilters({ ...filters, isRanked: false })}
-              />
-            </View>
-          </View>
+      {loading ? (
+        <GlassCard style={{ alignItems: 'center', paddingVertical: theme.spacing.xl }}>
+          <ActivityIndicator size="large" color={theme.color.role.primary} />
+          <Text style={{ marginTop: theme.spacing.sm, color: theme.color.role.textMuted, fontFamily: theme.type.family.body }}>
+            Loading matches...
+          </Text>
+        </GlassCard>
+      ) : error ? (
+        <EmptyState
+          title={error.includes('does not exist') && error.includes('match_participants') ? 'No matches logged yet' : 'Unable to load matches'}
+          subtitle={
+            error.includes('does not exist') && error.includes('match_participants')
+              ? 'Play your first match to start tracking history.'
+              : error
+          }
+          icon="alert-circle-outline"
+        />
+      ) : matches.length === 0 ? (
+        <EmptyState
+          title="No matches found"
+          subtitle="Try adjusting filters or play a new match."
+          icon="tennisball-outline"
+        />
+      ) : (
+        <View style={{ gap: theme.spacing.md }}>
+          {matches.map((match) => {
+            if (!match || !match.team1_player1 || !match.team2_player1) return null;
 
-          <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Result:</Text>
-            <View style={styles.filterButtons}>
-              <FilterButton
-                label="All"
-                active={filters.result === 'all'}
-                onPress={() => setFilters({ ...filters, result: 'all' })}
-              />
-              <FilterButton
-                label="Wins"
-                active={filters.result === 'wins'}
-                onPress={() => setFilters({ ...filters, result: 'wins' })}
-              />
-              <FilterButton
-                label="Losses"
-                active={filters.result === 'losses'}
-                onPress={() => setFilters({ ...filters, result: 'losses' })}
-              />
-            </View>
-          </View>
-        </View>
+            const team1Ids = [match.team1_player1?.id, match.team1_player2?.id].filter(Boolean);
+            const userInTeam1 = team1Ids.includes(session?.user?.id || '');
+            const userWon = (userInTeam1 && match.winning_team === 1) || (!userInTeam1 && match.winning_team === 2);
 
-        {/* Matches */}
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.blue} />
-            <Text style={styles.loadingText}>Loading matches...</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            {error.includes('does not exist') && error.includes('match_participants') ? (
-              <>
-                <Text style={styles.errorText}>No matches logged yet</Text>
-                <Text style={styles.errorHint}>
-                  Play your first match to start tracking your history.
-                </Text>
-              </>
-            ) : (
-              <Text style={styles.errorText}>Error: {error}</Text>
-            )}
-          </View>
-        ) : matches.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No matches found</Text>
-            <Text style={styles.emptySubtext}>
-              Try adjusting your filters or play some matches!
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.matchList}>
-            {matches.map((match) => {
-              // Safety checks
-              if (!match || !match.team1_player1 || !match.team2_player1) {
-                return null;
-              }
-
-              const team1Ids = [
-                match.team1_player1?.id,
-                match.team1_player2?.id,
-              ].filter(Boolean);
-              const userInTeam1 = team1Ids.includes(session?.user?.id || '');
-              const userWon =
-                (userInTeam1 && match.winning_team === 1) ||
-                (!userInTeam1 && match.winning_team === 2);
-
-              return (
-                <View
-                  key={match.id}
-                  style={[
-                    styles.matchCard,
-                    userWon ? styles.matchWin : styles.matchLoss,
-                  ]}
-                >
-                  <View style={styles.matchHeader}>
-                    <View style={styles.matchMeta}>
-                      <Text style={styles.matchType}>
-                        {match.match_type === 'singles' ? '1v1' : '2v2'}
-                      </Text>
-                      {match.is_ranked && (
-                        <View style={styles.rankedBadge}>
-                          <Text style={styles.rankedText}>RANKED</Text>
-                        </View>
-                      )}
-                    </View>
-                    <View
-                      style={[
-                        styles.resultBadge,
-                        userWon
-                          ? styles.resultBadgeWin
-                          : styles.resultBadgeLoss,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.resultText,
-                          userWon
-                            ? styles.resultTextWin
-                            : styles.resultTextLoss,
-                        ]}
+            return (
+              <GlassCard
+                key={match.id}
+                style={{
+                  borderColor: userWon ? theme.color.role.success : theme.color.role.secondary,
+                  borderWidth: 2,
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={{ color: theme.color.role.textMuted, fontFamily: theme.type.family.bodySemi }}>
+                      {match.match_type === 'singles' ? '1v1' : '2v2'}
+                    </Text>
+                    {match.is_ranked ? (
+                      <View
+                        style={{
+                          borderRadius: theme.radius.sm,
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                          backgroundColor: theme.color.role.primarySoft,
+                        }}
                       >
-                        {userWon ? 'WIN' : 'LOSS'}
+                        <Text style={{ color: theme.color.role.primary, fontFamily: theme.type.family.bodySemi, fontSize: theme.type.sizes.xs }}>
+                          RANKED
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <View
+                    style={{
+                      borderRadius: theme.radius.pill,
+                      backgroundColor: userWon ? theme.color.role.successSoft : theme.color.role.secondarySoft,
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: userWon ? theme.color.role.success : theme.color.role.secondary,
+                        fontFamily: theme.type.family.bodySemi,
+                        fontSize: theme.type.sizes.sm,
+                      }}
+                    >
+                      {userWon ? 'WIN' : 'LOSS'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ marginTop: theme.spacing.sm, gap: theme.spacing.xs }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                      <Avatar uri={match.team1_player1.avatar_url} name={match.team1_player1.full_name || 'Player'} size={24} />
+                      <Text numberOfLines={1} style={{ flex: 1, color: theme.color.role.textPrimary, fontFamily: theme.type.family.body }}>
+                        {match.team1_player1.full_name || 'Player'}
+                        {match.team1_player2 ? ` & ${match.team1_player2.full_name || 'Player'}` : ''}
                       </Text>
                     </View>
+                    <Text
+                      style={{
+                        color: match.winning_team === 1 ? theme.color.role.textPrimary : theme.color.role.textMuted,
+                        fontFamily: theme.type.family.headingSemi,
+                        fontSize: theme.type.sizes.lg,
+                      }}
+                    >
+                      {match.score_team1}
+                    </Text>
                   </View>
-
-                  <View style={styles.matchTeams}>
-                    {/* Team 1 */}
-                    {match.team1_player1 && (
-                      <View style={styles.team}>
-                        <View style={styles.teamPlayers}>
-                          <Avatar
-                            url={match.team1_player1.avatar_url}
-                            name={match.team1_player1.full_name || 'Player'}
-                          />
-                          <Text style={styles.playerName} numberOfLines={1}>
-                            {match.team1_player1.full_name || 'Player'}
-                          </Text>
-                          {match.team1_player2 && (
-                            <>
-                              <Avatar
-                                url={match.team1_player2.avatar_url}
-                                name={match.team1_player2.full_name || 'Player'}
-                              />
-                              <Text style={styles.playerName} numberOfLines={1}>
-                                {match.team1_player2.full_name || 'Player'}
-                              </Text>
-                            </>
-                          )}
-                        </View>
-                        <Text
-                          style={[
-                            styles.teamScore,
-                            match.winning_team === 1 && styles.teamScoreWin,
-                          ]}
-                        >
-                          {match.score_team1}
-                        </Text>
-                      </View>
-                    )}
-
-                    <Text style={styles.vs}>vs</Text>
-
-                    {/* Team 2 */}
-                    {match.team2_player1 && (
-                      <View style={styles.team}>
-                        <View style={styles.teamPlayers}>
-                          <Avatar
-                            url={match.team2_player1.avatar_url}
-                            name={match.team2_player1.full_name || 'Player'}
-                          />
-                          <Text style={styles.playerName} numberOfLines={1}>
-                            {match.team2_player1.full_name || 'Player'}
-                          </Text>
-                          {match.team2_player2 && (
-                            <>
-                              <Avatar
-                                url={match.team2_player2.avatar_url}
-                                name={match.team2_player2.full_name || 'Player'}
-                              />
-                              <Text style={styles.playerName} numberOfLines={1}>
-                                {match.team2_player2.full_name || 'Player'}
-                              </Text>
-                            </>
-                          )}
-                        </View>
-                        <Text
-                          style={[
-                            styles.teamScore,
-                            match.winning_team === 2 && styles.teamScoreWin,
-                          ]}
-                        >
-                          {match.score_team2}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <Text style={styles.matchDate}>
-                    {new Date(match.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })}
+                  <Text style={{ textAlign: 'center', color: theme.color.role.textMuted, fontFamily: theme.type.family.body, fontSize: theme.type.sizes.xs }}>
+                    VS
                   </Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                      <Avatar uri={match.team2_player1.avatar_url} name={match.team2_player1.full_name || 'Player'} size={24} />
+                      <Text numberOfLines={1} style={{ flex: 1, color: theme.color.role.textPrimary, fontFamily: theme.type.family.body }}>
+                        {match.team2_player1.full_name || 'Player'}
+                        {match.team2_player2 ? ` & ${match.team2_player2.full_name || 'Player'}` : ''}
+                      </Text>
+                    </View>
+                    <Text
+                      style={{
+                        color: match.winning_team === 2 ? theme.color.role.textPrimary : theme.color.role.textMuted,
+                        fontFamily: theme.type.family.headingSemi,
+                        fontSize: theme.type.sizes.lg,
+                      }}
+                    >
+                      {match.score_team2}
+                    </Text>
+                  </View>
                 </View>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+
+                <Text
+                  style={{
+                    marginTop: theme.spacing.sm,
+                    textAlign: 'center',
+                    color: theme.color.role.textMuted,
+                    fontFamily: theme.type.family.body,
+                    fontSize: theme.type.sizes.xs,
+                  }}
+                >
+                  {new Date(match.created_at).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </Text>
+              </GlassCard>
+            );
+          })}
+        </View>
+      )}
+    </AppScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    padding: spacing.lg,
-    gap: spacing.lg,
-  },
-  header: {
-    gap: 6,
-  },
-  backButton: {
-    marginBottom: spacing.xs,
-  },
-  backText: {
-    color: colors.blue,
-    fontSize: typography.sizes.md,
-  },
-  title: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.ink,
-  },
-  subtitle: {
-    fontSize: typography.sizes.base,
-    color: colors.muted,
-  },
-  filters: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    gap: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  filterRow: {
-    gap: spacing.xs,
-  },
-  filterLabel: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  filterButtons: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  filterButton: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.md,
-    backgroundColor: '#f5f5f5',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  filterButtonActive: {
-    backgroundColor: colors.blue,
-    borderColor: colors.blue,
-  },
-  filterText: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-    fontWeight: typography.weights.semibold,
-  },
-  filterTextActive: {
-    color: '#ffffff',
-  },
-  loadingContainer: {
-    padding: spacing.xl,
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  loadingText: {
-    color: colors.muted,
-    fontSize: typography.sizes.sm,
-  },
-  errorContainer: {
-    padding: spacing.lg,
-    backgroundColor: '#fff4f2',
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: '#ffd6d1',
-  },
-  errorText: {
-    color: colors.coral,
-    fontSize: typography.sizes.sm,
-  },
-  errorHint: {
-    color: colors.muted,
-    fontSize: typography.sizes.sm,
-    marginTop: spacing.xs,
-  },
-  emptyContainer: {
-    padding: spacing.xl,
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  emptyText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.ink,
-  },
-  emptySubtext: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-    textAlign: 'center',
-  },
-  matchList: {
-    gap: spacing.md,
-  },
-  matchCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    gap: spacing.sm,
-    borderWidth: 2,
-  },
-  matchWin: {
-    borderColor: '#4caf50',
-  },
-  matchLoss: {
-    borderColor: colors.coral,
-  },
-  matchHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  matchMeta: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    alignItems: 'center',
-  },
-  matchType: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: colors.muted,
-  },
-  rankedBadge: {
-    backgroundColor: colors.blue,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: radii.sm,
-  },
-  rankedText: {
-    fontSize: 10,
-    fontWeight: typography.weights.bold,
-    color: '#ffffff',
-    letterSpacing: 0.5,
-  },
-  resultBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radii.sm,
-  },
-  resultBadgeWin: {
-    backgroundColor: '#e8f5e9',
-  },
-  resultBadgeLoss: {
-    backgroundColor: '#fff4f2',
-  },
-  resultText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    letterSpacing: 0.8,
-  },
-  resultTextWin: {
-    color: '#4caf50',
-  },
-  resultTextLoss: {
-    color: colors.coral,
-  },
-  matchTeams: {
-    gap: spacing.xs,
-  },
-  team: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  teamPlayers: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    alignItems: 'center',
-    flex: 1,
-  },
-  playerAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-  },
-  playerAvatarPlaceholder: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.blue,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playerAvatarText: {
-    fontSize: 12,
-    fontWeight: typography.weights.bold,
-    color: '#ffffff',
-  },
-  playerName: {
-    fontSize: typography.sizes.sm,
-    color: colors.ink,
-    flex: 1,
-  },
-  teamScore: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.muted,
-  },
-  teamScoreWin: {
-    color: colors.ink,
-  },
-  vs: {
-    fontSize: typography.sizes.xs,
-    color: colors.muted,
-    textAlign: 'center',
-    fontWeight: typography.weights.semibold,
-  },
-  matchDate: {
-    fontSize: typography.sizes.xs,
-    color: colors.muted,
-    textAlign: 'center',
-  },
-});

@@ -2,18 +2,15 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Pressable,
   RefreshControl,
-  ScrollView,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PendingMatch, usePendingMatches } from '../src/hooks/usePendingMatches';
 import { useAuth } from '../src/state/auth';
-import { colors, radii, spacing, typography } from '../src/theme';
+import { AppScreen, EmptyState, GlassCard, GradientHeader, PrimaryButton } from '../src/components/ui';
+import { useAppTheme } from '../src/theme';
 
 function MatchCard({
   match,
@@ -24,26 +21,21 @@ function MatchCard({
   onApprove: () => Promise<boolean>;
   onReject: () => Promise<boolean>;
 }) {
+  const { theme } = useAppTheme();
   const { session } = useAuth();
   const [processing, setProcessing] = useState(false);
 
-  const userParticipant = match.participants.find(
-    (p: any) => p.user_id === session?.user?.id
-  );
+  const userParticipant = match.participants.find((p) => p.user_id === session?.user?.id);
   const userTeam = userParticipant?.team;
   const isWinner = userTeam === match.winner_team;
 
-  const teamAPlayers = match.participants.filter((p: any) => p.team === 'team_a');
-  const teamBPlayers = match.participants.filter((p: any) => p.team === 'team_b');
+  const teamAPlayers = match.participants.filter((p) => p.team === 'team_a');
+  const teamBPlayers = match.participants.filter((p) => p.team === 'team_b');
 
-  const hasApproved = match.approvals.some(
-    (a: any) => a.user_id === session?.user?.id && a.approved
-  );
-  const hasRejected = match.approvals.some(
-    (a: any) => a.user_id === session?.user?.id && !a.approved
-  );
+  const hasApproved = match.approvals.some((a) => a.user_id === session?.user?.id && a.approved);
+  const hasRejected = match.approvals.some((a) => a.user_id === session?.user?.id && !a.approved);
 
-  const approvalCount = match.approvals.filter((a: any) => a.approved).length;
+  const approvalCount = match.approvals.filter((a) => a.approved).length;
   const requiredApprovals = match.match_type === 'singles' ? 2 : 3;
 
   const handleApprove = async () => {
@@ -58,341 +50,153 @@ function MatchCard({
   };
 
   const handleReject = async () => {
-    Alert.alert(
-      'Reject match?',
-      'Are you sure you want to reject this match? This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reject',
-          style: 'destructive',
-          onPress: async () => {
-            setProcessing(true);
-            const success = await onReject();
-            setProcessing(false);
-            if (success) {
-              Alert.alert('Match rejected', 'Match has been rejected.');
-            } else {
-              Alert.alert('Error', 'Failed to reject match. Please try again.');
-            }
-          },
+    Alert.alert('Reject match?', 'Are you sure you want to reject this match? This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reject',
+        style: 'destructive',
+        onPress: async () => {
+          setProcessing(true);
+          const success = await onReject();
+          setProcessing(false);
+          if (success) {
+            Alert.alert('Match rejected', 'Match has been rejected.');
+          } else {
+            Alert.alert('Error', 'Failed to reject match. Please try again.');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
-    <View style={styles.matchCard}>
-      <View style={styles.matchHeader}>
-        <View>
-          <Text style={styles.matchType}>
-            {match.match_type === 'singles' ? 'Singles' : 'Doubles'} •{' '}
-            {match.match_mode === 'casual' ? 'Casual' : 'Ranked'}
+    <GlassCard style={{ gap: theme.spacing.sm }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.headingSemi, fontSize: theme.type.sizes.base }}>
+            {match.match_type === 'singles' ? 'Singles' : 'Doubles'} | {match.match_mode === 'casual' ? 'Casual' : 'Ranked'}
           </Text>
-          <Text style={styles.matchSubmitter}>
+          <Text style={{ marginTop: 2, color: theme.color.role.textMuted, fontFamily: theme.type.family.body }}>
             Submitted by {match.submitter_name || 'Unknown'}
           </Text>
         </View>
-        <View style={[styles.resultBadge, isWinner ? styles.winBadge : styles.lossBadge]}>
-          <Text style={styles.resultText}>{isWinner ? 'Win' : 'Loss'}</Text>
-        </View>
-      </View>
-
-      <View style={styles.teamsContainer}>
-        <View style={styles.team}>
-          <Text style={styles.teamLabel}>Team A</Text>
-          {teamAPlayers.map((p: any) => (
-            <Text key={p.user_id} style={styles.playerName}>
-              {p.full_name || 'Player'}
-              {p.user_id === session?.user?.id ? ' (You)' : ''}
-            </Text>
-          ))}
-        </View>
-        <View style={styles.scoreContainer}>
-          <Text style={styles.score}>
-            {match.team_a_score} - {match.team_b_score}
+        <View
+          style={{
+            alignSelf: 'flex-start',
+            borderRadius: theme.radius.pill,
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            backgroundColor: isWinner ? theme.color.role.successSoft : theme.color.role.secondarySoft,
+          }}
+        >
+          <Text
+            style={{
+              color: isWinner ? theme.color.role.success : theme.color.role.secondary,
+              fontFamily: theme.type.family.bodySemi,
+              fontSize: theme.type.sizes.sm,
+            }}
+          >
+            {isWinner ? 'Win' : 'Loss'}
           </Text>
         </View>
-        <View style={styles.team}>
-          <Text style={styles.teamLabel}>Team B</Text>
-          {teamBPlayers.map((p: any) => (
-            <Text key={p.user_id} style={styles.playerName}>
-              {p.full_name || 'Player'}
-              {p.user_id === session?.user?.id ? ' (You)' : ''}
+      </View>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: theme.color.role.textMuted, fontFamily: theme.type.family.bodySemi, fontSize: theme.type.sizes.xs }}>
+            TEAM A
+          </Text>
+          {teamAPlayers.map((p) => (
+            <Text key={p.user_id} style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.body }}>
+              {p.full_name || 'Player'}{p.user_id === session?.user?.id ? ' (You)' : ''}
+            </Text>
+          ))}
+        </View>
+        <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.headingSemi, fontSize: theme.type.sizes.lg }}>
+          {match.team_a_score} - {match.team_b_score}
+        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: theme.color.role.textMuted, fontFamily: theme.type.family.bodySemi, fontSize: theme.type.sizes.xs }}>
+            TEAM B
+          </Text>
+          {teamBPlayers.map((p) => (
+            <Text key={p.user_id} style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.body }}>
+              {p.full_name || 'Player'}{p.user_id === session?.user?.id ? ' (You)' : ''}
             </Text>
           ))}
         </View>
       </View>
 
-      <View style={styles.approvalStatus}>
-        <Text style={styles.approvalText}>
+      <View
+        style={{
+          borderRadius: theme.radius.md,
+          padding: theme.spacing.sm,
+          backgroundColor: theme.color.role.primarySoft,
+        }}
+      >
+        <Text style={{ color: theme.color.role.textSecondary, fontFamily: theme.type.family.body, textAlign: 'center' }}>
           Approvals: {approvalCount} / {requiredApprovals}
         </Text>
       </View>
 
       {hasApproved ? (
-        <View style={styles.approvedBanner}>
-          <Text style={styles.approvedText}>✓ You approved this match</Text>
+        <View style={{ borderRadius: theme.radius.md, padding: theme.spacing.sm, backgroundColor: theme.color.role.successSoft }}>
+          <Text style={{ textAlign: 'center', color: theme.color.role.success, fontFamily: theme.type.family.bodySemi }}>
+            You approved this match.
+          </Text>
         </View>
       ) : hasRejected ? (
-        <View style={styles.rejectedBanner}>
-          <Text style={styles.rejectedText}>✗ You rejected this match</Text>
+        <View style={{ borderRadius: theme.radius.md, padding: theme.spacing.sm, backgroundColor: theme.color.role.secondarySoft }}>
+          <Text style={{ textAlign: 'center', color: theme.color.role.secondary, fontFamily: theme.type.family.bodySemi }}>
+            You rejected this match.
+          </Text>
         </View>
       ) : (
-        <View style={styles.actions}>
-          <Pressable
-            style={[styles.actionButton, styles.rejectButton]}
-            onPress={handleReject}
-            disabled={processing}
-          >
-            {processing ? (
-              <ActivityIndicator size="small" color={colors.coral} />
-            ) : (
-              <Text style={styles.rejectButtonText}>Reject</Text>
-            )}
-          </Pressable>
-          <Pressable
-            style={[styles.actionButton, styles.approveButton]}
-            onPress={handleApprove}
-            disabled={processing}
-          >
-            {processing ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <Text style={styles.approveButtonText}>Approve</Text>
-            )}
-          </Pressable>
+        <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+          <PrimaryButton label="Reject" secondary onPress={handleReject} loading={processing} style={{ flex: 1 }} />
+          <PrimaryButton label="Approve" onPress={handleApprove} loading={processing} style={{ flex: 1 }} />
         </View>
       )}
-    </View>
+    </GlassCard>
   );
 }
 
 export default function ApprovalsScreen() {
+  const { theme } = useAppTheme();
   const { matches, loading, approveMatch, rejectMatch, refresh } = usePendingMatches();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={refresh} colors={[colors.blue]} />
-        }
-      >
-        <View style={styles.header}>
-          <Text style={styles.title}>Pending Approvals</Text>
-          <Text style={styles.subtitle}>
-            Review and approve matches you participated in.
-          </Text>
-        </View>
+    <AppScreen
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} colors={[theme.color.role.primary]} />}
+      contentContainerStyle={{ gap: theme.spacing.md, paddingBottom: 50 }}
+    >
+      <GradientHeader title="Pending Approvals" subtitle="Review and approve matches you participated in." />
 
-        {loading && matches.length === 0 ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.blue} />
-            <Text style={styles.loadingText}>Loading matches...</Text>
-          </View>
-        ) : matches.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No pending approvals</Text>
-            <Text style={styles.emptyHint}>
-              Matches you participate in will appear here for approval.
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.matches}>
-            {matches.map((match: any) => (
-              <MatchCard
-                key={match.id}
-                match={match}
-                onApprove={async () => await approveMatch(match.id)}
-                onReject={async () => await rejectMatch(match.id)}
-              />
-            ))}
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+      {loading && matches.length === 0 ? (
+        <GlassCard style={{ alignItems: 'center', paddingVertical: theme.spacing.xl }}>
+          <ActivityIndicator size="large" color={theme.color.role.primary} />
+          <Text style={{ marginTop: theme.spacing.sm, color: theme.color.role.textMuted, fontFamily: theme.type.family.body }}>
+            Loading matches...
+          </Text>
+        </GlassCard>
+      ) : matches.length === 0 ? (
+        <EmptyState
+          title="No pending approvals"
+          subtitle="Matches you participate in will appear here for approval."
+          icon="checkmark-done-outline"
+        />
+      ) : (
+        <View style={{ gap: theme.spacing.md }}>
+          {matches.map((match) => (
+            <MatchCard
+              key={match.id}
+              match={match}
+              onApprove={async () => await approveMatch(match.id)}
+              onReject={async () => await rejectMatch(match.id)}
+            />
+          ))}
+        </View>
+      )}
+    </AppScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    padding: spacing.lg,
-    paddingBottom: 40,
-  },
-  header: {
-    marginBottom: spacing.lg,
-  },
-  title: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.ink,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: typography.sizes.base,
-    color: colors.muted,
-  },
-  loadingContainer: {
-    paddingVertical: spacing.xxl,
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  loadingText: {
-    color: colors.muted,
-    fontSize: typography.sizes.base,
-  },
-  emptyContainer: {
-    paddingVertical: spacing.xxl,
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  emptyText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.ink,
-    marginBottom: 4,
-  },
-  emptyHint: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-    textAlign: 'center',
-  },
-  matches: {
-    gap: spacing.md,
-  },
-  matchCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.md,
-  },
-  matchHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  matchType: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
-    color: colors.ink,
-    marginBottom: 2,
-  },
-  matchSubmitter: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-  },
-  resultBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs - 2,
-    borderRadius: radii.pill,
-  },
-  winBadge: {
-    backgroundColor: '#e8f5e9',
-  },
-  lossBadge: {
-    backgroundColor: '#ffebee',
-  },
-  resultText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-  },
-  teamsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  team: {
-    flex: 1,
-  },
-  teamLabel: {
-    fontSize: typography.sizes.xs,
-    textTransform: 'uppercase',
-    color: colors.muted,
-    marginBottom: 4,
-    letterSpacing: 0.6,
-  },
-  playerName: {
-    fontSize: typography.sizes.sm,
-    color: colors.ink,
-    marginBottom: 2,
-  },
-  scoreContainer: {
-    paddingHorizontal: spacing.sm,
-  },
-  score: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.ink,
-  },
-  approvalStatus: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    backgroundColor: '#f5f7fa',
-    borderRadius: radii.sm,
-  },
-  approvalText: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-    textAlign: 'center',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-  },
-  rejectButton: {
-    backgroundColor: '#fff2f0',
-    borderWidth: 1,
-    borderColor: '#ffd6d1',
-  },
-  rejectButtonText: {
-    color: colors.coral,
-    fontWeight: typography.weights.semibold,
-    fontSize: typography.sizes.base,
-  },
-  approveButton: {
-    backgroundColor: colors.blue,
-  },
-  approveButtonText: {
-    color: '#ffffff',
-    fontWeight: typography.weights.semibold,
-    fontSize: typography.sizes.base,
-  },
-  approvedBanner: {
-    backgroundColor: '#e8f5e9',
-    padding: spacing.sm,
-    borderRadius: radii.md,
-  },
-  approvedText: {
-    color: '#2e7d32',
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
-    textAlign: 'center',
-  },
-  rejectedBanner: {
-    backgroundColor: '#ffebee',
-    padding: spacing.sm,
-    borderRadius: radii.md,
-  },
-  rejectedText: {
-    color: '#c62828',
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
-    textAlign: 'center',
-  },
-});
-

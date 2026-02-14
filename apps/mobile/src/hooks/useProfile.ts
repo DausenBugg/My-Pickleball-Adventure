@@ -118,7 +118,7 @@ export function useProfile() {
       const base64Data = image.base64
         ? image.base64
         : await FileSystem.readAsStringAsync(image.uri, {
-            encoding: FileSystem.EncodingType.Base64,
+            encoding: 'base64',
           });
 
       const binaryString = globalThis.atob

@@ -1,242 +1,147 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  ScrollView,
-  RefreshControl,
-} from 'react-native';
-import { Stack } from 'expo-router';
+import { RefreshControl, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
 import { useAchievements, UserAchievement } from '../src/hooks/useAchievements';
-import { colors, radii, spacing, typography } from '../src/theme';
+import { AppScreen, EmptyState, GlassCard, GradientHeader } from '../src/components/ui';
+import { useAppTheme } from '../src/theme';
 
-interface AchievementCardProps {
-  achievement: UserAchievement;
-}
+function AchievementCard({ achievement }: { achievement: UserAchievement }) {
+  const { theme } = useAppTheme();
 
-function AchievementCard({ achievement }: AchievementCardProps) {
   return (
-    <View
-      style={[
-        styles.card,
-        achievement.is_unlocked ? styles.cardUnlocked : styles.cardLocked,
-      ]}
+    <GlassCard
+      style={{
+        borderColor: achievement.is_unlocked ? theme.color.role.primary : theme.color.role.border,
+        opacity: achievement.is_unlocked ? 1 : 0.88,
+      }}
     >
-      <View style={styles.iconContainer}>
-        <Text style={styles.icon}>{achievement.icon}</Text>
-        {achievement.is_unlocked && <View style={styles.unlockedBadge} />}
-      </View>
-      <View style={styles.content}>
-        <Text
-          style={[
-            styles.name,
-            !achievement.is_unlocked && styles.lockedText,
-          ]}
+      <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+        <View
+          style={{
+            width: 52,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          {achievement.name}
-        </Text>
-        <Text
-          style={[
-            styles.description,
-            !achievement.is_unlocked && styles.lockedText,
-          ]}
-        >
-          {achievement.description}
-        </Text>
-        {!achievement.is_unlocked && achievement.progress !== undefined && (
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${achievement.progress}%` },
-                ]}
-              />
-            </View>
-            <Text style={styles.progressText}>
-              {Math.round(achievement.progress)}%
-            </Text>
-          </View>
-        )}
-        {achievement.is_unlocked && (
-          <Text style={styles.unlockedDate}>
-            Unlocked{' '}
-            {new Date(achievement.unlocked_at).toLocaleDateString()}
+          <Text style={{ fontSize: 36 }}>{achievement.icon}</Text>
+          {achievement.is_unlocked ? (
+            <Ionicons
+              name="checkmark-circle"
+              size={16}
+              color={theme.color.role.primary}
+              style={{ position: 'absolute', bottom: 0, right: 2 }}
+            />
+          ) : null}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text
+            style={{
+              color: achievement.is_unlocked ? theme.color.role.textPrimary : theme.color.role.textSecondary,
+              fontSize: theme.type.sizes.base,
+              fontFamily: theme.type.family.bodySemi,
+            }}
+          >
+            {achievement.name}
           </Text>
-        )}
+          <Text
+            style={{
+              marginTop: 4,
+              color: theme.color.role.textMuted,
+              fontSize: theme.type.sizes.sm,
+              lineHeight: theme.type.lineHeights.sm,
+              fontFamily: theme.type.family.body,
+            }}
+          >
+            {achievement.description}
+          </Text>
+          {!achievement.is_unlocked && achievement.progress !== undefined ? (
+            <View style={{ marginTop: theme.spacing.sm }}>
+              <View
+                style={{
+                  height: 8,
+                  borderRadius: theme.radius.pill,
+                  backgroundColor: theme.color.role.primarySoft,
+                  overflow: 'hidden',
+                }}
+              >
+                <View
+                  style={{
+                    height: '100%',
+                    width: `${achievement.progress}%`,
+                    backgroundColor: theme.color.role.primary,
+                  }}
+                />
+              </View>
+              <Text
+                style={{
+                  marginTop: 4,
+                  color: theme.color.role.textMuted,
+                  fontFamily: theme.type.family.body,
+                  fontSize: theme.type.sizes.xs,
+                }}
+              >
+                {Math.round(achievement.progress)}% complete
+              </Text>
+            </View>
+          ) : null}
+          {achievement.is_unlocked ? (
+            <Text style={{ marginTop: 6, color: theme.color.role.primary, fontFamily: theme.type.family.body, fontSize: theme.type.sizes.xs }}>
+              Unlocked {new Date(achievement.unlocked_at).toLocaleDateString()}
+            </Text>
+          ) : null}
+        </View>
       </View>
-    </View>
+    </GlassCard>
   );
 }
 
 export default function AchievementsScreen() {
+  const { theme } = useAppTheme();
   const { achievements, loading, refresh } = useAchievements();
 
   const unlocked = achievements.filter((a) => a.is_unlocked);
   const locked = achievements.filter((a) => !a.is_unlocked);
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: 'Achievements',
-          headerStyle: { backgroundColor: colors.blue[600] },
-          headerTintColor: colors.ink[0],
-          headerTitleStyle: { fontWeight: typography.weights.bold },
-        }}
+    <AppScreen
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} colors={[theme.color.role.primary]} />}
+      contentContainerStyle={{ gap: theme.spacing.md, paddingBottom: 50 }}
+    >
+      <GradientHeader
+        title="Achievements"
+        subtitle={`${unlocked.length} of ${achievements.length} unlocked`}
       />
-      <ScrollView
-        style={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={refresh} />
-        }
-      >
-        {/* Summary */}
-        <View style={styles.summary}>
-          <Text style={styles.summaryText}>
-            {unlocked.length} of {achievements.length} unlocked
-          </Text>
-        </View>
 
-        {/* Unlocked Achievements */}
-        {unlocked.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Unlocked</Text>
-            {unlocked.map((achievement) => (
-              <AchievementCard
-                key={achievement.id}
-                achievement={achievement}
-              />
-            ))}
-          </View>
-        )}
-
-        {/* Locked Achievements */}
-        {locked.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Locked</Text>
-            {locked.map((achievement) => (
-              <AchievementCard
-                key={achievement.id}
-                achievement={achievement}
-              />
-            ))}
-          </View>
-        )}
-      </ScrollView>
-    </>
+      {achievements.length === 0 ? (
+        <EmptyState
+          title="No achievements yet"
+          subtitle="Complete matches and play with friends to unlock them."
+          icon="trophy-outline"
+        />
+      ) : (
+        <>
+          {unlocked.length > 0 ? (
+            <View style={{ gap: theme.spacing.sm }}>
+              <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.headingSemi }}>
+                Unlocked
+              </Text>
+              {unlocked.map((achievement) => (
+                <AchievementCard key={achievement.id} achievement={achievement} />
+              ))}
+            </View>
+          ) : null}
+          {locked.length > 0 ? (
+            <View style={{ gap: theme.spacing.sm }}>
+              <Text style={{ color: theme.color.role.textPrimary, fontFamily: theme.type.family.headingSemi }}>
+                Locked
+              </Text>
+              {locked.map((achievement) => (
+                <AchievementCard key={achievement.id} achievement={achievement} />
+              ))}
+            </View>
+          ) : null}
+        </>
+      )}
+    </AppScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.ink[950],
-  },
-  summary: {
-    padding: spacing.lg,
-    alignItems: 'center',
-    backgroundColor: colors.ink[900],
-    borderBottomWidth: 1,
-    borderBottomColor: colors.ink[800],
-  },
-  summaryText: {
-    color: colors.ink[100],
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.semibold,
-  },
-  section: {
-    padding: spacing.md,
-  },
-  sectionTitle: {
-    color: colors.ink[200],
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.xs,
-  },
-  card: {
-    flexDirection: 'row',
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    borderRadius: radii.md,
-  },
-  cardUnlocked: {
-    backgroundColor: colors.ink[900],
-    borderWidth: 1,
-    borderColor: colors.blue[600],
-  },
-  cardLocked: {
-    backgroundColor: colors.ink[900],
-    opacity: 0.6,
-  },
-  iconContainer: {
-    position: 'relative',
-    marginRight: spacing.md,
-  },
-  icon: {
-    fontSize: 48,
-  },
-  unlockedBadge: {
-    position: 'absolute',
-    bottom: -4,
-    right: -4,
-    width: 16,
-    height: 16,
-    borderRadius: radii.pill,
-    backgroundColor: colors.blue[600],
-    borderWidth: 2,
-    borderColor: colors.ink[900],
-  },
-  content: {
-    flex: 1,
-  },
-  name: {
-    color: colors.ink[0],
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    marginBottom: spacing.xs,
-  },
-  description: {
-    color: colors.ink[200],
-    fontSize: typography.sizes.sm,
-    lineHeight: 20,
-  },
-  lockedText: {
-    color: colors.ink[400],
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  progressBar: {
-    flex: 1,
-    height: 6,
-    backgroundColor: colors.ink[800],
-    borderRadius: radii.pill,
-    overflow: 'hidden',
-    marginRight: spacing.sm,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.blue[600],
-  },
-  progressText: {
-    color: colors.ink[300],
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.medium,
-    minWidth: 40,
-    textAlign: 'right',
-  },
-  unlockedDate: {
-    color: colors.ink[400],
-    fontSize: typography.sizes.xs,
-    marginTop: spacing.xs,
-  },
-});
-
-

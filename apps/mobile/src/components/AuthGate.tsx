@@ -3,12 +3,13 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 
 import { useAuth } from '../state/auth';
-import { colors } from '../theme';
+import { useAppTheme } from '../theme';
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const { theme } = useAppTheme();
 
   useEffect(() => {
     if (loading) return;
@@ -26,8 +27,8 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.blue} />
+      <View style={[styles.loading, { backgroundColor: theme.color.role.background }]}>
+        <ActivityIndicator size="large" color={theme.color.role.primary} />
       </View>
     );
   }
@@ -38,7 +39,6 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
