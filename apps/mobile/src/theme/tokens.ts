@@ -1,11 +1,17 @@
 export const colors = {
-  ink: '#0b1a2b',
-  muted: '#5a6a7d',
-  blue: '#2b6cb0',
-  coral: '#ff6b5a',
+  ink: '#0b1220',
+  muted: '#5b6b80',
+  blue: '#4bb3ff',
+  blueDark: '#1f7edb',
+  blueSoft: '#e6f4ff',
+  coral: '#ff6f5e',
+  coralDark: '#e65544',
+  coralSoft: '#fff0ec',
   surface: '#ffffff',
-  background: '#f7f8fb',
-  border: '#d6dbe3',
+  background: '#f6f8fb',
+  panel: '#fdf7f2',
+  border: '#d9e1ee',
+  shadow: '#0b1220',
 } as const;
 
 export const spacing = {
@@ -31,14 +37,20 @@ export const typography = {
     sm: 12,
     base: 14,
     md: 16,
-    lg: 24,
+    lg: 22,
     xl: 28,
-    xxl: 32,
+    xxl: 36,
   },
   weights: {
     normal: '400' as const,
     medium: '500' as const,
     semibold: '600' as const,
     bold: '700' as const,
+  },
+  families: {
+    regular: 'SpaceGrotesk_400Regular',
+    medium: 'SpaceGrotesk_500Medium',
+    semibold: 'SpaceGrotesk_600SemiBold',
+    bold: 'SpaceGrotesk_700Bold',
   },
 } as const;

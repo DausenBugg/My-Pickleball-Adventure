@@ -326,17 +326,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   backText: {
-    color: colors.blue,
+    color: colors.blueDark,
     fontSize: typography.sizes.md,
+    fontFamily: typography.families.semibold,
   },
   title: {
     fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
   },
   subtitle: {
     fontSize: typography.sizes.base,
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
   filters: {
     backgroundColor: colors.surface,
@@ -351,9 +353,8 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.muted,
-    textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   filterButtons: {
@@ -364,9 +365,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radii.md,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.blueSoft,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   filterButtonActive: {
     backgroundColor: colors.blue,
@@ -375,7 +376,7 @@ const styles = StyleSheet.create({
   filterText: {
     fontSize: typography.sizes.sm,
     color: colors.muted,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   filterTextActive: {
     color: '#ffffff',
@@ -388,22 +389,25 @@ const styles = StyleSheet.create({
   loadingText: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
+    fontFamily: typography.families.regular,
   },
   errorContainer: {
     padding: spacing.lg,
-    backgroundColor: '#fff4f2',
+    backgroundColor: colors.coralSoft,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: '#ffd6d1',
+    borderColor: '#ffd1ca',
   },
   errorText: {
     color: colors.coral,
     fontSize: typography.sizes.sm,
+    fontFamily: typography.families.semibold,
   },
   errorHint: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
     marginTop: spacing.xs,
+    fontFamily: typography.families.regular,
   },
   emptyContainer: {
     padding: spacing.xl,
@@ -412,13 +416,14 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.ink,
   },
   emptySubtext: {
     fontSize: typography.sizes.sm,
     color: colors.muted,
     textAlign: 'center',
+    fontFamily: typography.families.regular,
   },
   matchList: {
     gap: spacing.md,
@@ -429,9 +434,14 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.sm,
     borderWidth: 2,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   matchWin: {
-    borderColor: '#4caf50',
+    borderColor: colors.blue,
   },
   matchLoss: {
     borderColor: colors.coral,
@@ -448,7 +458,7 @@ const styles = StyleSheet.create({
   },
   matchType: {
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.muted,
   },
   rankedBadge: {
@@ -459,7 +469,7 @@ const styles = StyleSheet.create({
   },
   rankedText: {
     fontSize: 10,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: '#ffffff',
     letterSpacing: 0.5,
   },
@@ -476,11 +486,11 @@ const styles = StyleSheet.create({
   },
   resultText: {
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     letterSpacing: 0.8,
   },
   resultTextWin: {
-    color: '#4caf50',
+    color: colors.blueDark,
   },
   resultTextLoss: {
     color: colors.coral,
@@ -514,17 +524,18 @@ const styles = StyleSheet.create({
   },
   playerAvatarText: {
     fontSize: 12,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: '#ffffff',
   },
   playerName: {
     fontSize: typography.sizes.sm,
     color: colors.ink,
     flex: 1,
+    fontFamily: typography.families.medium,
   },
   teamScore: {
     fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.muted,
   },
   teamScoreWin: {
@@ -534,11 +545,12 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     color: colors.muted,
     textAlign: 'center',
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   matchDate: {
     fontSize: typography.sizes.xs,
     color: colors.muted,
     textAlign: 'center',
+    fontFamily: typography.families.medium,
   },
 });

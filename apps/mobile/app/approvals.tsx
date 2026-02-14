@@ -229,13 +229,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: typography.sizes.base,
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
   loadingContainer: {
     paddingVertical: spacing.xxl,
@@ -245,6 +246,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: colors.muted,
     fontSize: typography.sizes.base,
+    fontFamily: typography.families.regular,
   },
   emptyContainer: {
     paddingVertical: spacing.xxl,
@@ -253,7 +255,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.ink,
     marginBottom: 4,
   },
@@ -261,6 +263,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.muted,
     textAlign: 'center',
+    fontFamily: typography.families.regular,
   },
   matches: {
     gap: spacing.md,
@@ -272,6 +275,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     gap: spacing.md,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   matchHeader: {
     flexDirection: 'row',
@@ -280,13 +288,14 @@ const styles = StyleSheet.create({
   },
   matchType: {
     fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.ink,
     marginBottom: 2,
   },
   matchSubmitter: {
     fontSize: typography.sizes.sm,
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
   resultBadge: {
     paddingHorizontal: spacing.sm,
@@ -294,14 +303,14 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   winBadge: {
-    backgroundColor: '#e8f5e9',
+    backgroundColor: colors.blueSoft,
   },
   lossBadge: {
-    backgroundColor: '#ffebee',
+    backgroundColor: colors.coralSoft,
   },
   resultText: {
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   teamsContainer: {
     flexDirection: 'row',
@@ -313,34 +322,36 @@ const styles = StyleSheet.create({
   },
   teamLabel: {
     fontSize: typography.sizes.xs,
-    textTransform: 'uppercase',
     color: colors.muted,
     marginBottom: 4,
     letterSpacing: 0.6,
+    fontFamily: typography.families.semibold,
   },
   playerName: {
     fontSize: typography.sizes.sm,
     color: colors.ink,
     marginBottom: 2,
+    fontFamily: typography.families.medium,
   },
   scoreContainer: {
     paddingHorizontal: spacing.sm,
   },
   score: {
     fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
   },
   approvalStatus: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: colors.panel,
     borderRadius: radii.sm,
   },
   approvalText: {
     fontSize: typography.sizes.sm,
     color: colors.muted,
     textAlign: 'center',
+    fontFamily: typography.families.regular,
   },
   actions: {
     flexDirection: 'row',
@@ -355,13 +366,13 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   rejectButton: {
-    backgroundColor: '#fff2f0',
+    backgroundColor: colors.coralSoft,
     borderWidth: 1,
-    borderColor: '#ffd6d1',
+    borderColor: '#ffd1ca',
   },
   rejectButtonText: {
     color: colors.coral,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     fontSize: typography.sizes.base,
   },
   approveButton: {
@@ -369,29 +380,29 @@ const styles = StyleSheet.create({
   },
   approveButtonText: {
     color: '#ffffff',
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     fontSize: typography.sizes.base,
   },
   approvedBanner: {
-    backgroundColor: '#e8f5e9',
+    backgroundColor: colors.blueSoft,
     padding: spacing.sm,
     borderRadius: radii.md,
   },
   approvedText: {
-    color: '#2e7d32',
+    color: colors.blueDark,
     fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     textAlign: 'center',
   },
   rejectedBanner: {
-    backgroundColor: '#ffebee',
+    backgroundColor: colors.coralSoft,
     padding: spacing.sm,
     borderRadius: radii.md,
   },
   rejectedText: {
-    color: '#c62828',
+    color: colors.coralDark,
     fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     textAlign: 'center',
   },
 });

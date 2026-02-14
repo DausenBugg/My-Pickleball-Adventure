@@ -152,15 +152,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
   },
   subtitle: {
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
   segment: {
     flexDirection: 'row',
-    backgroundColor: '#eef2f7',
+    backgroundColor: colors.blueSoft,
     borderRadius: radii.lg,
     padding: 4,
     gap: 6,
@@ -173,14 +174,15 @@ const styles = StyleSheet.create({
   },
   segmentActive: {
     backgroundColor: colors.surface,
-    shadowColor: '#000000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
   segmentText: {
     color: colors.muted,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   segmentTextActive: {
     color: colors.ink,
@@ -193,6 +195,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: colors.muted,
     fontSize: typography.sizes.base,
+    fontFamily: typography.families.regular,
   },
   emptyContainer: {
     paddingVertical: spacing.xxl,
@@ -202,6 +205,7 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: typography.sizes.base,
     textAlign: 'center',
+    fontFamily: typography.families.medium,
   },
   podiumRow: {
     flexDirection: 'row',
@@ -216,16 +220,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
   podiumTop: {
-    borderColor: '#ffd700',
+    borderColor: colors.coral,
     borderWidth: 2,
-    backgroundColor: '#fffef7',
+    backgroundColor: colors.panel,
   },
   podiumRank: {
     fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.blue,
+    fontFamily: typography.families.bold,
+    color: colors.blueDark,
     marginBottom: 8,
   },
   avatar: {
@@ -245,12 +254,12 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: '#ffffff',
   },
   podiumName: {
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.ink,
     textAlign: 'center',
     marginBottom: 4,
@@ -258,6 +267,7 @@ const styles = StyleSheet.create({
   podiumMeta: {
     fontSize: typography.sizes.xs,
     color: colors.muted,
+    fontFamily: typography.families.medium,
   },
   list: {
     gap: spacing.sm,
@@ -272,11 +282,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   listRank: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.blue,
+    fontFamily: typography.families.bold,
+    color: colors.blueDark,
     width: 40,
   },
   listInfo: {
@@ -284,17 +299,18 @@ const styles = StyleSheet.create({
   },
   listName: {
     fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.ink,
     marginBottom: 2,
   },
   listMeta: {
     fontSize: typography.sizes.sm,
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
   listRating: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
   },
 });

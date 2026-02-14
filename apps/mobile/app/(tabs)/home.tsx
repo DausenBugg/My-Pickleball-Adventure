@@ -511,6 +511,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: typography.sizes.base,
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
   errorContainer: {
     flex: 1,
@@ -521,7 +522,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.coral,
     textAlign: 'center',
   },
@@ -529,6 +530,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.muted,
     textAlign: 'center',
+    fontFamily: typography.families.regular,
   },
   header: {
     flexDirection: 'row',
@@ -543,13 +545,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
   },
   subtitle: {
     fontSize: typography.sizes.base,
     color: colors.muted,
     marginTop: 4,
+    fontFamily: typography.families.regular,
   },
   rankPill: {
     backgroundColor: colors.blue,
@@ -561,12 +564,12 @@ const styles = StyleSheet.create({
   rankLabel: {
     color: '#d7e7ff',
     fontSize: typography.sizes.xs,
-    textTransform: 'uppercase',
     letterSpacing: 0.6,
+    fontFamily: typography.families.semibold,
   },
   rankValue: {
     color: '#ffffff',
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     fontSize: typography.sizes.md,
     marginTop: 2,
   },
@@ -597,7 +600,7 @@ const styles = StyleSheet.create({
   bellBadgeText: {
     color: '#ffffff',
     fontSize: 10,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
   },
   prompts: {
     gap: spacing.sm,
@@ -610,22 +613,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     gap: spacing.sm,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   promptHeader: {
     gap: 2,
   },
   promptTitle: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
   },
   promptMeta: {
     fontSize: typography.sizes.sm,
     color: colors.muted,
+    fontFamily: typography.families.medium,
   },
   promptBody: {
     fontSize: typography.sizes.sm,
     color: colors.ink,
+    fontFamily: typography.families.regular,
   },
   promptActions: {
     flexDirection: 'row',
@@ -638,9 +648,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
   },
   promptDecline: {
-    backgroundColor: '#fff4f2',
+    backgroundColor: colors.coralSoft,
     borderWidth: 1,
-    borderColor: '#ffd6d1',
+    borderColor: '#ffd1ca',
   },
   promptAccept: {
     backgroundColor: colors.blue,
@@ -648,12 +658,12 @@ const styles = StyleSheet.create({
   promptDeclineText: {
     color: colors.coral,
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   promptAcceptText: {
     color: '#ffffff',
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   grid: {
     flexDirection: 'row',
@@ -667,16 +677,21 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   cardLabel: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
-    textTransform: 'uppercase',
     letterSpacing: 0.8,
+    fontFamily: typography.families.semibold,
   },
   cardValue: {
     fontSize: 22,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
     marginTop: 8,
   },
@@ -687,6 +702,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   progressHeader: {
     flexDirection: 'row',
@@ -695,16 +715,17 @@ const styles = StyleSheet.create({
   },
   progressTitle: {
     fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.ink,
   },
   progressMeta: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
+    fontFamily: typography.families.medium,
   },
   progressTrack: {
     height: 10,
-    backgroundColor: '#e7ecf4',
+    backgroundColor: colors.blueSoft,
     borderRadius: radii.pill,
     overflow: 'hidden',
   },
@@ -717,13 +738,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: colors.muted,
     fontSize: typography.sizes.sm,
+    fontFamily: typography.families.regular,
   },
   section: {
     marginTop: 28,
   },
   sectionTitle: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.ink,
     marginBottom: spacing.sm,
   },
@@ -744,12 +766,12 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.blue,
+    fontFamily: typography.families.semibold,
+    color: colors.blueDark,
   },
   viewAllChevron: {
     fontSize: typography.sizes.md,
-    color: colors.blue,
+    color: colors.blueDark,
   },
   matchCard: {
     backgroundColor: colors.surface,
@@ -760,24 +782,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   matchTitle: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.ink,
   },
   matchSubtitle: {
     color: colors.muted,
     marginTop: 6,
+    fontFamily: typography.families.regular,
   },
   matchBadgeWin: {
-    backgroundColor: '#e7f6ef',
+    backgroundColor: colors.blueSoft,
     borderRadius: radii.pill,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   matchBadgeLoss: {
-    backgroundColor: '#ffecec',
+    backgroundColor: colors.coralSoft,
     borderRadius: radii.pill,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -785,8 +813,7 @@ const styles = StyleSheet.create({
   matchBadgeText: {
     color: colors.ink,
     fontSize: 11,
-    fontWeight: typography.weights.semibold,
-    textTransform: 'uppercase',
+    fontFamily: typography.families.semibold,
     letterSpacing: 0.6,
   },
   overlay: {
@@ -816,7 +843,7 @@ const styles = StyleSheet.create({
   },
   panelTitle: {
     fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
   },
   panelClose: {
@@ -829,7 +856,7 @@ const styles = StyleSheet.create({
   panelCloseText: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   panelList: {
     paddingHorizontal: spacing.lg,
@@ -843,9 +870,10 @@ const styles = StyleSheet.create({
   panelEmptyText: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
+    fontFamily: typography.families.medium,
   },
   panelCard: {
-    backgroundColor: '#f7f8fb',
+    backgroundColor: colors.panel,
     borderRadius: radii.lg,
     padding: spacing.md,
     borderWidth: 1,
@@ -854,7 +882,7 @@ const styles = StyleSheet.create({
   },
   panelCardUnread: {
     borderColor: colors.blue,
-    backgroundColor: '#eef4ff',
+    backgroundColor: colors.blueSoft,
   },
   panelCardHeader: {
     flexDirection: 'row',
@@ -863,7 +891,7 @@ const styles = StyleSheet.create({
   },
   panelCardTitle: {
     fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.ink,
     flex: 1,
   },
@@ -871,11 +899,13 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     color: colors.muted,
     marginLeft: spacing.sm,
+    fontFamily: typography.families.medium,
   },
   panelCardMessage: {
     fontSize: typography.sizes.sm,
     color: colors.ink,
     lineHeight: 18,
+    fontFamily: typography.families.regular,
   },
   panelDetails: {
     marginTop: spacing.xs,
@@ -884,6 +914,7 @@ const styles = StyleSheet.create({
   panelDetailText: {
     fontSize: typography.sizes.sm,
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
   panelActions: {
     flexDirection: 'row',
@@ -898,13 +929,13 @@ const styles = StyleSheet.create({
   },
   panelButtonGhost: {
     borderWidth: 1,
-    borderColor: '#d9e1f2',
-    backgroundColor: '#ffffff',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   panelButtonGhostText: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   panelButtonPrimary: {
     backgroundColor: colors.blue,
@@ -912,19 +943,19 @@ const styles = StyleSheet.create({
   panelButtonPrimaryText: {
     color: '#ffffff',
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   panelMarkRead: {
     marginTop: spacing.xs,
     alignSelf: 'flex-start',
   },
   panelMarkReadText: {
-    color: colors.blue,
+    color: colors.blueDark,
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   alertRow: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: colors.surface,
     borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.sm,
@@ -936,12 +967,13 @@ const styles = StyleSheet.create({
   },
   alertTitle: {
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.ink,
   },
   alertMeta: {
     fontSize: typography.sizes.sm,
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
   alertActions: {
     flexDirection: 'row',
@@ -957,28 +989,28 @@ const styles = StyleSheet.create({
   alertButtonText: {
     color: '#ffffff',
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   alertButtonGhost: {
     flex: 1,
-    backgroundColor: '#fff4f2',
+    backgroundColor: colors.coralSoft,
     borderRadius: radii.md,
     alignItems: 'center',
     paddingVertical: spacing.xs,
     borderWidth: 1,
-    borderColor: '#ffd6d1',
+    borderColor: '#ffd1ca',
   },
   alertButtonGhostText: {
     color: colors.coral,
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   alertLink: {
     alignSelf: 'flex-start',
   },
   alertLinkText: {
-    color: colors.blue,
+    color: colors.blueDark,
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
 });

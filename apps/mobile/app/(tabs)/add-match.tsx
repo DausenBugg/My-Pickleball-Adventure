@@ -71,6 +71,7 @@ function SearchField({
         value={value}
         onChangeText={onChangeText}
         autoCapitalize="words"
+        placeholderTextColor={colors.muted}
       />
       {loading && value.trim().length > 1 ? (
         <View style={styles.searchLoading}>
@@ -342,6 +343,7 @@ export default function AddMatchScreen() {
                 style={styles.input}
                 value={userScore}
                 onChangeText={setUserScore}
+                placeholderTextColor={colors.muted}
               />
             </View>
             <View style={styles.field}>
@@ -352,6 +354,7 @@ export default function AddMatchScreen() {
                 style={styles.input}
                 value={opponentScore}
                 onChangeText={setOpponentScore}
+                placeholderTextColor={colors.muted}
               />
             </View>
           </View>
@@ -479,23 +482,24 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
   },
   subtitle: {
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
   section: {
     gap: spacing.sm,
   },
   sectionTitle: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.ink,
   },
   segment: {
     flexDirection: 'row',
-    backgroundColor: '#eef2f7',
+    backgroundColor: colors.blueSoft,
     borderRadius: radii.lg,
     padding: 4,
     gap: 6,
@@ -508,14 +512,15 @@ const styles = StyleSheet.create({
   },
   segmentActive: {
     backgroundColor: colors.surface,
-    shadowColor: '#000000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
   segmentText: {
     color: colors.muted,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   segmentTextActive: {
     color: colors.ink,
@@ -523,6 +528,7 @@ const styles = StyleSheet.create({
   helperText: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
+    fontFamily: typography.families.regular,
   },
   row: {
     flexDirection: 'row',
@@ -535,8 +541,8 @@ const styles = StyleSheet.create({
   label: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
-    textTransform: 'uppercase',
     letterSpacing: 0.7,
+    fontFamily: typography.families.semibold,
   },
   input: {
     backgroundColor: colors.surface,
@@ -546,10 +552,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     color: colors.ink,
+    fontFamily: typography.families.regular,
   },
   disabledInput: {
     color: colors.muted,
-    backgroundColor: '#f1f4f8',
+    backgroundColor: colors.panel,
   },
   searchLoading: {
     flexDirection: 'row',
@@ -560,6 +567,7 @@ const styles = StyleSheet.create({
   searchLoadingText: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
+    fontFamily: typography.families.medium,
   },
   suggestions: {
     backgroundColor: colors.surface,
@@ -576,12 +584,13 @@ const styles = StyleSheet.create({
   },
   suggestionName: {
     color: colors.ink,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     marginBottom: 2,
   },
   suggestionMeta: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
+    fontFamily: typography.families.regular,
   },
   selectedPlayer: {
     backgroundColor: colors.surface,
@@ -595,27 +604,29 @@ const styles = StyleSheet.create({
   },
   selectedPlayerName: {
     color: colors.ink,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     marginBottom: 2,
   },
   selectedPlayerMeta: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
+    fontFamily: typography.families.regular,
   },
   clearButton: {
-    backgroundColor: '#eef2f7',
+    backgroundColor: colors.blueSoft,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radii.sm,
   },
   clearButtonText: {
-    color: colors.ink,
+    color: colors.blueDark,
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   noMatch: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
+    fontFamily: typography.families.medium,
   },
   validationBanner: {
     borderRadius: radii.md,
@@ -623,18 +634,19 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   validationOk: {
-    backgroundColor: '#eaf7ef',
+    backgroundColor: colors.blueSoft,
   },
   validationError: {
-    backgroundColor: '#fff2f0',
+    backgroundColor: colors.coralSoft,
   },
   validationText: {
     color: colors.ink,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   validationMeta: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
+    fontFamily: typography.families.regular,
   },
   approvalCard: {
     backgroundColor: colors.surface,
@@ -642,28 +654,34 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   approvalTitle: {
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.ink,
     marginBottom: 6,
   },
   approvalText: {
     color: colors.muted,
     lineHeight: 20,
+    fontFamily: typography.families.regular,
   },
   submitButton: {
-    backgroundColor: colors.coral,
+    backgroundColor: colors.blue,
     borderRadius: radii.lg,
     paddingVertical: 14,
     alignItems: 'center',
   },
   submitDisabled: {
-    backgroundColor: '#f0b2a9',
+    backgroundColor: '#9ad4ff',
   },
   submitText: {
     color: '#ffffff',
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     fontSize: typography.sizes.md,
   },
 });

@@ -81,9 +81,9 @@ export default function AchievementsScreen() {
       <Stack.Screen
         options={{
           title: 'Achievements',
-          headerStyle: { backgroundColor: colors.blue[600] },
-          headerTintColor: colors.ink[0],
-          headerTitleStyle: { fontWeight: typography.weights.bold },
+          headerStyle: { backgroundColor: colors.blue },
+          headerTintColor: '#ffffff',
+          headerTitleStyle: { fontFamily: typography.families.semibold },
         }}
       />
       <ScrollView
@@ -132,29 +132,35 @@ export default function AchievementsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.ink[950],
+    backgroundColor: colors.background,
   },
   summary: {
+    margin: spacing.lg,
     padding: spacing.lg,
     alignItems: 'center',
-    backgroundColor: colors.ink[900],
-    borderBottomWidth: 1,
-    borderBottomColor: colors.ink[800],
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 3,
   },
   summaryText: {
-    color: colors.ink[100],
+    color: colors.ink,
     fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   section: {
     padding: spacing.md,
   },
   sectionTitle: {
-    color: colors.ink[200],
+    color: colors.muted,
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontFamily: typography.families.semibold,
+    letterSpacing: 1.2,
     marginBottom: spacing.sm,
     paddingHorizontal: spacing.xs,
   },
@@ -163,15 +169,14 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   cardUnlocked: {
-    backgroundColor: colors.ink[900],
-    borderWidth: 1,
-    borderColor: colors.blue[600],
+    backgroundColor: colors.surface,
   },
   cardLocked: {
-    backgroundColor: colors.ink[900],
-    opacity: 0.6,
+    backgroundColor: colors.panel,
   },
   iconContainer: {
     position: 'relative',
@@ -187,26 +192,27 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: radii.pill,
-    backgroundColor: colors.blue[600],
+    backgroundColor: colors.blue,
     borderWidth: 2,
-    borderColor: colors.ink[900],
+    borderColor: colors.surface,
   },
   content: {
     flex: 1,
   },
   name: {
-    color: colors.ink[0],
+    color: colors.ink,
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     marginBottom: spacing.xs,
   },
   description: {
-    color: colors.ink[200],
+    color: colors.muted,
     fontSize: typography.sizes.sm,
     lineHeight: 20,
+    fontFamily: typography.families.regular,
   },
   lockedText: {
-    color: colors.ink[400],
+    color: colors.muted,
   },
   progressContainer: {
     flexDirection: 'row',
@@ -216,26 +222,27 @@ const styles = StyleSheet.create({
   progressBar: {
     flex: 1,
     height: 6,
-    backgroundColor: colors.ink[800],
+    backgroundColor: colors.blueSoft,
     borderRadius: radii.pill,
     overflow: 'hidden',
     marginRight: spacing.sm,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.blue[600],
+    backgroundColor: colors.blue,
   },
   progressText: {
-    color: colors.ink[300],
+    color: colors.muted,
     fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.medium,
+    fontFamily: typography.families.medium,
     minWidth: 40,
     textAlign: 'right',
   },
   unlockedDate: {
-    color: colors.ink[400],
+    color: colors.muted,
     fontSize: typography.sizes.xs,
     marginTop: spacing.xs,
+    fontFamily: typography.families.medium,
   },
 });
 

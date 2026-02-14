@@ -94,15 +94,18 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <View style={styles.backgroundTop} />
+      <View style={styles.backgroundBottom} />
       <View style={styles.container}>
         <View style={styles.header}>
+          <Text style={styles.kicker}>NEW PLAYER</Text>
           <Text style={styles.title}>Create your account</Text>
           <Text style={styles.subtitle}>
-            Start logging matches and climbing the ranks.
+            Set up your profile and start logging matches.
           </Text>
         </View>
 
-        <View style={styles.form}>
+        <View style={styles.formCard}>
           <View style={styles.field}>
             <Text style={styles.label}>Name</Text>
             <TextInput
@@ -110,6 +113,7 @@ export default function RegisterScreen() {
               style={styles.input}
               value={name}
               onChangeText={setName}
+              placeholderTextColor={colors.muted}
             />
           </View>
           <View style={styles.field}>
@@ -123,6 +127,7 @@ export default function RegisterScreen() {
               style={styles.input}
               value={email}
               onChangeText={setEmail}
+              placeholderTextColor={colors.muted}
             />
           </View>
           <View style={styles.field}>
@@ -136,6 +141,7 @@ export default function RegisterScreen() {
                 style={[styles.input, styles.passwordInput]}
                 value={password}
                 onChangeText={setPassword}
+                placeholderTextColor={colors.muted}
               />
               <Pressable
                 onPress={() => setShowPassword((prev) => !prev)}
@@ -156,6 +162,7 @@ export default function RegisterScreen() {
                 style={[styles.input, styles.passwordInput]}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
+                placeholderTextColor={colors.muted}
               />
               <Pressable
                 onPress={() => setShowConfirm((prev) => !prev)}
@@ -208,6 +215,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  backgroundTop: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 120,
+    backgroundColor: colors.coralSoft,
+    top: -60,
+    right: -60,
+  },
+  backgroundBottom: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 160,
+    backgroundColor: colors.blueSoft,
+    bottom: -90,
+    left: -70,
+  },
   container: {
     flex: 1,
     paddingHorizontal: spacing.xl,
@@ -217,35 +242,53 @@ const styles = StyleSheet.create({
   header: {
     gap: 8,
   },
+  kicker: {
+    fontSize: typography.sizes.xs,
+    letterSpacing: 2.2,
+    color: colors.muted,
+    fontFamily: typography.families.semibold,
+  },
   title: {
     fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
   },
   subtitle: {
     fontSize: typography.sizes.base,
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
-  form: {
+  formCard: {
     gap: 16,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 3,
   },
   field: {
     gap: 8,
   },
   label: {
     fontSize: typography.sizes.sm,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 0.8,
+    letterSpacing: 1.2,
     color: colors.muted,
+    fontFamily: typography.families.semibold,
   },
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     borderRadius: radii.md,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
     color: colors.ink,
+    fontFamily: typography.families.regular,
   },
   passwordRow: {
     flexDirection: 'row',
@@ -259,47 +302,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs + 2,
     borderRadius: radii.sm,
-    backgroundColor: '#eef2f7',
+    backgroundColor: colors.coralSoft,
   },
   passwordToggleText: {
-    color: colors.ink,
-    fontWeight: '600',
+    color: colors.coralDark,
     fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  helper: {
-    color: colors.muted,
-    fontSize: 12,
-  },
-  helperError: {
-    color: colors.coral,
+    letterSpacing: 1,
+    fontFamily: typography.families.semibold,
   },
   validationErrors: {
-    backgroundColor: '#fff4f2',
+    backgroundColor: colors.coralSoft,
     borderRadius: radii.md,
     padding: spacing.sm,
     gap: 6,
     borderWidth: 1,
-    borderColor: '#ffd6d1',
+    borderColor: '#ffd1ca',
   },
   validationError: {
     color: colors.coral,
     fontSize: typography.sizes.sm,
+    fontFamily: typography.families.medium,
   },
   primary: {
-    backgroundColor: colors.coral,
+    backgroundColor: colors.blue,
     borderRadius: radii.lg,
     paddingVertical: spacing.sm + 2,
     alignItems: 'center',
     marginTop: 8,
   },
   primaryDisabled: {
-    backgroundColor: '#f0b2a9',
+    backgroundColor: '#9ad4ff',
   },
   primaryText: {
     color: '#ffffff',
-    fontWeight: '600',
+    fontFamily: typography.families.semibold,
     fontSize: 16,
   },
   termsText: {
@@ -307,19 +343,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     lineHeight: 18,
+    fontFamily: typography.families.regular,
   },
   link: {
-    color: colors.blue,
+    color: colors.blueDark,
     textAlign: 'center',
+    fontFamily: typography.families.semibold,
   },
   errorText: {
     color: colors.coral,
     textAlign: 'center',
     fontSize: 12,
+    fontFamily: typography.families.medium,
   },
   noticeText: {
-    color: colors.blue,
+    color: colors.blueDark,
     textAlign: 'center',
     fontSize: 12,
+    fontFamily: typography.families.medium,
   },
 });

@@ -53,13 +53,16 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <View style={styles.backgroundTop} />
+      <View style={styles.backgroundBottom} />
       <View style={styles.container}>
         <View style={styles.header}>
+          <Text style={styles.kicker}>PLAYER ACCESS</Text>
           <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Sign in to your account.</Text>
+          <Text style={styles.subtitle}>Sign in and keep the rally going.</Text>
         </View>
 
-        <View style={styles.form}>
+        <View style={styles.formCard}>
           <View style={styles.field}>
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -71,6 +74,7 @@ export default function LoginScreen() {
               style={styles.input}
               value={email}
               onChangeText={setEmail}
+              placeholderTextColor={colors.muted}
             />
           </View>
           <View style={styles.field}>
@@ -84,6 +88,7 @@ export default function LoginScreen() {
                 style={[styles.input, styles.passwordInput]}
                 value={password}
                 onChangeText={setPassword}
+                placeholderTextColor={colors.muted}
               />
               <Pressable
                 onPress={() => setShowPassword((prev) => !prev)}
@@ -127,6 +132,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  backgroundTop: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 120,
+    backgroundColor: colors.blueSoft,
+    top: -40,
+    right: -40,
+  },
+  backgroundBottom: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 160,
+    backgroundColor: colors.coralSoft,
+    bottom: -80,
+    left: -80,
+  },
   container: {
     flex: 1,
     paddingHorizontal: spacing.xl,
@@ -136,35 +159,53 @@ const styles = StyleSheet.create({
   header: {
     gap: 8,
   },
+  kicker: {
+    fontSize: typography.sizes.xs,
+    letterSpacing: 2.2,
+    color: colors.muted,
+    fontFamily: typography.families.semibold,
+  },
   title: {
     fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
   },
   subtitle: {
     fontSize: typography.sizes.base,
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
-  form: {
+  formCard: {
     gap: 16,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 3,
   },
   field: {
     gap: 8,
   },
   label: {
     fontSize: typography.sizes.sm,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 0.8,
+    letterSpacing: 1.2,
     color: colors.muted,
+    fontFamily: typography.families.semibold,
   },
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     borderRadius: radii.md,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
     color: colors.ink,
+    fontFamily: typography.families.regular,
   },
   passwordRow: {
     flexDirection: 'row',
@@ -178,18 +219,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs + 2,
     borderRadius: radii.sm,
-    backgroundColor: '#eef2f7',
+    backgroundColor: colors.blueSoft,
   },
   passwordToggleText: {
-    color: colors.ink,
-    fontWeight: '600',
+    color: colors.blueDark,
     fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 1,
+    fontFamily: typography.families.semibold,
   },
   helper: {
     color: colors.muted,
     fontSize: 12,
+    fontFamily: typography.families.regular,
   },
   helperError: {
     color: colors.coral,
@@ -202,20 +243,22 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   primaryDisabled: {
-    backgroundColor: '#9cb7d6',
+    backgroundColor: '#9ad4ff',
   },
   primaryText: {
     color: '#ffffff',
-    fontWeight: '600',
+    fontFamily: typography.families.semibold,
     fontSize: 16,
   },
   link: {
-    color: colors.blue,
+    color: colors.blueDark,
     textAlign: 'center',
+    fontFamily: typography.families.semibold,
   },
   errorText: {
     color: colors.coral,
     textAlign: 'center',
     fontSize: 12,
+    fontFamily: typography.families.medium,
   },
 });

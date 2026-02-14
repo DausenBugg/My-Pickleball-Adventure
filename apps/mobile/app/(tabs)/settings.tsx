@@ -199,7 +199,7 @@ export default function SettingsScreen() {
                 <Switch
                   value={notificationsEnabled}
                   onValueChange={handleToggleNotifications}
-                  trackColor={{ false: '#e0e0e0', true: '#9bbcff' }}
+                  trackColor={{ false: '#e0e0e0', true: colors.blueSoft }}
                   thumbColor={notificationsEnabled ? colors.blue : '#f4f4f4'}
                 />
               </View>
@@ -251,6 +251,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     gap: spacing.md,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
   profileHeader: {
     flexDirection: 'row',
@@ -278,7 +283,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: '#ffffff',
   },
   profileInfo: {
@@ -286,13 +291,14 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
     marginBottom: 4,
   },
   profileEmail: {
     fontSize: typography.sizes.sm,
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
   profileStats: {
     flexDirection: 'row',
@@ -306,29 +312,31 @@ const styles = StyleSheet.create({
   },
   profileStatValue: {
     fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
     marginBottom: 4,
   },
   profileStatLabel: {
     fontSize: typography.sizes.sm,
     color: colors.muted,
+    fontFamily: typography.families.medium,
   },
   title: {
     fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
   },
   subtitle: {
     fontSize: typography.sizes.base,
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
   section: {
     gap: spacing.sm,
   },
   sectionTitle: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     color: colors.ink,
   },
   card: {
@@ -338,6 +346,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     gap: spacing.md,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   cardRow: {
     flexDirection: 'row',
@@ -352,15 +365,17 @@ const styles = StyleSheet.create({
   cardLabel: {
     fontSize: typography.sizes.base,
     color: colors.ink,
+    fontFamily: typography.families.medium,
   },
   cardValue: {
     fontSize: typography.sizes.sm,
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
   cardChevron: {
     fontSize: typography.sizes.xl,
-    color: colors.blue,
-    fontWeight: typography.weights.normal,
+    color: colors.blueDark,
+    fontFamily: typography.families.medium,
   },
   signOutButton: {
     backgroundColor: colors.coral,
@@ -370,11 +385,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   signOutDisabled: {
-    backgroundColor: '#f0b2a9',
+    backgroundColor: '#ffb7ad',
   },
   signOutText: {
     color: '#ffffff',
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     fontSize: typography.sizes.md,
   },
   version: {
@@ -382,5 +397,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: typography.sizes.xs,
     marginTop: spacing.xl,
+    fontFamily: typography.families.medium,
   },
 });

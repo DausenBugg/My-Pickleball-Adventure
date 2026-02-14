@@ -69,6 +69,7 @@ export default function SearchScreen() {
             value={query}
             onChangeText={setQuery}
             autoCapitalize="none"
+            placeholderTextColor={colors.muted}
           />
         </View>
 
@@ -190,11 +191,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
   },
   subtitle: {
     color: colors.muted,
+    fontFamily: typography.families.regular,
   },
   searchBox: {
     backgroundColor: colors.surface,
@@ -202,11 +204,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.sm,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   input: {
     height: 48,
     color: colors.ink,
     fontSize: typography.sizes.base,
+    fontFamily: typography.families.regular,
   },
   filters: {
     flexDirection: 'row',
@@ -216,16 +224,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: radii.pill,
-    backgroundColor: '#eef2f7',
+    backgroundColor: colors.blueSoft,
   },
   filterActive: {
     backgroundColor: colors.blue,
   },
   filterText: {
     color: colors.muted,
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
     fontSize: typography.sizes.sm,
-    textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   filterTextActive: {
@@ -239,6 +246,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: colors.muted,
     fontSize: typography.sizes.base,
+    fontFamily: typography.families.regular,
   },
   results: {
     gap: 14,
@@ -247,6 +255,7 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textAlign: 'center',
     paddingVertical: spacing.xl,
+    fontFamily: typography.families.medium,
   },
   card: {
     backgroundColor: colors.surface,
@@ -255,6 +264,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     gap: spacing.sm,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -263,29 +277,30 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontFamily: typography.families.bold,
     color: colors.ink,
   },
   meta: {
     color: colors.muted,
     marginTop: 4,
+    fontFamily: typography.families.regular,
   },
   ratingPill: {
-    backgroundColor: '#eaf1ff',
+    backgroundColor: colors.blueSoft,
     borderRadius: radii.md,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     alignItems: 'center',
   },
   ratingLabel: {
-    color: colors.blue,
+    color: colors.blueDark,
     fontSize: typography.sizes.xs,
-    textTransform: 'uppercase',
     letterSpacing: 0.6,
+    fontFamily: typography.families.semibold,
   },
   ratingValue: {
-    color: colors.blue,
-    fontWeight: typography.weights.bold,
+    color: colors.blueDark,
+    fontFamily: typography.families.bold,
     marginTop: 2,
   },
   statsRow: {
@@ -295,6 +310,7 @@ const styles = StyleSheet.create({
   stat: {
     color: colors.muted,
     fontSize: typography.sizes.sm,
+    fontFamily: typography.families.medium,
   },
   actionButton: {
     backgroundColor: colors.coral,
@@ -303,14 +319,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionMuted: {
-    backgroundColor: '#eff2f7',
+    backgroundColor: colors.blueSoft,
   },
   actionPending: {
-    backgroundColor: '#ffe9e6',
+    backgroundColor: colors.coralSoft,
   },
   actionText: {
     color: '#ffffff',
-    fontWeight: typography.weights.semibold,
+    fontFamily: typography.families.semibold,
   },
   actionTextMuted: {
     color: colors.muted,
