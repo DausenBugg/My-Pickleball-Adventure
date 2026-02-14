@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Dimensions, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 
-import { usePendingMatches } from '../../src/hooks/usePendingMatches';
+import { PendingMatch, usePendingMatches } from '../../src/hooks/usePendingMatches';
+import { useMatches } from '../../src/hooks/useMatches';
 import { useNotifications } from '../../src/hooks/useNotifications';
 import { useFriends } from '../../src/hooks/useFriends';
 import {
@@ -16,15 +16,22 @@ import {
 import { colors, radii, spacing, typography } from '../../src/theme';
 
 export default function HomeScreen() {
-  const router = useRouter();
   const { profile, loading: profileLoading, error: profileError } = useProfile();
   const { rating, loading: ratingLoading } = useRating();
-  const { matches: pendingMatches, approveMatch, rejectMatch } = usePendingMatches();
+  const { matches: pendingMatches, approveMatch, rejectMatch, refresh: refreshPendingMatches } = usePendingMatches();
   const { pendingReceived, pendingReceivedUsers, acceptFriendRequest, rejectFriendRequest } = useFriends();
-  const { notifications, unreadCount, markAsRead } = useNotifications();
+  const { matches: recentMatchesRaw, loading: recentMatchesLoading } = useMatches({ status: 'approved' });
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    refresh: refreshNotifications,
+  } = useNotifications();
   const [showFriendPrompt, setShowFriendPrompt] = useState(false);
-  const [showMatchPrompt, setShowMatchPrompt] = useState(false);
-  const [showAlerts, setShowAlerts] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const screenWidth = Dimensions.get('window').width;
+  const panelWidth = Math.min(360, screenWidth * 0.9);
 
   const loading = profileLoading || ratingLoading;
 
@@ -60,11 +67,18 @@ export default function HomeScreen() {
 
   // Estimate wins needed (assuming 120 XP per win)
   const winsToNext = useMemo(() => Math.ceil(xpToNext / 120), [xpToNext]);
-  const matchApprovalNotifications = useMemo(
-    () => notifications.filter((item) => item.type === 'match_approval' && !item.read),
-    [notifications]
-  );
 
+  const pendingMatchById = useMemo(() => {
+    return new Map(pendingMatches.map((match) => [match.id, match]));
+  }, [pendingMatches]);
+
+  const pendingFriendById = useMemo(() => {
+    return new Map(pendingReceivedUsers.map((user) => [user.id, user]));
+  }, [pendingReceivedUsers]);
+
+  const recentMatches = useMemo(() => {
+    return recentMatchesRaw.slice(0, 5);
+  }, [recentMatchesRaw]);
   useEffect(() => {
     if (pendingReceivedUsers.length === 0) {
       setShowFriendPrompt(false);
@@ -75,17 +89,6 @@ export default function HomeScreen() {
     const timer = setTimeout(() => setShowFriendPrompt(false), 8000);
     return () => clearTimeout(timer);
   }, [pendingReceivedUsers.length]);
-
-  useEffect(() => {
-    if (pendingMatches.length === 0 && matchApprovalNotifications.length === 0) {
-      setShowMatchPrompt(false);
-      return;
-    }
-
-    setShowMatchPrompt(true);
-    const timer = setTimeout(() => setShowMatchPrompt(false), 8000);
-    return () => clearTimeout(timer);
-  }, [pendingMatches.length, matchApprovalNotifications.length]);
 
   const handleAcceptFriend = async () => {
     const requestId = pendingReceivedUsers[0]?.id || pendingReceived[0];
@@ -101,32 +104,101 @@ export default function HomeScreen() {
     if (success) setShowFriendPrompt(false);
   };
 
-  const handleApproveMatch = async () => {
-    const match = pendingMatches[0];
-    const fallbackId = matchApprovalNotifications[0]?.data?.match_id as string | undefined;
-    const matchId = match?.id || fallbackId;
-    if (!matchId) return;
+  const openNotifications = () => {
+    setIsNotificationsOpen(true);
+    refreshNotifications();
+    refreshPendingMatches();
+    Animated.timing(slideAnim, {
+      toValue: 1,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeNotifications = () => {
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setIsNotificationsOpen(false);
+    });
+  };
+
+  const handleApproveMatchNotification = async (matchId: string, notificationId?: string) => {
     const success = await approveMatch(matchId);
     if (success) {
-      if (matchApprovalNotifications[0]) {
-        await markAsRead(matchApprovalNotifications[0].id);
-      }
-      setShowMatchPrompt(false);
+      if (notificationId) await markAsRead(notificationId);
+      refreshPendingMatches();
+      refreshNotifications();
     }
   };
 
-  const handleRejectMatch = async () => {
-    const match = pendingMatches[0];
-    const fallbackId = matchApprovalNotifications[0]?.data?.match_id as string | undefined;
-    const matchId = match?.id || fallbackId;
-    if (!matchId) return;
+  const handleRejectMatchNotification = async (matchId: string, notificationId?: string) => {
     const success = await rejectMatch(matchId);
     if (success) {
-      if (matchApprovalNotifications[0]) {
-        await markAsRead(matchApprovalNotifications[0].id);
-      }
-      setShowMatchPrompt(false);
+      if (notificationId) await markAsRead(notificationId);
+      refreshPendingMatches();
+      refreshNotifications();
     }
+  };
+
+  const handleAcceptFriendNotification = async (requesterId: string, notificationId?: string) => {
+    const success = await acceptFriendRequest(requesterId);
+    if (success) {
+      if (notificationId) await markAsRead(notificationId);
+    }
+  };
+
+  const handleRejectFriendNotification = async (requesterId: string, notificationId?: string) => {
+    const success = await rejectFriendRequest(requesterId);
+    if (success) {
+      if (notificationId) await markAsRead(notificationId);
+    }
+  };
+
+  const formatTeamNames = (match: PendingMatch, team: 'team_a' | 'team_b') => {
+    const names = match.participants
+      .filter((participant) => participant.team === team)
+      .map((participant) => participant.full_name || 'Player');
+
+    return names.length > 0 ? names.join(' & ') : 'TBD';
+  };
+
+  const formatMatchSummary = (match: PendingMatch) => {
+    const teamA = formatTeamNames(match, 'team_a');
+    const teamB = formatTeamNames(match, 'team_b');
+    return {
+      title: `${match.match_type === 'singles' ? 'Singles' : 'Doubles'} ${match.match_mode}`,
+      teams: `${teamA} vs ${teamB}`,
+      score: `${match.team_a_score} - ${match.team_b_score}`,
+      winner: match.winner_team === 'team_a' ? teamA : teamB,
+    };
+  };
+
+  const formatRecentMatch = (match: typeof recentMatchesRaw[number]) => {
+    const teamA = [match.team1_player1, match.team1_player2]
+      .filter(Boolean)
+      .map((player) => player?.full_name || 'Player')
+      .join(' & ');
+    const teamB = [match.team2_player1, match.team2_player2]
+      .filter(Boolean)
+      .map((player) => player?.full_name || 'Player')
+      .join(' & ');
+    const userOnTeamA = [match.team1_player1?.id, match.team1_player2?.id]
+      .filter(Boolean)
+      .includes(profile?.id || '');
+    const userTeam = userOnTeamA ? teamA : teamB;
+    const opponentTeam = userOnTeamA ? teamB : teamA;
+    const userWon = match.winning_team === (userOnTeamA ? 1 : 2);
+    const score = userOnTeamA
+      ? `${match.score_team1} - ${match.score_team2}`
+      : `${match.score_team2} - ${match.score_team1}`;
+    return {
+      title: `${userTeam} vs ${opponentTeam}`,
+      subtitle: `${match.is_ranked ? 'Ranked' : 'Casual'} • ${score}`,
+      result: userWon ? 'Win' : 'Loss',
+    };
   };
 
   if (loading) {
@@ -178,13 +250,23 @@ export default function HomeScreen() {
               {profile.full_name || 'Player'}'s overview
             </Text>
           </View>
-          <View style={styles.rankPill}>
-            <Text style={styles.rankLabel}>Rating</Text>
-            <Text style={styles.rankValue}>{rating?.rating ?? 1200}</Text>
+          <View style={styles.headerActions}>
+            <Pressable style={styles.bellButton} onPress={openNotifications}>
+              <Text style={styles.bellIcon}>🔔</Text>
+              {unreadCount > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>{unreadCount}</Text>
+                </View>
+              )}
+            </Pressable>
+            <View style={styles.rankPill}>
+              <Text style={styles.rankLabel}>Rating</Text>
+              <Text style={styles.rankValue}>{rating?.rating ?? 1200}</Text>
+            </View>
           </View>
         </View>
 
-        {(showFriendPrompt || showMatchPrompt) && (
+        {showFriendPrompt && (
           <View style={styles.prompts}>
             {showFriendPrompt && pendingReceivedUsers.length > 0 && (
               <View style={styles.promptCard}>
@@ -208,27 +290,6 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {showMatchPrompt && (pendingMatches.length > 0 || matchApprovalNotifications.length > 0) && (
-              <View style={styles.promptCard}>
-                <View style={styles.promptHeader}>
-                  <Text style={styles.promptTitle}>Match awaiting approval</Text>
-                  <Text style={styles.promptMeta}>You were tagged in a match</Text>
-                </View>
-                <Text style={styles.promptBody}>
-                  {pendingMatches.length > 0
-                    ? `${pendingMatches.length} pending match${pendingMatches.length === 1 ? '' : 'es'} waiting for your vote.`
-                    : `${matchApprovalNotifications.length} match request${matchApprovalNotifications.length === 1 ? '' : 's'} waiting for your vote.`}
-                </Text>
-                <View style={styles.promptActions}>
-                  <Pressable style={[styles.promptButton, styles.promptDecline]} onPress={handleRejectMatch}>
-                    <Text style={styles.promptDeclineText}>Reject</Text>
-                  </Pressable>
-                  <Pressable style={[styles.promptButton, styles.promptAccept]} onPress={handleApproveMatch}>
-                    <Text style={styles.promptAcceptText}>Approve</Text>
-                  </Pressable>
-                </View>
-              </View>
-            )}
           </View>
         )}
 
@@ -267,100 +328,160 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        {pendingMatches.length > 0 && (
-          <Pressable
-            style={styles.approvalsButton}
-            onPress={() => router.push('/approvals')}
-          >
-            <View style={styles.approvalsBadge}>
-              <Text style={styles.approvalsBadgeText}>{pendingMatches.length}</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent matches</Text>
+          {recentMatchesLoading ? (
+            <View style={styles.matchCard}>
+              <Text style={styles.matchSubtitle}>Loading recent matches...</Text>
             </View>
-            <View style={styles.approvalsContent}>
-              <Text style={styles.approvalsTitle}>Pending Approvals</Text>
-              <Text style={styles.approvalsSubtitle}>
-                {pendingMatches.length} {pendingMatches.length === 1 ? 'match' : 'matches'}{' '}
-                waiting for your approval
-              </Text>
-            </View>
-            <Text style={styles.approvalsChevron}>›</Text>
-          </Pressable>
-        )}
-
-        {(unreadCount > 0 || pendingReceivedUsers.length > 0 || pendingMatches.length > 0 || matchApprovalNotifications.length > 0) && (
-          <Pressable
-            style={styles.notificationsButton}
-            onPress={() => setShowAlerts((prev) => !prev)}
-          >
-            <View style={styles.notificationsBadge}>
-              <Text style={styles.notificationsBadgeText}>
-                {unreadCount + pendingReceivedUsers.length + pendingMatches.length + matchApprovalNotifications.length}
-              </Text>
-            </View>
-            <View style={styles.notificationsContent}>
-              <Text style={styles.notificationsTitle}>Recent Alerts</Text>
-              <Text style={styles.notificationsSubtitle}>
-                Tap to view achievements, requests, and approvals
-              </Text>
-            </View>
-            <Text style={styles.notificationsChevron}>›</Text>
-          </Pressable>
-        )}
-
-        {showAlerts && (
-          <View style={styles.alertsPanel}>
-            {unreadCount > 0 && (
-              <Pressable
-                style={styles.alertRow}
-                onPress={() => router.push('/notifications')}
-              >
-                <Text style={styles.alertTitle}>Achievements and updates</Text>
-                <Text style={styles.alertMeta}>{unreadCount} unread</Text>
-              </Pressable>
-            )}
-
-            {pendingReceivedUsers.length > 0 && (
-              <View style={styles.alertRow}>
-                <View style={styles.alertInfo}>
-                  <Text style={styles.alertTitle}>Friend requests</Text>
-                  <Text style={styles.alertMeta}>{pendingReceivedUsers.length} waiting</Text>
-                </View>
-                <View style={styles.alertActions}>
-                  <Pressable style={styles.alertButtonGhost} onPress={handleRejectFriend}>
-                    <Text style={styles.alertButtonGhostText}>Decline</Text>
-                  </Pressable>
-                  <Pressable style={styles.alertButton} onPress={handleAcceptFriend}>
-                    <Text style={styles.alertButtonText}>Accept</Text>
-                  </Pressable>
-                </View>
+          ) : recentMatches.length === 0 ? (
+            <View style={styles.matchCard}>
+              <View>
+                <Text style={styles.matchTitle}>No matches logged yet</Text>
+                <Text style={styles.matchSubtitle}>Play your first match to see it here.</Text>
               </View>
-            )}
-
-            {(pendingMatches.length > 0 || matchApprovalNotifications.length > 0) && (
-              <View style={styles.alertRow}>
-                <View style={styles.alertInfo}>
-                  <Text style={styles.alertTitle}>Pending matches</Text>
-                  <Text style={styles.alertMeta}>
-                    {pendingMatches.length > 0
-                      ? `${pendingMatches.length} waiting`
-                      : `${matchApprovalNotifications.length} waiting`}
-                  </Text>
-                </View>
-                <View style={styles.alertActions}>
-                  <Pressable style={styles.alertButtonGhost} onPress={handleRejectMatch}>
-                    <Text style={styles.alertButtonGhostText}>Reject</Text>
-                  </Pressable>
-                  <Pressable style={styles.alertButton} onPress={handleApproveMatch}>
-                    <Text style={styles.alertButtonText}>Approve</Text>
-                  </Pressable>
-                </View>
-                <Pressable style={styles.alertLink} onPress={() => router.push('/approvals')}>
-                  <Text style={styles.alertLinkText}>Review all</Text>
-                </Pressable>
-              </View>
-            )}
-          </View>
-        )}
+            </View>
+          ) : (
+            <View style={styles.matchList}>
+              {recentMatches.map((match) => {
+                const summary = formatRecentMatch(match);
+                return (
+                  <View key={match.id} style={styles.matchCard}>
+                    <View>
+                      <Text style={styles.matchTitle}>{summary.title}</Text>
+                      <Text style={styles.matchSubtitle}>{summary.subtitle}</Text>
+                    </View>
+                    <View style={summary.result === 'Win' ? styles.matchBadgeWin : styles.matchBadgeLoss}>
+                      <Text style={styles.matchBadgeText}>{summary.result}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
       </ScrollView>
+      {isNotificationsOpen && (
+        <Pressable style={styles.overlay} onPress={closeNotifications} />
+      )}
+      <Animated.View
+        pointerEvents={isNotificationsOpen ? 'auto' : 'none'}
+        style={[
+          styles.notificationsPanel,
+          {
+            width: panelWidth,
+            transform: [
+              {
+                translateX: slideAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [panelWidth, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <View style={styles.panelHeader}>
+          <Text style={styles.panelTitle}>Notifications</Text>
+          <Pressable style={styles.panelClose} onPress={closeNotifications}>
+            <Text style={styles.panelCloseText}>Close</Text>
+          </Pressable>
+        </View>
+        <ScrollView contentContainerStyle={styles.panelList}>
+          {notifications.length === 0 && (
+            <View style={styles.panelEmpty}>
+              <Text style={styles.panelEmptyText}>No notifications yet</Text>
+            </View>
+          )}
+          {notifications
+            .filter((notification) => !(notification.type === 'match_approval' && notification.read))
+            .map((notification) => {
+            const matchId = notification.data?.match_id as string | undefined;
+            const requesterId = notification.data?.requester_id as string | undefined;
+            const pendingMatch = matchId ? pendingMatchById.get(matchId) : undefined;
+            const requester = requesterId ? pendingFriendById.get(requesterId) : undefined;
+            const matchSummary = pendingMatch ? formatMatchSummary(pendingMatch) : null;
+            const requesterName = requester?.full_name || 'Someone';
+
+            return (
+              <View key={notification.id} style={[
+                styles.panelCard,
+                !notification.read && styles.panelCardUnread,
+              ]}>
+                <View style={styles.panelCardHeader}>
+                  <Text style={styles.panelCardTitle}>{notification.title}</Text>
+                  <Text style={styles.panelCardTime}>{new Date(notification.created_at).toLocaleDateString()}</Text>
+                </View>
+                <Text style={styles.panelCardMessage}>{notification.message}</Text>
+
+                {notification.type === 'match_approval' && (
+                  <View style={styles.panelDetails}>
+                    {matchSummary ? (
+                      <>
+                        <Text style={styles.panelDetailText}>{matchSummary.title}</Text>
+                        <Text style={styles.panelDetailText}>{matchSummary.teams}</Text>
+                        <Text style={styles.panelDetailText}>Score: {matchSummary.score}</Text>
+                        <Text style={styles.panelDetailText}>Winner: {matchSummary.winner}</Text>
+                      </>
+                    ) : (
+                      <Text style={styles.panelDetailText}>Match details unavailable.</Text>
+                    )}
+                    <View style={styles.panelActions}>
+                      <Pressable
+                        style={[styles.panelButton, styles.panelButtonGhost]}
+                        onPress={() => matchId && handleRejectMatchNotification(matchId, notification.id)}
+                      >
+                        <Text style={styles.panelButtonGhostText}>Decline</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.panelButton, styles.panelButtonPrimary]}
+                        onPress={() => matchId && handleApproveMatchNotification(matchId, notification.id)}
+                      >
+                        <Text style={styles.panelButtonPrimaryText}>Approve</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+
+                {notification.type === 'friend_request' && (
+                  <View style={styles.panelDetails}>
+                    <Text style={styles.panelDetailText}>{requesterName} sent you a friend request.</Text>
+                    <View style={styles.panelActions}>
+                      <Pressable
+                        style={[styles.panelButton, styles.panelButtonGhost]}
+                        onPress={() => requesterId && handleRejectFriendNotification(requesterId, notification.id)}
+                      >
+                        <Text style={styles.panelButtonGhostText}>Decline</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.panelButton, styles.panelButtonPrimary]}
+                        onPress={() => requesterId && handleAcceptFriendNotification(requesterId, notification.id)}
+                      >
+                        <Text style={styles.panelButtonPrimaryText}>Accept</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+
+                {notification.type === 'achievement' && notification.data?.details && (
+                  <View style={styles.panelDetails}>
+                    <Text style={styles.panelDetailText}>{notification.data.details}</Text>
+                  </View>
+                )}
+
+                {!notification.read && (
+                  <Pressable
+                    style={styles.panelMarkRead}
+                    onPress={() => markAsRead(notification.id)}
+                  >
+                    <Text style={styles.panelMarkReadText}>Mark as read</Text>
+                  </Pressable>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -409,6 +530,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   title: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
@@ -437,6 +563,35 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
     fontSize: typography.sizes.md,
     marginTop: 2,
+  },
+  bellButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  bellIcon: {
+    fontSize: 18,
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: colors.coral,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  bellBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: typography.weights.bold,
   },
   prompts: {
     gap: spacing.sm,
@@ -609,108 +764,158 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: 6,
   },
-  matchBadge: {
-    backgroundColor: '#eaf1ff',
+  matchBadgeWin: {
+    backgroundColor: '#e7f6ef',
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  matchBadgeLoss: {
+    backgroundColor: '#ffecec',
     borderRadius: radii.pill,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   matchBadgeText: {
-    color: colors.blue,
+    color: colors.ink,
     fontSize: 11,
     fontWeight: typography.weights.semibold,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  approvalsButton: {
-    backgroundColor: '#fff4e6',
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: '#ffe0b2',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(5, 10, 20, 0.45)',
   },
-  approvalsBadge: {
-    backgroundColor: colors.coral,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  approvalsBadgeText: {
-    color: '#ffffff',
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.bold,
-  },
-  approvalsContent: {
-    flex: 1,
-  },
-  approvalsTitle: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
-    color: colors.ink,
-    marginBottom: 2,
-  },
-  approvalsSubtitle: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-  },
-  approvalsChevron: {
-    fontSize: 32,
-    color: colors.muted,
-  },
-  notificationsButton: {
-    backgroundColor: '#e6f4ff',
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: '#b3d9ff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  notificationsBadge: {
-    backgroundColor: colors.blue,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notificationsBadgeText: {
-    color: '#ffffff',
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.bold,
-  },
-  notificationsContent: {
-    flex: 1,
-  },
-  notificationsTitle: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
-    color: colors.ink,
-    marginBottom: 2,
-  },
-  notificationsSubtitle: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-  },
-  notificationsChevron: {
-    fontSize: 32,
-    color: colors.muted,
-  },
-  alertsPanel: {
+  notificationsPanel: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: colors.surface,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
+    paddingTop: spacing.lg,
+  },
+  panelHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  panelTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.ink,
+  },
+  panelClose: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  panelCloseText: {
+    color: colors.muted,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+  },
+  panelList: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+    gap: spacing.sm,
+  },
+  panelEmpty: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  panelEmptyText: {
+    color: colors.muted,
+    fontSize: typography.sizes.sm,
+  },
+  panelCard: {
+    backgroundColor: '#f7f8fb',
     borderRadius: radii.lg,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    gap: spacing.xs,
+  },
+  panelCardUnread: {
+    borderColor: colors.blue,
+    backgroundColor: '#eef4ff',
+  },
+  panelCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  panelCardTitle: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
+    color: colors.ink,
+    flex: 1,
+  },
+  panelCardTime: {
+    fontSize: typography.sizes.xs,
+    color: colors.muted,
+    marginLeft: spacing.sm,
+  },
+  panelCardMessage: {
+    fontSize: typography.sizes.sm,
+    color: colors.ink,
+    lineHeight: 18,
+  },
+  panelDetails: {
+    marginTop: spacing.xs,
+    gap: 4,
+  },
+  panelDetailText: {
+    fontSize: typography.sizes.sm,
+    color: colors.muted,
+  },
+  panelActions: {
+    flexDirection: 'row',
     gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  panelButton: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+  },
+  panelButtonGhost: {
+    borderWidth: 1,
+    borderColor: '#d9e1f2',
+    backgroundColor: '#ffffff',
+  },
+  panelButtonGhostText: {
+    color: colors.muted,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+  },
+  panelButtonPrimary: {
+    backgroundColor: colors.blue,
+  },
+  panelButtonPrimaryText: {
+    color: '#ffffff',
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+  },
+  panelMarkRead: {
+    marginTop: spacing.xs,
+    alignSelf: 'flex-start',
+  },
+  panelMarkReadText: {
+    color: colors.blue,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
   },
   alertRow: {
     backgroundColor: '#f9f9f9',

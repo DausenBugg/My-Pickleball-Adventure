@@ -122,11 +122,13 @@ serve(async (req) => {
     
     for (const participant of participants) {
       let xp = 0;
+      const resolvedResult = participant.result ??
+        (participant.team === match.winner_team ? 'win' : 'loss');
 
       // Base XP
-      if (participant.result === 'win') {
+      if (resolvedResult === 'win') {
         xp = 120;
-      } else if (participant.result === 'loss') {
+      } else if (resolvedResult === 'loss') {
         xp = 70;
       }
 
@@ -140,12 +142,12 @@ serve(async (req) => {
           user_id: participant.user_id,
           match_id: matchId,
           amount: xp,
-          reason: `${participant.result === 'win' ? 'Win' : 'Loss'} in ${match.match_mode} ${match.match_type}`,
+          reason: `${resolvedResult === 'win' ? 'Win' : 'Loss'} in ${match.match_mode} ${match.match_type}`,
         });
         console.log('[process-match-approval] XP event queued:', {
           user_id: participant.user_id,
           amount: xp,
-          result: participant.result,
+          result: resolvedResult,
         });
       }
     }
@@ -174,7 +176,8 @@ serve(async (req) => {
       }
 
       if (profile) {
-        const newTotalXP = profile.total_xp + event.amount;
+        const currentTotalXP = profile.total_xp ?? 0;
+        const newTotalXP = currentTotalXP + event.amount;
         
         // Calculate new level based on XP formula: XP(N) = 100 * N^1.6
         let newLevel = 1;
@@ -199,6 +202,19 @@ serve(async (req) => {
           console.error('[process-match-approval] Error updating profile XP:', event.user_id, updateError);
         } else {
           console.log('[process-match-approval] Profile XP updated successfully');
+        }
+      }
+    }
+
+    if (match.match_mode === 'casual') {
+      for (const participant of participants) {
+        const resolvedResult = participant.result ??
+          (participant.team === match.winner_team ? 'win' : 'loss');
+
+        if (resolvedResult === 'win') {
+          await supabaseClient.rpc('increment_wins', { user_id: participant.user_id });
+        } else if (resolvedResult === 'loss') {
+          await supabaseClient.rpc('increment_losses', { user_id: participant.user_id });
         }
       }
     }

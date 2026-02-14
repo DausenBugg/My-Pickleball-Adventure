@@ -162,13 +162,6 @@ export function usePendingMatches() {
       }
 
       // Call Edge Function to process match approval
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-      if (!accessToken) {
-        console.error('Missing access token for approval invoke');
-        return false;
-      }
-
       if (!supabaseUrl || !supabaseAnonKey) {
         console.error('Supabase not configured for edge function calls');
         return false;
@@ -180,7 +173,7 @@ export function usePendingMatches() {
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${supabaseAnonKey}`,
             apikey: supabaseAnonKey,
             'Content-Type': 'application/json',
           },
@@ -220,10 +213,6 @@ export function usePendingMatches() {
       if (insertError) throw insertError;
 
       // Call Edge Function to process rejection (update status)
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-      if (!accessToken) return false;
-
       if (!supabaseUrl || !supabaseAnonKey) {
         console.error('Supabase not configured for edge function calls');
         return false;
@@ -234,7 +223,7 @@ export function usePendingMatches() {
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${supabaseAnonKey}`,
             apikey: supabaseAnonKey,
             'Content-Type': 'application/json',
           },

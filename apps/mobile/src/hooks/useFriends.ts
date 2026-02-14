@@ -110,6 +110,28 @@ export function useFriends() {
       return false;
     }
 
+    const { data: requesterProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', session.user.id)
+      .single();
+
+    const requesterName = requesterProfile?.full_name || 'Someone';
+
+    const { error: notificationError } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: friendId,
+        type: 'friend_request',
+        title: 'New friend request',
+        message: `${requesterName} wants to add you as a friend.`,
+        data: { requester_id: session.user.id },
+      });
+
+    if (notificationError) {
+      console.error('Failed to create friend request notification:', notificationError);
+    }
+
     // Update local state
     setPendingSent((prev) => [...prev, friendId]);
     return true;
