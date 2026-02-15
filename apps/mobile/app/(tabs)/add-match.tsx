@@ -361,22 +361,6 @@ export default function AddMatchScreen() {
             </View>
           </View>
 
-          <View
-            style={[
-              styles.validationBanner,
-              { backgroundColor: validation.valid ? colors.successGhost : colors.secondaryGhost },
-            ]}
-          >
-            <View style={styles.validationRow}>
-              <Ionicons
-                name={validation.valid ? 'checkmark-circle' : 'information-circle'}
-                size={18}
-                color={validation.valid ? colors.success : colors.secondary}
-              />
-              <Text style={[styles.validationText, { color: colors.ink }]}>{validation.message}</Text>
-            </View>
-            <Text style={[styles.validationMeta, { color: colors.muted }]}>Winner: {winnerLabel}</Text>
-          </View>
         </Animated.View>
 
         {/* Players */}
@@ -438,6 +422,22 @@ export default function AddMatchScreen() {
               Singles require both players. Doubles require 3 of 4 approvals.
               Your submission counts as one approval.
             </Text>
+          </View>
+          <View
+            style={[
+              styles.validationBanner,
+              { backgroundColor: validation.valid ? colors.successGhost : colors.secondaryGhost },
+            ]}
+          >
+            <View style={styles.validationRow}>
+              <Ionicons
+                name={validation.valid ? 'checkmark-circle' : 'information-circle'}
+                size={18}
+                color={validation.valid ? colors.success : colors.secondary}
+              />
+              <Text style={[styles.validationText, { color: colors.ink }]}>{validation.message}</Text>
+            </View>
+            <Text style={[styles.validationMeta, { color: colors.muted }]}>Winner: {winnerLabel}</Text>
           </View>
         </Animated.View>
 

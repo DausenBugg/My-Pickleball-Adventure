@@ -141,6 +141,9 @@ export default function LeaderboardScreen() {
                     <View style={[styles.podiumRatingBadge, { backgroundColor: colors.primary }]}>
                       <Text style={styles.podiumRatingText}>{player.rating}</Text>
                     </View>
+                    <Text style={[styles.podiumMeta, { color: colors.muted }]}>
+                      {player.wins}W · {player.losses}L
+                    </Text>
                   </AnimatedPressable>
                 ))}
               </Animated.View>
@@ -167,7 +170,7 @@ export default function LeaderboardScreen() {
                           {player.full_name || 'Player'}
                         </Text>
                         <Text style={[styles.listMeta, { color: colors.muted }]}>
-                          Level {player.level} · Wins {player.wins}
+                          Level {player.level} · {player.wins}W · {player.losses}L
                         </Text>
                       </View>
                       <Text style={[styles.listRating, { color: colors.ink }]}>{player.rating}</Text>

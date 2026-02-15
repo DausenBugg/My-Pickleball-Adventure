@@ -164,7 +164,7 @@ export default function SearchScreen() {
                       </View>
                       <View style={[styles.ratingPill, { backgroundColor: colors.primaryGhost }]}>
                         <Text style={[styles.ratingLabel, { color: colors.primary }]}>Rating</Text>
-                        <Text style={[styles.ratingValue, { color: colors.primary }]}>1200</Text>
+                        <Text style={[styles.ratingValue, { color: colors.primary }]}>{player.rating}</Text>
                       </View>
                     </View>
 

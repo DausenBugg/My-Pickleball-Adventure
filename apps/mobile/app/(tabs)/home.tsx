@@ -345,38 +345,7 @@ export default function HomeScreen() {
           </View>
         </ReAnimated.View>
 
-        {/* ── Pending actions (friend requests, match approvals) ── */}
-        {showFriendPrompt && pendingReceivedUsers.length > 0 && (
-          <ReAnimated.View entering={FadeInDown.delay(250).duration(400)} style={[styles.pendingCard, { backgroundColor: colors.cardBackground, borderColor: colors.secondary }]}>
-            <View style={styles.pendingDot} />
-            <View style={styles.pendingContent}>
-              <Text style={[styles.pendingTitle, dynamicStyles.ink]}>
-                New friend request
-              </Text>
-              <Text style={[styles.pendingBody, dynamicStyles.muted]}>
-                {pendingReceivedUsers.length === 1
-                  ? `${pendingReceivedUsers[0]?.full_name || 'Someone'} wants to be your friend.`
-                  : `${pendingReceivedUsers[0]?.full_name || 'Someone'} and ${pendingReceivedUsers.length - 1} others sent requests.`}
-              </Text>
-              <View style={styles.pendingActions}>
-                <AnimatedPressable
-                  style={[styles.pendingBtn, { backgroundColor: colors.lossBg }]}
-                  onPress={handleRejectFriend}
-                >
-                  <Text style={[styles.pendingBtnText, { color: colors.secondary }]}>Decline</Text>
-                </AnimatedPressable>
-                <AnimatedPressable
-                  style={[styles.pendingBtn, { backgroundColor: colors.primary }]}
-                  onPress={handleAcceptFriend}
-                >
-                  <Text style={[styles.pendingBtnText, { color: colors.textOnPrimary }]}>Accept</Text>
-                </AnimatedPressable>
-              </View>
-            </View>
-          </ReAnimated.View>
-        )}
-
-        {/* ── Recent matches (horizontal scroll) ── */}
+        {/* ── Recent matches ── */}
         <ReAnimated.View entering={FadeInDown.delay(300).duration(400)}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, dynamicStyles.ink]}>Recent Matches</Text>
