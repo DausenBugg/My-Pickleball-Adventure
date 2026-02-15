@@ -206,16 +206,15 @@ serve(async (req) => {
       }
     }
 
-    if (match.match_mode === 'casual') {
-      for (const participant of participants) {
-        const resolvedResult = participant.result ??
-          (participant.team === match.winner_team ? 'win' : 'loss');
+    // Increment wins/losses for all match modes (casual + ranked)
+    for (const participant of participants) {
+      const resolvedResult = participant.result ??
+        (participant.team === match.winner_team ? 'win' : 'loss');
 
-        if (resolvedResult === 'win') {
-          await supabaseClient.rpc('increment_wins', { user_id: participant.user_id });
-        } else if (resolvedResult === 'loss') {
-          await supabaseClient.rpc('increment_losses', { user_id: participant.user_id });
-        }
+      if (resolvedResult === 'win') {
+        await supabaseClient.rpc('increment_wins', { user_id: participant.user_id });
+      } else if (resolvedResult === 'loss') {
+        await supabaseClient.rpc('increment_losses', { user_id: participant.user_id });
       }
     }
 

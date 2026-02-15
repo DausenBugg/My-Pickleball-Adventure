@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -12,7 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useFriends } from '../../src/hooks/useFriends';
-import { usePlayerSearch } from '../../src/hooks/usePlayerSearch';
+import { Player, usePlayerSearch } from '../../src/hooks/usePlayerSearch';
+import { supabase } from '../../src/lib/supabase';
 import { useTheme } from '../../src/theme';
 import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
 import AnimatedPressable from '../../src/components/AnimatedPressable';
@@ -32,14 +33,55 @@ export default function SearchScreen() {
     sendFriendRequest,
   } = useFriends();
 
+  // Fetch friend profiles so friends tab works without a search query
+  const [friendProfiles, setFriendProfiles] = useState<Player[]>([]);
+  const [friendProfilesLoading, setFriendProfilesLoading] = useState(false);
+
+  useEffect(() => {
+    if (!supabase || friends.length === 0) {
+      setFriendProfiles([]);
+      return;
+    }
+
+    const fetchFriendProfiles = async () => {
+      setFriendProfilesLoading(true);
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, level, wins, losses, ratings(rating)')
+        .in('id', friends)
+        .order('full_name');
+
+      const mapped: Player[] = (data || []).map((p: any) => ({
+        id: p.id,
+        full_name: p.full_name,
+        email: p.email,
+        level: p.level,
+        wins: p.wins,
+        losses: p.losses,
+        rating: p.ratings?.[0]?.rating ?? p.ratings?.rating ?? 1200,
+      }));
+      setFriendProfiles(mapped);
+      setFriendProfilesLoading(false);
+    };
+
+    fetchFriendProfiles();
+  }, [friends]);
+
   const results = useMemo(() => {
     if (filter === 'friends') {
-      return players.filter((player) => friends.includes(player.id));
+      // If user typed a query, filter the friend profiles by query
+      if (query.trim().length >= 2) {
+        return players.filter((player) => friends.includes(player.id));
+      }
+      // Otherwise show all friend profiles
+      return friendProfiles;
     }
     return players;
-  }, [filter, players, friends]);
+  }, [filter, players, friends, friendProfiles, query]);
 
-  const loading = searchLoading || friendsLoading;
+  const loading = filter === 'friends'
+    ? friendsLoading || friendProfilesLoading
+    : searchLoading || friendsLoading;
 
   const handleAddFriend = async (userId: string) => {
     const success = await sendFriendRequest(userId);
@@ -119,7 +161,7 @@ export default function SearchScreen() {
           </AnimatedPressable>
         </Animated.View>
 
-        {loading && query.length > 0 ? (
+        {loading && (query.length > 0 || filter === 'friends') ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[styles.loadingText, { color: colors.muted }]}>Searching...</Text>
@@ -127,11 +169,18 @@ export default function SearchScreen() {
         ) : null}
 
         <View style={styles.results}>
-          {!loading && query.length < 2 ? (
+          {!loading && filter === 'all' && query.length < 2 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={44} color={colors.muted} />
               <Text style={[styles.emptyText, { color: colors.muted }]}>
                 Enter at least 2 characters to search
+              </Text>
+            </View>
+          ) : !loading && filter === 'friends' && results.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={44} color={colors.muted} />
+              <Text style={[styles.emptyText, { color: colors.muted }]}>
+                {friends.length === 0 ? 'No friends yet. Add some!' : 'No friends match your search.'}
               </Text>
             </View>
           ) : !loading && results.length === 0 && query.length >= 2 ? (

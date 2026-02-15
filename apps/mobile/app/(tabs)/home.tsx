@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ReAnimated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
@@ -50,12 +50,21 @@ export default function HomeScreen() {
   const [showFriendPrompt, setShowFriendPrompt] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [dismissedNotifications, setDismissedNotifications] = useState<Set<string>>(new Set());
   const prevLevelRef = useRef<number | null>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const screenWidth = Dimensions.get('window').width;
   const panelWidth = Math.min(360, screenWidth * 0.9);
 
   const loading = profileLoading || ratingLoading;
+
+  // Refresh profile when tab gains focus (e.g. after avatar change in settings)
+  useFocusEffect(
+    useCallback(() => {
+      refreshProfile();
+      refreshRating();
+    }, [])
+  );
 
   const xpToNext = useMemo(() => {
     if (!profile) return 0;
@@ -156,9 +165,13 @@ export default function HomeScreen() {
   };
 
   const handleApproveMatchNotification = async (matchId: string, notificationId?: string) => {
+    if (notificationId) {
+      setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+    }
     const success = await approveMatch(matchId);
     if (success) {
       if (notificationId) await markAsRead(notificationId);
+      closeNotifications();
       refreshPendingMatches();
       refreshNotifications();
       refreshProfile();
@@ -168,9 +181,13 @@ export default function HomeScreen() {
   };
 
   const handleRejectMatchNotification = async (matchId: string, notificationId?: string) => {
+    if (notificationId) {
+      setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+    }
     const success = await rejectMatch(matchId);
     if (success) {
       if (notificationId) await markAsRead(notificationId);
+      closeNotifications();
       refreshPendingMatches();
       refreshNotifications();
       refreshProfile();
@@ -180,16 +197,24 @@ export default function HomeScreen() {
   };
 
   const handleAcceptFriendNotification = async (requesterId: string, notificationId?: string) => {
+    if (notificationId) {
+      setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+    }
     const success = await acceptFriendRequest(requesterId);
     if (success) {
       if (notificationId) await markAsRead(notificationId);
+      refreshNotifications();
     }
   };
 
   const handleRejectFriendNotification = async (requesterId: string, notificationId?: string) => {
+    if (notificationId) {
+      setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+    }
     const success = await rejectFriendRequest(requesterId);
     if (success) {
       if (notificationId) await markAsRead(notificationId);
+      refreshNotifications();
     }
   };
 
@@ -466,7 +491,10 @@ export default function HomeScreen() {
             </View>
           )}
           {notifications
-            .filter((notification) => !(notification.type === 'match_approval' && notification.read))
+            .filter((notification) => !(
+              (notification.type === 'match_approval' || notification.type === 'friend_request') && notification.read
+            ))
+            .filter((notification) => !dismissedNotifications.has(notification.id))
             .map((notification) => {
             const matchId = notification.data?.match_id as string | undefined;
             const requesterId = notification.data?.requester_id as string | undefined;

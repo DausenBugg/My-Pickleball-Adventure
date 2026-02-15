@@ -23,13 +23,15 @@ interface AchievementCardProps {
 }
 
 function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
+  const isComplete = achievement.is_unlocked || (achievement.progress !== undefined && achievement.progress >= 100);
+
   return (
     <Animated.View entering={FadeInDown.delay(100 + index * 60).duration(400)}>
       <View
         style={[
           styles.card,
           { backgroundColor: colors.cardBackground },
-          achievement.is_unlocked
+          isComplete
             ? {
                 borderWidth: 2,
                 borderColor: colors.primary,
@@ -40,8 +42,8 @@ function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
         ]}
       >
         <View style={styles.iconContainer}>
-          <Text style={[styles.icon, !achievement.is_unlocked && { opacity: 0.5 }]}>{achievement.icon}</Text>
-          {achievement.is_unlocked && (
+          <Text style={[styles.icon, !isComplete && { opacity: 0.5 }]}>{achievement.icon}</Text>
+          {isComplete && (
             <View style={[styles.unlockedBadge, { backgroundColor: colors.primary, borderColor: colors.cardBackground }]}>
               <Ionicons name="checkmark" size={10} color="#ffffff" />
             </View>
@@ -52,7 +54,7 @@ function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
             style={[
               styles.name,
               { color: colors.ink },
-              !achievement.is_unlocked && { color: colors.muted },
+              !isComplete && { color: colors.muted },
             ]}
           >
             {achievement.name}
@@ -65,7 +67,7 @@ function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
           >
             {achievement.description}
           </Text>
-          {!achievement.is_unlocked && achievement.progress !== undefined && (
+          {!isComplete && achievement.progress !== undefined && (
             <View style={styles.progressContainer}>
               <View style={[styles.progressBar, { backgroundColor: colors.borderLight }]}>
                 <View
@@ -80,12 +82,16 @@ function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
               </Text>
             </View>
           )}
-          {achievement.is_unlocked && (
+          {achievement.is_unlocked && achievement.unlocked_at ? (
             <Text style={[styles.unlockedDate, { color: colors.muted }]}>
               Unlocked{' '}
               {new Date(achievement.unlocked_at).toLocaleDateString()}
             </Text>
-          )}
+          ) : isComplete ? (
+            <Text style={[styles.unlockedDate, { color: colors.primary }]}>
+              Completed!
+            </Text>
+          ) : null}
         </View>
       </View>
     </Animated.View>
@@ -97,13 +103,13 @@ export default function AchievementsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
 
-  const unlocked = achievements.filter((a) => a.is_unlocked);
-  const locked = achievements.filter((a) => !a.is_unlocked);
+  const unlocked = achievements.filter((a) => a.is_unlocked || (a.progress !== undefined && a.progress >= 100));
+  const locked = achievements.filter((a) => !a.is_unlocked && (a.progress === undefined || a.progress < 100));
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.primary} />
         }
