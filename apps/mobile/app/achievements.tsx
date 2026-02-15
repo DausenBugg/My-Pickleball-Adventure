@@ -3,75 +3,88 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   ScrollView,
   RefreshControl,
 } from 'react-native';
 import { Stack } from 'expo-router';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+
 import { useAchievements, UserAchievement } from '../src/hooks/useAchievements';
-import { colors, radii, spacing, typography } from '../src/theme';
+import { useTheme } from '../src/theme';
+import { radii, shadows, spacing, typography } from '../src/theme/tokens';
 
 interface AchievementCardProps {
   achievement: UserAchievement;
+  index: number;
+  colors: ReturnType<typeof useTheme>['colors'];
 }
 
-function AchievementCard({ achievement }: AchievementCardProps) {
+function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
   return (
-    <View
-      style={[
-        styles.card,
-        achievement.is_unlocked ? styles.cardUnlocked : styles.cardLocked,
-      ]}
-    >
-      <View style={styles.iconContainer}>
-        <Text style={styles.icon}>{achievement.icon}</Text>
-        {achievement.is_unlocked && <View style={styles.unlockedBadge} />}
-      </View>
-      <View style={styles.content}>
-        <Text
-          style={[
-            styles.name,
-            !achievement.is_unlocked && styles.lockedText,
-          ]}
-        >
-          {achievement.name}
-        </Text>
-        <Text
-          style={[
-            styles.description,
-            !achievement.is_unlocked && styles.lockedText,
-          ]}
-        >
-          {achievement.description}
-        </Text>
-        {!achievement.is_unlocked && achievement.progress !== undefined && (
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${achievement.progress}%` },
-                ]}
-              />
-            </View>
-            <Text style={styles.progressText}>
-              {Math.round(achievement.progress)}%
-            </Text>
-          </View>
-        )}
-        {achievement.is_unlocked && (
-          <Text style={styles.unlockedDate}>
-            Unlocked{' '}
-            {new Date(achievement.unlocked_at).toLocaleDateString()}
+    <Animated.View entering={FadeInDown.delay(100 + index * 60).duration(400)}>
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: colors.cardBackground },
+          achievement.is_unlocked
+            ? { borderWidth: 2, borderColor: colors.primary }
+            : { opacity: 0.65, borderWidth: 1, borderColor: colors.borderLight },
+        ]}
+      >
+        <View style={styles.iconContainer}>
+          <Text style={styles.icon}>{achievement.icon}</Text>
+          {achievement.is_unlocked && (
+            <View style={[styles.unlockedBadge, { backgroundColor: colors.primary, borderColor: colors.cardBackground }]} />
+          )}
+        </View>
+        <View style={styles.content}>
+          <Text
+            style={[
+              styles.name,
+              { color: colors.ink },
+              !achievement.is_unlocked && { color: colors.muted },
+            ]}
+          >
+            {achievement.name}
           </Text>
-        )}
+          <Text
+            style={[
+              styles.description,
+              { color: colors.muted },
+            ]}
+          >
+            {achievement.description}
+          </Text>
+          {!achievement.is_unlocked && achievement.progress !== undefined && (
+            <View style={styles.progressContainer}>
+              <View style={[styles.progressBar, { backgroundColor: colors.borderLight }]}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${achievement.progress}%`, backgroundColor: colors.primary },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.progressText, { color: colors.muted }]}>
+                {Math.round(achievement.progress)}%
+              </Text>
+            </View>
+          )}
+          {achievement.is_unlocked && (
+            <Text style={[styles.unlockedDate, { color: colors.muted }]}>
+              Unlocked{' '}
+              {new Date(achievement.unlocked_at).toLocaleDateString()}
+            </Text>
+          )}
+        </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 export default function AchievementsScreen() {
   const { achievements, loading, refresh } = useAchievements();
+  const { colors } = useTheme();
 
   const unlocked = achievements.filter((a) => a.is_unlocked);
   const locked = achievements.filter((a) => !a.is_unlocked);
@@ -81,32 +94,37 @@ export default function AchievementsScreen() {
       <Stack.Screen
         options={{
           title: 'Achievements',
-          headerStyle: { backgroundColor: colors.blue[600] },
-          headerTintColor: colors.ink[0],
+          headerStyle: { backgroundColor: colors.primary },
+          headerTintColor: colors.textOnPrimary,
           headerTitleStyle: { fontWeight: typography.weights.bold },
         }}
       />
       <ScrollView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={refresh} />
+          <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.primary} />
         }
       >
         {/* Summary */}
-        <View style={styles.summary}>
-          <Text style={styles.summaryText}>
-            {unlocked.length} of {achievements.length} unlocked
-          </Text>
-        </View>
+        <Animated.View entering={FadeInDown.duration(400)}>
+          <View style={[styles.summary, { backgroundColor: colors.primaryGhost }]}>
+            <Text style={[styles.summaryEmoji]}>🏆</Text>
+            <Text style={[styles.summaryText, { color: colors.ink }]}>
+              {unlocked.length} of {achievements.length} unlocked
+            </Text>
+          </View>
+        </Animated.View>
 
         {/* Unlocked Achievements */}
         {unlocked.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Unlocked</Text>
-            {unlocked.map((achievement) => (
+            <Text style={[styles.sectionTitle, { color: colors.primary }]}>Unlocked</Text>
+            {unlocked.map((achievement, idx) => (
               <AchievementCard
                 key={achievement.id}
                 achievement={achievement}
+                index={idx}
+                colors={colors}
               />
             ))}
           </View>
@@ -115,15 +133,19 @@ export default function AchievementsScreen() {
         {/* Locked Achievements */}
         {locked.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Locked</Text>
-            {locked.map((achievement) => (
+            <Text style={[styles.sectionTitle, { color: colors.muted }]}>Locked</Text>
+            {locked.map((achievement, idx) => (
               <AchievementCard
                 key={achievement.id}
                 achievement={achievement}
+                index={idx + unlocked.length}
+                colors={colors}
               />
             ))}
           </View>
         )}
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </>
   );
@@ -132,17 +154,18 @@ export default function AchievementsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.ink[950],
   },
   summary: {
     padding: spacing.lg,
+    margin: spacing.md,
+    borderRadius: radii.lg,
     alignItems: 'center',
-    backgroundColor: colors.ink[900],
-    borderBottomWidth: 1,
-    borderBottomColor: colors.ink[800],
+    gap: 8,
+  },
+  summaryEmoji: {
+    fontSize: 36,
   },
   summaryText: {
-    color: colors.ink[100],
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.semibold,
   },
@@ -150,9 +173,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   sectionTitle: {
-    color: colors.ink[200],
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontWeight: typography.weights.bold,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
@@ -162,16 +184,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: spacing.md,
     marginBottom: spacing.sm,
-    borderRadius: radii.md,
-  },
-  cardUnlocked: {
-    backgroundColor: colors.ink[900],
-    borderWidth: 1,
-    borderColor: colors.blue[600],
-  },
-  cardLocked: {
-    backgroundColor: colors.ink[900],
-    opacity: 0.6,
+    borderRadius: radii.lg,
+    ...shadows.sm,
   },
   iconContainer: {
     position: 'relative',
@@ -187,26 +201,19 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: radii.pill,
-    backgroundColor: colors.blue[600],
     borderWidth: 2,
-    borderColor: colors.ink[900],
   },
   content: {
     flex: 1,
   },
   name: {
-    color: colors.ink[0],
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
     marginBottom: spacing.xs,
   },
   description: {
-    color: colors.ink[200],
     fontSize: typography.sizes.sm,
     lineHeight: 20,
-  },
-  lockedText: {
-    color: colors.ink[400],
   },
   progressContainer: {
     flexDirection: 'row',
@@ -216,24 +223,20 @@ const styles = StyleSheet.create({
   progressBar: {
     flex: 1,
     height: 6,
-    backgroundColor: colors.ink[800],
     borderRadius: radii.pill,
     overflow: 'hidden',
     marginRight: spacing.sm,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.blue[600],
   },
   progressText: {
-    color: colors.ink[300],
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.medium,
     minWidth: 40,
     textAlign: 'right',
   },
   unlockedDate: {
-    color: colors.ink[400],
     fontSize: typography.sizes.xs,
     marginTop: spacing.xs,
   },

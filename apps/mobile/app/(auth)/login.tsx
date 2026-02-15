@@ -2,16 +2,18 @@ import { Link } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
-import { colors, radii, spacing, typography } from '../../src/theme';
+import { useTheme } from '../../src/theme';
+import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
+import AnimatedPressable from '../../src/components/AnimatedPressable';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -20,6 +22,7 @@ export default function LoginScreen() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { colors } = useTheme();
 
   const emailValid = useMemo(() => email.includes('@') && email.includes('.'), [email]);
   const passwordValid = useMemo(() => password.length >= 8, [password]);
@@ -52,56 +55,58 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Sign in to your account.</Text>
-        </View>
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+          <Text style={[styles.title, { color: colors.ink }]}>Welcome back</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>Sign in to your account.</Text>
+        </Animated.View>
 
-        <View style={styles.form}>
+        <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.form}>
           <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={[styles.label, { color: colors.muted }]}>Email</Text>
             <TextInput
               placeholder="you@example.com"
+              placeholderTextColor={colors.muted}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
               textContentType="emailAddress"
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight, color: colors.ink }]}
               value={email}
               onChangeText={setEmail}
             />
           </View>
           <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={[styles.label, { color: colors.muted }]}>Password</Text>
             <View style={styles.passwordRow}>
               <TextInput
                 placeholder="••••••••"
+                placeholderTextColor={colors.muted}
                 secureTextEntry={!showPassword}
                 autoComplete="password"
                 textContentType="password"
-                style={[styles.input, styles.passwordInput]}
+                style={[styles.input, styles.passwordInput, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight, color: colors.ink }]}
                 value={password}
                 onChangeText={setPassword}
               />
-              <Pressable
+              <AnimatedPressable
                 onPress={() => setShowPassword((prev) => !prev)}
-                style={styles.passwordToggle}
+                style={[styles.passwordToggle, { backgroundColor: colors.borderLight }]}
               >
-                <Text style={styles.passwordToggleText}>
+                <Text style={[styles.passwordToggleText, { color: colors.ink }]}>
                   {showPassword ? 'Hide' : 'Show'}
                 </Text>
-              </Pressable>
+              </AnimatedPressable>
             </View>
           </View>
 
-          <Text style={[styles.helper, submitted && !canSubmit && styles.helperError]}>
+          <Text style={[styles.helper, { color: colors.muted }, submitted && !canSubmit && { color: colors.secondary }]}>
             {helperText}
           </Text>
 
-          <Pressable
-            style={[styles.primary, !canSubmit && styles.primaryDisabled]}
+          <AnimatedPressable
+            style={[styles.primary, { backgroundColor: colors.primary }, !canSubmit && { opacity: 0.5 }]}
             onPress={handleSignIn}
           >
             {loading ? (
@@ -109,14 +114,16 @@ export default function LoginScreen() {
             ) : (
               <Text style={styles.primaryText}>Sign in</Text>
             )}
-          </Pressable>
+          </AnimatedPressable>
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        </View>
+          {error ? <Text style={[styles.errorText, { color: colors.secondary }]}>{error}</Text> : null}
+        </Animated.View>
 
-        <Link href="/(auth)/register" style={styles.link}>
-          No account yet? Create one
-        </Link>
+        <Animated.View entering={FadeInDown.delay(200).duration(400)}>
+          <Link href="/(auth)/register" style={[styles.link, { color: colors.primary }]}>
+            No account yet? Create one
+          </Link>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -125,7 +132,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
@@ -139,11 +145,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
-    color: colors.ink,
   },
   subtitle: {
     fontSize: typography.sizes.base,
-    color: colors.muted,
   },
   form: {
     gap: 16,
@@ -155,16 +159,13 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.8,
-    color: colors.muted,
   },
   input: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.ink,
+    fontSize: typography.sizes.base,
   },
   passwordRow: {
     flexDirection: 'row',
@@ -177,44 +178,34 @@ const styles = StyleSheet.create({
   passwordToggle: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs + 2,
-    borderRadius: radii.sm,
-    backgroundColor: '#eef2f7',
+    borderRadius: radii.pill,
   },
   passwordToggleText: {
-    color: colors.ink,
     fontWeight: '600',
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   helper: {
-    color: colors.muted,
     fontSize: 12,
   },
-  helperError: {
-    color: colors.coral,
-  },
   primary: {
-    backgroundColor: colors.blue,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     paddingVertical: spacing.sm + 2,
     alignItems: 'center',
     marginTop: 8,
-  },
-  primaryDisabled: {
-    backgroundColor: '#9cb7d6',
+    ...shadows.md,
   },
   primaryText: {
     color: '#ffffff',
-    fontWeight: '600',
+    fontWeight: typography.weights.bold,
     fontSize: 16,
   },
   link: {
-    color: colors.blue,
     textAlign: 'center',
+    fontWeight: typography.weights.semibold,
   },
   errorText: {
-    color: colors.coral,
     textAlign: 'center',
     fontSize: 12,
   },

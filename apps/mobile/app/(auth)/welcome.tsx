@@ -1,36 +1,55 @@
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { colors, radii, spacing, typography } from '../../src/theme';
+import AnimatedPressable from '../../src/components/AnimatedPressable';
+import { useTheme } from '../../src/theme';
+import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
 
 export default function WelcomeScreen() {
+  const { colors } = useTheme();
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
-        <View style={styles.hero}>
-          <Text style={styles.title}>My Pickleball Adventure</Text>
-          <Text style={styles.subtitle}>
+        {/* Hero area with primary background */}
+        <Animated.View
+          entering={FadeInDown.duration(500)}
+          style={[styles.hero, { backgroundColor: colors.primary }]}
+        >
+          <Text style={styles.heroEmoji}>🏓</Text>
+          <Text style={styles.heroTitle}>My Pickleball{'\n'}Adventure</Text>
+          <Text style={styles.heroSubtitle}>
             Track matches, level up, and climb the leaderboards.
           </Text>
-        </View>
+        </Animated.View>
 
-        <View style={styles.actions}>
+        {/* Actions */}
+        <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.actions}>
           <Link href="/(auth)/register" asChild>
-            <Pressable style={[styles.button, styles.primary]}>
-              <Text style={[styles.buttonText, styles.primaryText]}>
+            <AnimatedPressable
+              style={[styles.button, styles.primaryBtn, { backgroundColor: colors.primary }]}
+            >
+              <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>
                 Create account
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           </Link>
           <Link href="/(auth)/login" asChild>
-            <Pressable style={[styles.button, styles.secondary]}>
-              <Text style={[styles.buttonText, styles.secondaryText]}>
+            <AnimatedPressable
+              style={[
+                styles.button,
+                styles.secondaryBtn,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              <Text style={[styles.buttonText, { color: colors.ink }]}>
                 Sign in
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           </Link>
-        </View>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -39,53 +58,54 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxl,
     justifyContent: 'space-between',
   },
   hero: {
-    gap: 12,
-    marginTop: 40,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomLeftRadius: radii.xl + 12,
+    borderBottomRightRadius: radii.xl + 12,
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: typography.weights.bold,
-    color: colors.ink,
+  heroEmoji: {
+    fontSize: 72,
+    marginBottom: spacing.sm,
   },
-  subtitle: {
-    fontSize: 16,
-    color: colors.muted,
+  heroTitle: {
+    fontSize: typography.sizes.xxl + 4,
+    fontWeight: typography.weights.heavy,
+    color: '#ffffff',
+    textAlign: 'center',
+    lineHeight: 42,
+  },
+  heroSubtitle: {
+    fontSize: typography.sizes.md,
+    color: 'rgba(255,255,255,0.85)',
+    textAlign: 'center',
     lineHeight: 22,
   },
   actions: {
-    gap: 12,
-    marginBottom: 24,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
   },
   button: {
-    borderRadius: radii.lg,
-    paddingVertical: spacing.sm + 2,
+    borderRadius: radii.pill,
+    paddingVertical: spacing.md,
     alignItems: 'center',
+    ...shadows.sm,
   },
-  primary: {
-    backgroundColor: colors.blue,
-  },
-  secondary: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+  primaryBtn: {},
+  secondaryBtn: {
+    borderWidth: 1.5,
   },
   buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  primaryText: {
-    color: '#ffffff',
-  },
-  secondaryText: {
-    color: colors.ink,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
   },
 });

@@ -3,16 +3,21 @@ import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Swi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useProfile, useRating } from '../../src/hooks/useProfile';
 import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
 import { registerForPushNotificationsAsync, savePushToken } from '../../src/lib/notifications';
-import { colors, radii, spacing, typography } from '../../src/theme';
+import { useTheme, type ThemeMode } from '../../src/theme/ThemeContext';
+import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
 import { useAuth } from '../../src/state/auth';
+import AnimatedPressable from '../../src/components/AnimatedPressable';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { session } = useAuth();
+  const { colors, mode, setMode } = useTheme();
   const { profile, loading: profileLoading, uploadAvatar } = useProfile();
   const { rating } = useRating();
   const [loading, setLoading] = useState(false);
@@ -100,128 +105,178 @@ export default function SettingsScreen() {
     }
   };
 
+  const cycleTheme = () => {
+    const modes: ThemeMode[] = ['system', 'light', 'dark'];
+    const currentIdx = modes.indexOf(mode);
+    const nextMode = modes[(currentIdx + 1) % modes.length];
+    setMode(nextMode);
+  };
+
+  const themeLabel = mode === 'system' ? 'System' : mode === 'dark' ? 'Dark' : 'Light';
+  const themeIcon = mode === 'dark' ? 'moon' : mode === 'light' ? 'sunny' : 'phone-portrait-outline';
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+          <Text style={[styles.title, { color: colors.ink }]}>Settings</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>
             Manage your account and preferences.
           </Text>
-        </View>
+        </Animated.View>
 
         {profileLoading ? (
           <View style={styles.profileLoading}>
-            <ActivityIndicator size="small" color={colors.blue} />
+            <ActivityIndicator size="small" color={colors.primary} />
           </View>
         ) : profile ? (
-          <View style={styles.profileCard}>
-            <View style={styles.profileHeader}>
-              <Pressable onPress={handleAvatarUpload} disabled={uploadingAvatar}>
-                {profile.avatar_url ? (
-                  <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
-                ) : (
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                      {(profile.full_name || 'P')[0].toUpperCase()}
-                    </Text>
-                  </View>
-                )}
-                {uploadingAvatar && (
-                  <View style={styles.avatarLoading}>
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  </View>
-                )}
-              </Pressable>
-              <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>
-                  {profile.full_name || 'Player'}
-                </Text>
-                <Text style={styles.profileEmail}>{profile.email}</Text>
+          <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+            {/* Profile hero card with primary bg */}
+            <View style={[styles.profileCard, { backgroundColor: colors.primary }]}>
+              <View style={styles.profileHeader}>
+                <Pressable onPress={handleAvatarUpload} disabled={uploadingAvatar}>
+                  {profile.avatar_url ? (
+                    <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+                  ) : (
+                    <View style={[styles.avatar, { backgroundColor: 'rgba(255,255,255,0.25)' }]}>
+                      <Text style={styles.avatarText}>
+                        {(profile.full_name || 'P')[0].toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                  {uploadingAvatar && (
+                    <View style={styles.avatarLoading}>
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    </View>
+                  )}
+                </Pressable>
+                <View style={styles.profileInfo}>
+                  <Text style={styles.profileName}>
+                    {profile.full_name || 'Player'}
+                  </Text>
+                  <Text style={styles.profileEmail}>{profile.email}</Text>
+                </View>
+              </View>
+              <View style={styles.profileStats}>
+                <View style={styles.profileStat}>
+                  <Text style={styles.profileStatValue}>{profile.level}</Text>
+                  <Text style={styles.profileStatLabel}>Level</Text>
+                </View>
+                <View style={styles.profileStatDivider} />
+                <View style={styles.profileStat}>
+                  <Text style={styles.profileStatValue}>
+                    {rating?.rating ?? 1200}
+                  </Text>
+                  <Text style={styles.profileStatLabel}>Rating</Text>
+                </View>
+                <View style={styles.profileStatDivider} />
+                <View style={styles.profileStat}>
+                  <Text style={styles.profileStatValue}>{profile.wins}</Text>
+                  <Text style={styles.profileStatLabel}>Wins</Text>
+                </View>
               </View>
             </View>
-            <View style={styles.profileStats}>
-              <View style={styles.profileStat}>
-                <Text style={styles.profileStatValue}>{profile.level}</Text>
-                <Text style={styles.profileStatLabel}>Level</Text>
-              </View>
-              <View style={styles.profileStat}>
-                <Text style={styles.profileStatValue}>
-                  {rating?.rating ?? 1200}
-                </Text>
-                <Text style={styles.profileStatLabel}>Rating</Text>
-              </View>
-              <View style={styles.profileStat}>
-                <Text style={styles.profileStatValue}>{profile.wins}</Text>
-                <Text style={styles.profileStatLabel}>Wins</Text>
-              </View>
-            </View>
-          </View>
+          </Animated.View>
         ) : null}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
-          <View style={styles.card}>
-            <Pressable 
+        <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.ink }]}>Account</Text>
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
+            <AnimatedPressable 
               style={styles.cardRow} 
               onPress={() => router.push('/achievements')}
             >
-              <Text style={styles.cardLabel}>🏆 Achievements</Text>
-              <Text style={styles.cardChevron}>›</Text>
-            </Pressable>
-            <Pressable 
+              <View style={styles.cardRowLeft}>
+                <Ionicons name="trophy" size={20} color={colors.primary} />
+                <Text style={[styles.cardLabel, { color: colors.ink }]}>Achievements</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+            </AnimatedPressable>
+            <View style={[styles.cardDivider, { backgroundColor: colors.borderLight }]} />
+            <AnimatedPressable 
               style={styles.cardRow} 
               onPress={() => router.push('/match-history')}
             >
-              <Text style={styles.cardLabel}>📊 Match History</Text>
-              <Text style={styles.cardChevron}>›</Text>
-            </Pressable>
-            <Pressable 
+              <View style={styles.cardRowLeft}>
+                <Ionicons name="stats-chart" size={20} color={colors.primary} />
+                <Text style={[styles.cardLabel, { color: colors.ink }]}>Match History</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+            </AnimatedPressable>
+            <View style={[styles.cardDivider, { backgroundColor: colors.borderLight }]} />
+            <AnimatedPressable 
               style={styles.cardRow} 
               onPress={handleAvatarUpload}
               disabled={uploadingAvatar}
             >
-              <Text style={styles.cardLabel}>📸 Change Profile Photo</Text>
-              <Text style={styles.cardChevron}>›</Text>
-            </Pressable>
+              <View style={styles.cardRowLeft}>
+                <Ionicons name="camera" size={20} color={colors.primary} />
+                <Text style={[styles.cardLabel, { color: colors.ink }]}>Change Profile Photo</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+            </AnimatedPressable>
           </View>
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
-          <View style={styles.card}>
+        <Animated.View entering={FadeInDown.delay(300).duration(400)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.ink }]}>Preferences</Text>
+          <View style={[styles.card, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
             <View style={styles.cardRow}>
-              <Text style={styles.cardLabel}>Notifications</Text>
+              <View style={styles.cardRowLeft}>
+                <Ionicons name="notifications" size={20} color={colors.primary} />
+                <Text style={[styles.cardLabel, { color: colors.ink }]}>Notifications</Text>
+              </View>
               <View style={styles.notificationsToggle}>
-                <Text style={styles.cardValue}>
+                <Text style={[styles.cardValue, { color: colors.muted }]}>
                   {notificationsSaving ? 'Saving...' : notificationsEnabled ? 'On' : 'Off'}
                 </Text>
                 <Switch
                   value={notificationsEnabled}
                   onValueChange={handleToggleNotifications}
-                  trackColor={{ false: '#e0e0e0', true: '#9bbcff' }}
-                  thumbColor={notificationsEnabled ? colors.blue : '#f4f4f4'}
+                  trackColor={{ false: colors.border, true: colors.primaryLight }}
+                  thumbColor={notificationsEnabled ? colors.primary : colors.muted}
                 />
               </View>
             </View>
+            <View style={[styles.cardDivider, { backgroundColor: colors.borderLight }]} />
+            <AnimatedPressable style={styles.cardRow} onPress={cycleTheme}>
+              <View style={styles.cardRowLeft}>
+                <Ionicons name={themeIcon as any} size={20} color={colors.primary} />
+                <Text style={[styles.cardLabel, { color: colors.ink }]}>Appearance</Text>
+              </View>
+              <View style={styles.notificationsToggle}>
+                <Text style={[styles.cardValue, { color: colors.muted }]}>{themeLabel}</Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+              </View>
+            </AnimatedPressable>
+            <View style={[styles.cardDivider, { backgroundColor: colors.borderLight }]} />
             <View style={styles.cardRow}>
-              <Text style={styles.cardLabel}>Privacy</Text>
-              <Text style={styles.cardValue}>Public</Text>
+              <View style={styles.cardRowLeft}>
+                <Ionicons name="lock-closed" size={20} color={colors.primary} />
+                <Text style={[styles.cardLabel, { color: colors.ink }]}>Privacy</Text>
+              </View>
+              <Text style={[styles.cardValue, { color: colors.muted }]}>Public</Text>
             </View>
           </View>
-        </View>
+        </Animated.View>
 
-        <Pressable
-          style={[styles.signOutButton, loading && styles.signOutDisabled]}
-          onPress={confirmSignOut}
-          disabled={loading}
-        >
-          <Text style={styles.signOutText}>
-            {loading ? 'Signing out...' : 'Sign out'}
-          </Text>
-        </Pressable>
+        <Animated.View entering={FadeInDown.delay(400).duration(400)}>
+          <AnimatedPressable
+            style={[styles.signOutButton, { backgroundColor: colors.secondary }, loading && styles.signOutDisabled]}
+            onPress={confirmSignOut}
+            disabled={loading}
+          >
+            <Ionicons name="log-out-outline" size={20} color={colors.textOnSecondary} />
+            <Text style={[styles.signOutText, { color: colors.textOnSecondary }]}>
+              {loading ? 'Signing out...' : 'Sign out'}
+            </Text>
+          </AnimatedPressable>
 
-        <Text style={styles.version}>Version 1.0.0</Text>
+          <Text style={[styles.version, { color: colors.muted }]}>Version 1.0.0</Text>
+        </Animated.View>
+
+        {/* Spacer for floating tab bar */}
+        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -230,7 +285,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   container: {
     padding: spacing.lg,
@@ -245,12 +299,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.md,
+    ...shadows.lg,
   },
   profileHeader: {
     flexDirection: 'row',
@@ -258,12 +310,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.blue,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   avatarLoading: {
     position: 'absolute',
@@ -272,7 +325,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.4)',
-    borderRadius: 30,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -285,43 +338,49 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.ink,
-    marginBottom: 4,
+    color: '#ffffff',
+    marginBottom: 2,
   },
   profileEmail: {
     fontSize: typography.sizes.sm,
-    color: colors.muted,
+    color: 'rgba(255,255,255,0.75)',
   },
   profileStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    alignItems: 'center',
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: 'rgba(255,255,255,0.2)',
   },
   profileStat: {
     alignItems: 'center',
   },
+  profileStatDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
   profileStatValue: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
-    color: colors.ink,
-    marginBottom: 4,
+    color: '#ffffff',
+    marginBottom: 2,
   },
   profileStatLabel: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
+    fontSize: typography.sizes.xs,
+    color: 'rgba(255,255,255,0.75)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   title: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.ink,
   },
   subtitle: {
     fontSize: typography.sizes.base,
-    color: colors.muted,
   },
   section: {
     gap: spacing.sm,
@@ -329,20 +388,27 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    color: colors.ink,
   },
   card: {
-    backgroundColor: colors.surface,
     borderRadius: radii.lg,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.md,
+    ...shadows.sm,
   },
   cardRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  cardRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  cardDivider: {
+    height: 1,
+    marginVertical: spacing.xs,
   },
   notificationsToggle: {
     flexDirection: 'row',
@@ -351,35 +417,29 @@ const styles = StyleSheet.create({
   },
   cardLabel: {
     fontSize: typography.sizes.base,
-    color: colors.ink,
   },
   cardValue: {
     fontSize: typography.sizes.sm,
-    color: colors.muted,
-  },
-  cardChevron: {
-    fontSize: typography.sizes.xl,
-    color: colors.blue,
-    fontWeight: typography.weights.normal,
   },
   signOutButton: {
-    backgroundColor: colors.coral,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.sm + 2,
+    borderRadius: radii.pill,
+    paddingVertical: spacing.md,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
     marginTop: spacing.md,
+    ...shadows.sm,
   },
   signOutDisabled: {
-    backgroundColor: '#f0b2a9',
+    opacity: 0.6,
   },
   signOutText: {
-    color: '#ffffff',
     fontWeight: typography.weights.semibold,
     fontSize: typography.sizes.md,
   },
   version: {
     textAlign: 'center',
-    color: colors.muted,
     fontSize: typography.sizes.xs,
     marginTop: spacing.xl,
   },

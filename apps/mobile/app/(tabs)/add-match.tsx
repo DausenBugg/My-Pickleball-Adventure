@@ -10,11 +10,15 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Player, usePlayerSearch } from '../../src/hooks/usePlayerSearch';
 import { MatchParticipant, useSubmitMatch } from '../../src/hooks/useSubmitMatch';
 import { useAuth } from '../../src/state/auth';
-import { colors, radii, spacing, typography } from '../../src/theme';
+import { useTheme } from '../../src/theme';
+import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
+import AnimatedPressable from '../../src/components/AnimatedPressable';
 
 type MatchType = 'singles' | 'doubles';
 type MatchMode = 'casual' | 'ranked';
@@ -27,6 +31,7 @@ type SearchFieldProps = {
   selectedPlayer: Player | null;
   onSelectPlayer: (player: Player) => void;
   onClearPlayer: () => void;
+  colors: ReturnType<typeof useTheme>['colors'];
 };
 
 function SearchField({
@@ -37,26 +42,27 @@ function SearchField({
   selectedPlayer,
   onSelectPlayer,
   onClearPlayer,
+  colors,
 }: SearchFieldProps) {
   const { players, loading } = usePlayerSearch(value);
 
   if (selectedPlayer) {
     return (
       <View style={styles.field}>
-        <Text style={styles.label}>{label}</Text>
-        <View style={styles.selectedPlayer}>
+        <Text style={[styles.label, { color: colors.muted }]}>{label}</Text>
+        <View style={[styles.selectedPlayer, { backgroundColor: colors.cardBackground, borderColor: colors.primary }]}>
           <View>
-            <Text style={styles.selectedPlayerName}>
+            <Text style={[styles.selectedPlayerName, { color: colors.ink }]}>
               {selectedPlayer.full_name || 'Player'}
             </Text>
-            <Text style={styles.selectedPlayerMeta}>
+            <Text style={[styles.selectedPlayerMeta, { color: colors.muted }]}>
               Level {selectedPlayer.level} • {selectedPlayer.wins}W -{' '}
               {selectedPlayer.losses}L
             </Text>
           </View>
-          <Pressable onPress={onClearPlayer} style={styles.clearButton}>
-            <Text style={styles.clearButtonText}>Change</Text>
-          </Pressable>
+          <AnimatedPressable onPress={onClearPlayer} style={[styles.clearButton, { backgroundColor: colors.borderLight }]}>
+            <Text style={[styles.clearButtonText, { color: colors.ink }]}>Change</Text>
+          </AnimatedPressable>
         </View>
       </View>
     );
@@ -64,30 +70,31 @@ function SearchField({
 
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.muted }]}>{label}</Text>
       <TextInput
         placeholder={placeholder}
-        style={styles.input}
+        placeholderTextColor={colors.muted}
+        style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight, color: colors.ink }]}
         value={value}
         onChangeText={onChangeText}
         autoCapitalize="words"
       />
       {loading && value.trim().length > 1 ? (
         <View style={styles.searchLoading}>
-          <ActivityIndicator size="small" color={colors.blue} />
-          <Text style={styles.searchLoadingText}>Searching...</Text>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={[styles.searchLoadingText, { color: colors.muted }]}>Searching...</Text>
         </View>
       ) : null}
       {!loading && value.trim().length > 1 && players.length > 0 ? (
-        <View style={styles.suggestions}>
+        <View style={[styles.suggestions, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
           {players.map((player) => (
             <Pressable key={player.id} onPress={() => onSelectPlayer(player)}>
-              <View style={styles.suggestionItem}>
+              <View style={[styles.suggestionItem, { borderBottomColor: colors.borderLight }]}>
                 <View>
-                  <Text style={styles.suggestionName}>
+                  <Text style={[styles.suggestionName, { color: colors.ink }]}>
                     {player.full_name || 'Player'}
                   </Text>
-                  <Text style={styles.suggestionMeta}>
+                  <Text style={[styles.suggestionMeta, { color: colors.muted }]}>
                     Level {player.level} • {player.wins}W - {player.losses}L
                   </Text>
                 </View>
@@ -97,7 +104,7 @@ function SearchField({
         </View>
       ) : null}
       {!loading && value.trim().length > 1 && players.length === 0 ? (
-        <Text style={styles.noMatch}>No matching players</Text>
+        <Text style={[styles.noMatch, { color: colors.muted }]}>No matching players</Text>
       ) : null}
     </View>
   );
@@ -106,18 +113,17 @@ function SearchField({
 export default function AddMatchScreen() {
   const { session } = useAuth();
   const { submitMatch, loading: submitting, error: submitError } = useSubmitMatch();
+  const { colors } = useTheme();
 
   const [matchType, setMatchType] = useState<MatchType>('singles');
   const [matchMode, setMatchMode] = useState<MatchMode>('casual');
   const [userScore, setUserScore] = useState('');
   const [opponentScore, setOpponentScore] = useState('');
 
-  // Player search states
   const [opponentSearch, setOpponentSearch] = useState('');
   const [allySearch, setAllySearch] = useState('');
   const [opponent2Search, setOpponent2Search] = useState('');
 
-  // Selected players
   const [opponent, setOpponent] = useState<Player | null>(null);
   const [ally, setAlly] = useState<Player | null>(null);
   const [opponent2, setOpponent2] = useState<Player | null>(null);
@@ -129,39 +135,29 @@ export default function AddMatchScreen() {
     if (!userScore || !opponentScore) {
       return { valid: false, message: 'Enter both scores to continue.' };
     }
-
     if (Number.isNaN(parsedUserScore) || Number.isNaN(parsedOpponentScore)) {
       return { valid: false, message: 'Scores must be numbers.' };
     }
-
     if (parsedUserScore < 0 || parsedOpponentScore < 0) {
       return { valid: false, message: 'Scores must be 0 or higher.' };
     }
-
     if (parsedUserScore === parsedOpponentScore) {
       return { valid: false, message: 'Scores cannot be tied.' };
     }
-
     const winnerScore = Math.max(parsedUserScore, parsedOpponentScore);
     const loserScore = Math.min(parsedUserScore, parsedOpponentScore);
-
     if (winnerScore < 11) {
       return { valid: false, message: 'Winner must have at least 11 points.' };
     }
-
     if (winnerScore - loserScore < 2) {
       return { valid: false, message: 'Winner must lead by 2 points.' };
     }
-
-    // Check player selection
     if (!opponent) {
       return { valid: false, message: 'Select an opponent to continue.' };
     }
-
     if (matchType === 'doubles' && (!ally || !opponent2)) {
       return { valid: false, message: 'Select all players for doubles match.' };
     }
-
     return { valid: true, message: 'Ready to submit!' };
   }, [
     opponentScore,
@@ -184,13 +180,11 @@ export default function AddMatchScreen() {
       Alert.alert('Unable to submit', validation.message);
       return;
     }
-
     if (!session?.user?.id || !opponent) {
       Alert.alert('Unable to submit', 'Missing required player or session data.');
       return;
     }
 
-    // Build participants list
     const userTeam: 'team_a' | 'team_b' =
       parsedUserScore > parsedOpponentScore ? 'team_a' : 'team_b';
     const opponentTeam: 'team_a' | 'team_b' =
@@ -224,7 +218,6 @@ export default function AddMatchScreen() {
           {
             text: 'OK',
             onPress: () => {
-              // Reset form
               setUserScore('');
               setOpponentScore('');
               setOpponent(null);
@@ -243,113 +236,125 @@ export default function AddMatchScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Add match</Text>
-          <Text style={styles.subtitle}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+          <Text style={[styles.title, { color: colors.ink }]}>Add match</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>
             Log a match and submit it for approval.
           </Text>
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Match type</Text>
-          <View style={styles.segment}>
-            <Pressable
+        {/* Match type */}
+        <Animated.View entering={FadeInDown.delay(80).duration(400)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.ink }]}>Match type</Text>
+          <View style={[styles.segment, { backgroundColor: colors.borderLight }]}>
+            <AnimatedPressable
               style={[
                 styles.segmentButton,
-                matchType === 'singles' && styles.segmentActive,
+                matchType === 'singles' && { backgroundColor: colors.primary },
               ]}
               onPress={() => setMatchType('singles')}
             >
               <Text
                 style={[
                   styles.segmentText,
-                  matchType === 'singles' && styles.segmentTextActive,
+                  { color: colors.muted },
+                  matchType === 'singles' && { color: colors.textOnPrimary },
                 ]}
               >
                 Singles
               </Text>
-            </Pressable>
-            <Pressable
+            </AnimatedPressable>
+            <AnimatedPressable
               style={[
                 styles.segmentButton,
-                matchType === 'doubles' && styles.segmentActive,
+                matchType === 'doubles' && { backgroundColor: colors.primary },
               ]}
               onPress={() => setMatchType('doubles')}
             >
               <Text
                 style={[
                   styles.segmentText,
-                  matchType === 'doubles' && styles.segmentTextActive,
+                  { color: colors.muted },
+                  matchType === 'doubles' && { color: colors.textOnPrimary },
                 ]}
               >
                 Doubles
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Match mode</Text>
-          <View style={styles.segment}>
-            <Pressable
+        {/* Match mode */}
+        <Animated.View entering={FadeInDown.delay(140).duration(400)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.ink }]}>Match mode</Text>
+          <View style={[styles.segment, { backgroundColor: colors.borderLight }]}>
+            <AnimatedPressable
               style={[
                 styles.segmentButton,
-                matchMode === 'casual' && styles.segmentActive,
+                matchMode === 'casual' && { backgroundColor: colors.primary },
               ]}
               onPress={() => setMatchMode('casual')}
             >
               <Text
                 style={[
                   styles.segmentText,
-                  matchMode === 'casual' && styles.segmentTextActive,
+                  { color: colors.muted },
+                  matchMode === 'casual' && { color: colors.textOnPrimary },
                 ]}
               >
                 Casual
               </Text>
-            </Pressable>
-            <Pressable
+            </AnimatedPressable>
+            <AnimatedPressable
               style={[
                 styles.segmentButton,
-                matchMode === 'ranked' && styles.segmentActive,
+                matchMode === 'ranked' && { backgroundColor: colors.primary },
               ]}
               onPress={() => setMatchMode('ranked')}
             >
               <Text
                 style={[
                   styles.segmentText,
-                  matchMode === 'ranked' && styles.segmentTextActive,
+                  { color: colors.muted },
+                  matchMode === 'ranked' && { color: colors.textOnPrimary },
                 ]}
               >
                 Ranked
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
-          <Text style={styles.helperText}>
+          <Text style={[styles.helperText, { color: colors.muted }]}>
             Ranked matches update your rating after approval.
           </Text>
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Scores</Text>
+        {/* Scores */}
+        <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.ink }]}>Scores</Text>
           <View style={styles.row}>
             <View style={styles.field}>
-              <Text style={styles.label}>Your score</Text>
+              <Text style={[styles.label, { color: colors.muted }]}>Your score</Text>
               <TextInput
                 placeholder="11"
+                placeholderTextColor={colors.muted}
                 keyboardType="number-pad"
-                style={styles.input}
+                style={[styles.scoreInput, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight, color: colors.ink }]}
                 value={userScore}
                 onChangeText={setUserScore}
               />
             </View>
+            <View style={styles.scoreDivider}>
+              <Text style={[styles.scoreDash, { color: colors.muted }]}>vs</Text>
+            </View>
             <View style={styles.field}>
-              <Text style={styles.label}>Opponent score</Text>
+              <Text style={[styles.label, { color: colors.muted }]}>Opponent score</Text>
               <TextInput
                 placeholder="9"
+                placeholderTextColor={colors.muted}
                 keyboardType="number-pad"
-                style={styles.input}
+                style={[styles.scoreInput, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight, color: colors.ink }]}
                 value={opponentScore}
                 onChangeText={setOpponentScore}
               />
@@ -359,21 +364,24 @@ export default function AddMatchScreen() {
           {matchType === 'doubles' ? (
             <View style={styles.row}>
               <View style={styles.field}>
-                <Text style={styles.label}>Ally score</Text>
+                <Text style={[styles.label, { color: colors.muted }]}>Ally score</Text>
                 <TextInput
                   editable={false}
-                  style={[styles.input, styles.disabledInput]}
+                  style={[styles.scoreInput, { backgroundColor: colors.borderLight, borderColor: colors.borderLight, color: colors.muted }]}
                   value={userScore}
                   placeholder="Same as team"
+                  placeholderTextColor={colors.muted}
                 />
               </View>
+              <View style={styles.scoreDivider} />
               <View style={styles.field}>
-                <Text style={styles.label}>Opponent 2 score</Text>
+                <Text style={[styles.label, { color: colors.muted }]}>Opponent 2 score</Text>
                 <TextInput
                   editable={false}
-                  style={[styles.input, styles.disabledInput]}
+                  style={[styles.scoreInput, { backgroundColor: colors.borderLight, borderColor: colors.borderLight, color: colors.muted }]}
                   value={opponentScore}
                   placeholder="Same as team"
+                  placeholderTextColor={colors.muted}
                 />
               </View>
             </View>
@@ -382,16 +390,24 @@ export default function AddMatchScreen() {
           <View
             style={[
               styles.validationBanner,
-              validation.valid ? styles.validationOk : styles.validationError,
+              { backgroundColor: validation.valid ? colors.successGhost : colors.secondaryGhost },
             ]}
           >
-            <Text style={styles.validationText}>{validation.message}</Text>
-            <Text style={styles.validationMeta}>Winner: {winnerLabel}</Text>
+            <View style={styles.validationRow}>
+              <Ionicons
+                name={validation.valid ? 'checkmark-circle' : 'information-circle'}
+                size={18}
+                color={validation.valid ? colors.success : colors.secondary}
+              />
+              <Text style={[styles.validationText, { color: colors.ink }]}>{validation.message}</Text>
+            </View>
+            <Text style={[styles.validationMeta, { color: colors.muted }]}>Winner: {winnerLabel}</Text>
           </View>
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Players</Text>
+        {/* Players */}
+        <Animated.View entering={FadeInDown.delay(260).duration(400)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.ink }]}>Players</Text>
           <SearchField
             label="Opponent"
             placeholder="Search players"
@@ -403,6 +419,7 @@ export default function AddMatchScreen() {
               setOpponentSearch('');
             }}
             onClearPlayer={() => setOpponent(null)}
+            colors={colors}
           />
 
           {matchType === 'doubles' ? (
@@ -418,6 +435,7 @@ export default function AddMatchScreen() {
                   setAllySearch('');
                 }}
                 onClearPlayer={() => setAlly(null)}
+                colors={colors}
               />
               <SearchField
                 label="Opponent 2"
@@ -430,35 +448,48 @@ export default function AddMatchScreen() {
                   setOpponent2Search('');
                 }}
                 onClearPlayer={() => setOpponent2(null)}
+                colors={colors}
               />
             </>
           ) : null}
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
-          <View style={styles.approvalCard}>
-            <Text style={styles.approvalTitle}>Approval required</Text>
-            <Text style={styles.approvalText}>
+        {/* Approval info */}
+        <Animated.View entering={FadeInDown.delay(320).duration(400)} style={styles.section}>
+          <View style={[styles.approvalCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
+            <View style={styles.approvalHeader}>
+              <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
+              <Text style={[styles.approvalTitle, { color: colors.ink }]}>Approval required</Text>
+            </View>
+            <Text style={[styles.approvalText, { color: colors.muted }]}>
               Singles require both players. Doubles require 3 of 4 approvals.
               Your submission counts as one approval.
             </Text>
           </View>
-        </View>
+        </Animated.View>
 
-        <Pressable
-          style={[
-            styles.submitButton,
-            (!validation.valid || submitting) && styles.submitDisabled,
-          ]}
-          disabled={submitting}
-          onPress={handleSubmit}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <Text style={styles.submitText}>Submit match</Text>
-          )}
-        </Pressable>
+        <Animated.View entering={FadeInDown.delay(380).duration(400)}>
+          <AnimatedPressable
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.secondary },
+              (!validation.valid || submitting) && { opacity: 0.5 },
+            ]}
+            disabled={submitting}
+            onPress={handleSubmit}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <View style={styles.submitRow}>
+                <Ionicons name="add-circle" size={22} color="#ffffff" />
+                <Text style={styles.submitText}>Submit match</Text>
+              </View>
+            )}
+          </AnimatedPressable>
+        </Animated.View>
+
+        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -467,7 +498,6 @@ export default function AddMatchScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   container: {
     padding: spacing.lg,
@@ -480,76 +510,74 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.ink,
   },
-  subtitle: {
-    color: colors.muted,
-  },
+  subtitle: {},
   section: {
     gap: spacing.sm,
   },
   sectionTitle: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    color: colors.ink,
   },
   segment: {
     flexDirection: 'row',
-    backgroundColor: '#eef2f7',
-    borderRadius: radii.lg,
+    borderRadius: radii.pill,
     padding: 4,
-    gap: 6,
+    gap: 4,
   },
   segmentButton: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: radii.sm,
+    borderRadius: radii.pill,
     alignItems: 'center',
   },
-  segmentActive: {
-    backgroundColor: colors.surface,
-    shadowColor: '#000000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
   segmentText: {
-    color: colors.muted,
     fontWeight: typography.weights.semibold,
-  },
-  segmentTextActive: {
-    color: colors.ink,
+    fontSize: typography.sizes.base,
   },
   helperText: {
-    color: colors.muted,
     fontSize: typography.sizes.sm,
   },
   row: {
     flexDirection: 'row',
     gap: spacing.sm,
+    alignItems: 'flex-end',
   },
   field: {
     flex: 1,
     gap: 8,
   },
   label: {
-    color: colors.muted,
     fontSize: typography.sizes.sm,
     textTransform: 'uppercase',
     letterSpacing: 0.7,
   },
   input: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.ink,
+    fontSize: typography.sizes.base,
   },
-  disabledInput: {
-    color: colors.muted,
-    backgroundColor: '#f1f4f8',
+  scoreInput: {
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
+    borderWidth: 1,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    textAlign: 'center',
+    ...shadows.sm,
+  },
+  scoreDivider: {
+    width: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 20,
+  },
+  scoreDash: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
   },
   searchLoading: {
     flexDirection: 'row',
@@ -558,112 +586,101 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   searchLoadingText: {
-    color: colors.muted,
     fontSize: typography.sizes.sm,
   },
   suggestions: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.border,
     overflow: 'hidden',
   },
   suggestionItem: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   suggestionName: {
-    color: colors.ink,
     fontWeight: typography.weights.semibold,
     marginBottom: 2,
   },
   suggestionMeta: {
-    color: colors.muted,
     fontSize: typography.sizes.sm,
   },
   selectedPlayer: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     padding: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.blue,
+    borderWidth: 2,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   selectedPlayerName: {
-    color: colors.ink,
     fontWeight: typography.weights.semibold,
     marginBottom: 2,
   },
   selectedPlayerMeta: {
-    color: colors.muted,
     fontSize: typography.sizes.sm,
   },
   clearButton: {
-    backgroundColor: '#eef2f7',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: radii.sm,
+    borderRadius: radii.pill,
   },
   clearButtonText: {
-    color: colors.ink,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
   },
   noMatch: {
-    color: colors.muted,
     fontSize: typography.sizes.sm,
   },
   validationBanner: {
-    borderRadius: radii.md,
-    padding: spacing.sm,
+    borderRadius: radii.lg,
+    padding: spacing.md,
     gap: 4,
   },
-  validationOk: {
-    backgroundColor: '#eaf7ef',
-  },
-  validationError: {
-    backgroundColor: '#fff2f0',
+  validationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   validationText: {
-    color: colors.ink,
     fontWeight: typography.weights.semibold,
   },
   validationMeta: {
-    color: colors.muted,
     fontSize: typography.sizes.sm,
+    marginLeft: 24,
   },
   approvalCard: {
-    backgroundColor: colors.surface,
     borderRadius: radii.lg,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    ...shadows.sm,
+  },
+  approvalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
   },
   approvalTitle: {
     fontWeight: typography.weights.semibold,
-    color: colors.ink,
-    marginBottom: 6,
   },
   approvalText: {
-    color: colors.muted,
     lineHeight: 20,
   },
   submitButton: {
-    backgroundColor: colors.coral,
-    borderRadius: radii.lg,
-    paddingVertical: 14,
+    borderRadius: radii.xl,
+    paddingVertical: 16,
     alignItems: 'center',
+    ...shadows.md,
   },
-  submitDisabled: {
-    backgroundColor: '#f0b2a9',
+  submitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   submitText: {
     color: '#ffffff',
-    fontWeight: typography.weights.semibold,
+    fontWeight: typography.weights.bold,
     fontSize: typography.sizes.md,
   },
 });
