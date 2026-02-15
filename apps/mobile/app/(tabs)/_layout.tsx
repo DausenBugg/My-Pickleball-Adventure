@@ -12,8 +12,8 @@ type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 const TAB_CONFIG: Record<string, { icon: IoniconsName; activeIcon: IoniconsName; label: string }> = {
   home: { icon: 'home-outline', activeIcon: 'home', label: 'Home' },
-  'add-match': { icon: 'add-circle-outline', activeIcon: 'add-circle', label: 'Log Match' },
   search: { icon: 'search-outline', activeIcon: 'search', label: 'Search' },
+  'add-match': { icon: 'add-circle-outline', activeIcon: 'add-circle', label: 'Log Match' },
   leaderboard: { icon: 'trophy-outline', activeIcon: 'trophy', label: 'Ranks' },
   settings: { icon: 'settings-outline', activeIcon: 'settings', label: 'Settings' },
 };
@@ -109,8 +109,8 @@ export default function TabsLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="home" options={{ title: 'Home' }} />
-      <Tabs.Screen name="add-match" options={{ title: 'Add Match' }} />
       <Tabs.Screen name="search" options={{ title: 'Search' }} />
+      <Tabs.Screen name="add-match" options={{ title: 'Add Match' }} />
       <Tabs.Screen name="leaderboard" options={{ title: 'Leaderboard' }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
     </Tabs>

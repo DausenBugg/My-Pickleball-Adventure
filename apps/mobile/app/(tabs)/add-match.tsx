@@ -361,32 +361,6 @@ export default function AddMatchScreen() {
             </View>
           </View>
 
-          {matchType === 'doubles' ? (
-            <View style={styles.row}>
-              <View style={styles.field}>
-                <Text style={[styles.label, { color: colors.muted }]}>Ally score</Text>
-                <TextInput
-                  editable={false}
-                  style={[styles.scoreInput, { backgroundColor: colors.borderLight, borderColor: colors.borderLight, color: colors.muted }]}
-                  value={userScore}
-                  placeholder="Same as team"
-                  placeholderTextColor={colors.muted}
-                />
-              </View>
-              <View style={styles.scoreDivider} />
-              <View style={styles.field}>
-                <Text style={[styles.label, { color: colors.muted }]}>Opponent 2 score</Text>
-                <TextInput
-                  editable={false}
-                  style={[styles.scoreInput, { backgroundColor: colors.borderLight, borderColor: colors.borderLight, color: colors.muted }]}
-                  value={opponentScore}
-                  placeholder="Same as team"
-                  placeholderTextColor={colors.muted}
-                />
-              </View>
-            </View>
-          ) : null}
-
           <View
             style={[
               styles.validationBanner,
@@ -454,7 +428,6 @@ export default function AddMatchScreen() {
           ) : null}
         </Animated.View>
 
-        {/* Approval info */}
         <Animated.View entering={FadeInDown.delay(320).duration(400)} style={styles.section}>
           <View style={[styles.approvalCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
             <View style={styles.approvalHeader}>

@@ -278,7 +278,7 @@ export default function HomeScreen() {
         <ReAnimated.View entering={FadeInDown.duration(400)} style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={[styles.greeting, dynamicStyles.ink]}>
-              Hey, {profile.full_name?.split(' ')[0] || 'Player'}! 🏓
+              Hey, {profile.full_name?.split(' ')[0] || 'Player'}!
             </Text>
             <Text style={[styles.greetingSub, dynamicStyles.muted]}>
               Let's see how you're doing
@@ -889,7 +889,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderLeftWidth: 1,
-    paddingTop: spacing.lg,
+    paddingTop: 54,
   },
   panelHeader: {
     paddingHorizontal: spacing.lg,
