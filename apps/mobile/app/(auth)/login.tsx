@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
@@ -23,6 +24,7 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { colors } = useTheme();
+  const router = useRouter();
 
   const emailValid = useMemo(() => email.includes('@') && email.includes('.'), [email]);
   const passwordValid = useMemo(() => password.length >= 8, [password]);
@@ -58,6 +60,12 @@ export default function LoginScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
         <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+          <AnimatedPressable
+            style={[styles.backButton, { backgroundColor: colors.borderLight }]}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={20} color={colors.ink} />
+          </AnimatedPressable>
           <Text style={[styles.title, { color: colors.ink }]}>Welcome back</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>Sign in to your account.</Text>
         </Animated.View>
@@ -138,6 +146,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.xl,
     justifyContent: 'space-between',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
   header: {
     gap: 8,

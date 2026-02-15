@@ -29,9 +29,9 @@ export default function WelcomeScreen() {
         <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.actions}>
           <Link href="/(auth)/register" asChild>
             <AnimatedPressable
-              style={[styles.button, styles.primaryBtn, { backgroundColor: colors.primary }]}
+              style={[styles.button, styles.primaryBtn, { backgroundColor: colors.ink }]}
             >
-              <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>
+              <Text style={[styles.buttonText, { color: colors.ink }]}>
                 Create account
               </Text>
             </AnimatedPressable>

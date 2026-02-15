@@ -31,6 +31,7 @@ import { useTheme } from '../../src/theme';
 import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
 import CircularProgress from '../../src/components/CircularProgress';
 import AnimatedPressable from '../../src/components/AnimatedPressable';
+import ConfettiBurst from '../../src/components/ConfettiBurst';
 
 export default function HomeScreen() {
   const { colors } = useTheme();
@@ -48,6 +49,8 @@ export default function HomeScreen() {
   } = useNotifications();
   const [showFriendPrompt, setShowFriendPrompt] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const prevLevelRef = useRef<number | null>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const screenWidth = Dimensions.get('window').width;
   const panelWidth = Math.min(360, screenWidth * 0.9);
@@ -85,6 +88,15 @@ export default function HomeScreen() {
   }, [xpForCurrentLevel, xpForNextLevel]);
 
   const winsToNext = useMemo(() => Math.ceil(xpToNext / 120), [xpToNext]);
+
+  // Detect level-up and trigger confetti
+  useEffect(() => {
+    if (!profile) return;
+    if (prevLevelRef.current !== null && profile.level > prevLevelRef.current) {
+      setShowConfetti(true);
+    }
+    prevLevelRef.current = profile.level;
+  }, [profile?.level]);
 
   const pendingMatchById = useMemo(() => {
     return new Map(pendingMatches.map((match) => [match.id, match]));
@@ -311,18 +323,24 @@ export default function HomeScreen() {
         {/* ── Hero: circular XP progress (center stage) ── */}
         <ReAnimated.View entering={FadeInDown.delay(100).duration(500)} style={[styles.heroCard, { backgroundColor: colors.primary }]}>
           <View style={styles.heroContent}>
-            <CircularProgress
-              progress={levelProgress}
-              size={170}
-              strokeWidth={12}
-              progressColor="#ffffff"
-              trackColor="rgba(255,255,255,0.25)"
-              centerLabel={`${profile.level}`}
-              centerSub={`Level`}
-              centerHint={`${xpInCurrentLevel} / ${xpNeededForLevel} XP`}
-              labelColor="#ffffff"
-              subColor="rgba(255,255,255,0.85)"
-            />
+            <View>
+              <CircularProgress
+                progress={levelProgress}
+                size={170}
+                strokeWidth={12}
+                progressColor="#ffffff"
+                trackColor="rgba(255,255,255,0.25)"
+                centerLabel={`${profile.level}`}
+                centerSub={`Level`}
+                centerHint={`${xpInCurrentLevel} / ${xpNeededForLevel} XP`}
+                labelColor="#ffffff"
+                subColor="rgba(255,255,255,0.85)"
+              />
+              <ConfettiBurst
+                playing={showConfetti}
+                onComplete={() => setShowConfetti(false)}
+              />
+            </View>
             <Text style={styles.heroHint}>
               {winsToNext} {winsToNext === 1 ? 'win' : 'wins'} to Level {profile.level + 1}
             </Text>
