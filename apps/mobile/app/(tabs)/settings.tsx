@@ -249,14 +249,6 @@ export default function SettingsScreen() {
                 <Ionicons name="chevron-forward" size={20} color={colors.primary} />
               </View>
             </AnimatedPressable>
-            <View style={[styles.cardDivider, { backgroundColor: colors.borderLight }]} />
-            <View style={styles.cardRow}>
-              <View style={styles.cardRowLeft}>
-                <Ionicons name="lock-closed" size={20} color={colors.primary} />
-                <Text style={[styles.cardLabel, { color: colors.ink }]}>Privacy</Text>
-              </View>
-              <Text style={[styles.cardValue, { color: colors.muted }]}>Public</Text>
-            </View>
           </View>
         </Animated.View>
 

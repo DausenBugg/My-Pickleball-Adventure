@@ -6,12 +6,15 @@ import {
   ScrollView,
   RefreshControl,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAchievements, UserAchievement } from '../src/hooks/useAchievements';
 import { useTheme } from '../src/theme';
 import { radii, shadows, spacing, typography } from '../src/theme/tokens';
+import AnimatedPressable from '../src/components/AnimatedPressable';
 
 interface AchievementCardProps {
   achievement: UserAchievement;
@@ -27,14 +30,21 @@ function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
           styles.card,
           { backgroundColor: colors.cardBackground },
           achievement.is_unlocked
-            ? { borderWidth: 2, borderColor: colors.primary }
-            : { opacity: 0.65, borderWidth: 1, borderColor: colors.borderLight },
+            ? {
+                borderWidth: 2,
+                borderColor: colors.primary,
+                backgroundColor: colors.primaryGhost,
+                ...shadows.md,
+              }
+            : { opacity: 0.55, borderWidth: 1, borderColor: colors.borderLight },
         ]}
       >
         <View style={styles.iconContainer}>
-          <Text style={styles.icon}>{achievement.icon}</Text>
+          <Text style={[styles.icon, !achievement.is_unlocked && { opacity: 0.5 }]}>{achievement.icon}</Text>
           {achievement.is_unlocked && (
-            <View style={[styles.unlockedBadge, { backgroundColor: colors.primary, borderColor: colors.cardBackground }]} />
+            <View style={[styles.unlockedBadge, { backgroundColor: colors.primary, borderColor: colors.cardBackground }]}>
+              <Ionicons name="checkmark" size={10} color="#ffffff" />
+            </View>
           )}
         </View>
         <View style={styles.content}>
@@ -85,26 +95,35 @@ function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
 export default function AchievementsScreen() {
   const { achievements, loading, refresh } = useAchievements();
   const { colors } = useTheme();
+  const router = useRouter();
 
   const unlocked = achievements.filter((a) => a.is_unlocked);
   const locked = achievements.filter((a) => !a.is_unlocked);
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: 'Achievements',
-          headerStyle: { backgroundColor: colors.primary },
-          headerTintColor: colors.textOnPrimary,
-          headerTitleStyle: { fontWeight: typography.weights.bold },
-        }}
-      />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
+        style={styles.container}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.primary} />
         }
       >
+        {/* Header with back button */}
+        <Animated.View entering={FadeInDown.duration(400)}>
+          <View style={[styles.headerCard, { backgroundColor: colors.primary }]}>
+            <View style={styles.headerRow}>
+              <AnimatedPressable
+                style={styles.backButton}
+                onPress={() => router.back()}
+              >
+                <Ionicons name="arrow-back" size={22} color={colors.textOnPrimary} />
+              </AnimatedPressable>
+              <Text style={[styles.headerTitle, { color: colors.textOnPrimary }]}>Achievements</Text>
+              <View style={{ width: 36 }} />
+            </View>
+          </View>
+        </Animated.View>
+
         {/* Summary */}
         <Animated.View entering={FadeInDown.duration(400)}>
           <View style={[styles.summary, { backgroundColor: colors.primaryGhost }]}>
@@ -147,13 +166,38 @@ export default function AchievementsScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
-    </>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
+  },
+  headerCard: {
+    padding: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
   },
   summary: {
     padding: spacing.lg,
@@ -198,10 +242,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -4,
     right: -4,
-    width: 16,
-    height: 16,
+    width: 18,
+    height: 18,
     borderRadius: radii.pill,
     borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     flex: 1,

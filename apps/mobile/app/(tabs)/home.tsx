@@ -323,15 +323,9 @@ export default function HomeScreen() {
               labelColor="#ffffff"
               subColor="rgba(255,255,255,0.85)"
             />
-            <View style={styles.heroMeta}>
-              <View style={styles.heroRating}>
-                <Ionicons name="star" size={16} color="#ffd700" />
-                <Text style={styles.heroRatingText}>{rating?.rating ?? 1200}</Text>
-              </View>
-              <Text style={styles.heroHint}>
-                {winsToNext} {winsToNext === 1 ? 'win' : 'wins'} to Level {profile.level + 1}
-              </Text>
-            </View>
+            <Text style={styles.heroHint}>
+              {winsToNext} {winsToNext === 1 ? 'win' : 'wins'} to Level {profile.level + 1}
+            </Text>
           </View>
         </ReAnimated.View>
 
@@ -404,12 +398,12 @@ export default function HomeScreen() {
               </Text>
             </View>
           ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.matchScroll}>
+            <View style={styles.matchList}>
               {recentMatches.map((match) => {
                 const summary = formatRecentMatch(match);
                 const isWin = summary.result === 'Win';
                 return (
-                  <AnimatedPressable
+                  <View
                     key={match.id}
                     style={[
                       styles.matchCard,
@@ -420,40 +414,26 @@ export default function HomeScreen() {
                       },
                     ]}
                   >
-                    <View style={[styles.matchBadge, { backgroundColor: isWin ? colors.winBg : colors.lossBg }]}>
-                      <Text style={[styles.matchBadgeText, { color: isWin ? colors.success : colors.error }]}>
-                        {summary.result}
-                      </Text>
+                    <View style={styles.matchCardRow}>
+                      <View style={[styles.matchBadge, { backgroundColor: isWin ? colors.winBg : colors.lossBg }]}>
+                        <Text style={[styles.matchBadgeText, { color: isWin ? colors.success : colors.error }]}>
+                          {summary.result}
+                        </Text>
+                      </View>
+                      <View style={styles.matchCardInfo}>
+                        <Text style={[styles.matchTitle, dynamicStyles.ink]} numberOfLines={1}>
+                          {summary.title}
+                        </Text>
+                        <Text style={[styles.matchSubtitle, dynamicStyles.muted]}>
+                          {summary.subtitle}
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={[styles.matchTitle, dynamicStyles.ink]} numberOfLines={2}>
-                      {summary.title}
-                    </Text>
-                    <Text style={[styles.matchSubtitle, dynamicStyles.muted]}>
-                      {summary.subtitle}
-                    </Text>
-                  </AnimatedPressable>
+                  </View>
                 );
               })}
-            </ScrollView>
+            </View>
           )}
-        </ReAnimated.View>
-
-        {/* ── Quick actions ── */}
-        <ReAnimated.View entering={FadeInDown.delay(400).duration(400)} style={styles.quickActions}>
-          <AnimatedPressable
-            style={[styles.quickActionBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.push('/(tabs)/add-match')}
-          >
-            <Ionicons name="add-circle" size={22} color={colors.textOnPrimary} />
-            <Text style={[styles.quickActionText, { color: colors.textOnPrimary }]}>Log a Match</Text>
-          </AnimatedPressable>
-          <AnimatedPressable
-            style={[styles.quickActionBtn, { backgroundColor: colors.cardBackground, borderWidth: 1.5, borderColor: colors.primary }]}
-            onPress={() => router.push('/(tabs)/search')}
-          >
-            <Ionicons name="people" size={22} color={colors.primary} />
-            <Text style={[styles.quickActionText, { color: colors.primary }]}>Find Players</Text>
-          </AnimatedPressable>
         </ReAnimated.View>
 
         {/* Spacer for floating tab bar */}
@@ -701,24 +681,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
-  heroMeta: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  heroRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: radii.pill,
-  },
-  heroRatingText: {
-    color: '#ffffff',
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-  },
   heroHint: {
     color: 'rgba(255,255,255,0.8)',
     fontSize: typography.sizes.sm,
@@ -811,17 +773,23 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
   },
 
-  // Recent matches (horizontal)
-  matchScroll: {
+  // Recent matches (vertical list)
+  matchList: {
     gap: spacing.sm,
-    paddingRight: spacing.lg,
   },
   matchCard: {
-    width: 200,
     borderRadius: radii.lg,
     padding: spacing.md,
-    gap: spacing.xs,
     ...shadows.sm,
+  },
+  matchCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  matchCardInfo: {
+    flex: 1,
+    gap: 2,
   },
   matchCardPlaceholder: {
     borderRadius: radii.lg,
@@ -852,27 +820,6 @@ const styles = StyleSheet.create({
   },
   matchSubtitle: {
     fontSize: typography.sizes.sm,
-  },
-
-  // Quick actions
-  quickActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xl,
-  },
-  quickActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    borderRadius: radii.lg,
-    ...shadows.sm,
-  },
-  quickActionText: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
   },
 
   // Notification panel
