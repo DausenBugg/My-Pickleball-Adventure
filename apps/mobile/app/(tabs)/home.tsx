@@ -32,6 +32,7 @@ import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
 import CircularProgress from '../../src/components/CircularProgress';
 import AnimatedPressable from '../../src/components/AnimatedPressable';
 import ConfettiBurst from '../../src/components/ConfettiBurst';
+import { LeagueLabel } from '../../src/components/LeagueBadge';
 
 export default function HomeScreen() {
   const { colors } = useTheme();
@@ -384,7 +385,7 @@ export default function HomeScreen() {
           </View>
           <View style={[styles.statChip, { backgroundColor: colors.cardBackground, borderWidth: 1, borderColor: colors.borderLight }]}>
             <Text style={[styles.statChipValue, { color: colors.ink }]}>{rating?.rating ?? 1200}</Text>
-            <Text style={[styles.statChipLabel, { color: colors.muted }]}>Rating</Text>
+            <LeagueLabel rating={rating?.rating ?? 1200} size="sm" />
           </View>
         </ReAnimated.View>
 

@@ -15,6 +15,7 @@ import { useLeaderboard } from '../../src/hooks/useLeaderboard';
 import { useTheme } from '../../src/theme';
 import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
 import AnimatedPressable from '../../src/components/AnimatedPressable';
+import { LeagueRatingBadge, LeagueInlineBadge } from '../../src/components/LeagueBadge';
 
 type BoardType = 'global' | 'friends';
 
@@ -60,7 +61,7 @@ export default function LeaderboardScreen() {
             <AnimatedPressable
               style={[
                 styles.segmentButton,
-                boardType === 'global' && { backgroundColor: colors.primary },
+                boardType === 'global' ? { backgroundColor: colors.primary } : {},
               ]}
               onPress={() => setBoardType('global')}
             >
@@ -77,7 +78,7 @@ export default function LeaderboardScreen() {
             <AnimatedPressable
               style={[
                 styles.segmentButton,
-                boardType === 'friends' && { backgroundColor: colors.primary },
+                boardType === 'friends' ? { backgroundColor: colors.primary } : {},
               ]}
               onPress={() => setBoardType('friends')}
             >
@@ -123,7 +124,7 @@ export default function LeaderboardScreen() {
                         borderColor: MEDAL_COLORS[index] || colors.borderLight,
                         borderWidth: index === 0 ? 2.5 : 1.5,
                       },
-                      index === 0 && styles.podiumTop,
+                      index === 0 ? styles.podiumTop : {},
                     ]}
                   >
                     <Text style={[styles.podiumRank, { color: MEDAL_COLORS[index] || colors.primary }]}>
@@ -138,9 +139,7 @@ export default function LeaderboardScreen() {
                     <Text style={[styles.podiumName, { color: colors.ink }]} numberOfLines={2}>
                       {player.full_name || 'Player'}
                     </Text>
-                    <View style={[styles.podiumRatingBadge, { backgroundColor: colors.primary }]}>
-                      <Text style={styles.podiumRatingText}>{player.rating}</Text>
-                    </View>
+                    <LeagueRatingBadge rating={player.rating} rank={index + 1} />
                     <Text style={[styles.podiumMeta, { color: colors.muted }]}>
                       {player.wins}W · {player.losses}L
                     </Text>
@@ -173,7 +172,7 @@ export default function LeaderboardScreen() {
                           Level {player.level} · {player.wins}W · {player.losses}L
                         </Text>
                       </View>
-                      <Text style={[styles.listRating, { color: colors.ink }]}>{player.rating}</Text>
+                      <LeagueInlineBadge rating={player.rating} rank={index + 4} ratingColor={colors.ink} />
                     </AnimatedPressable>
                   </Animated.View>
                 ))}
