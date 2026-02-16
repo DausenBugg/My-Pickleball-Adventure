@@ -1,6 +1,6 @@
 # Supabase Backend
 
-This folder contains database migrations, Edge Functions, and configuration for the My Pickleball Adventure backend.
+This folder contains database migrations, Edge Functions, and configuration for the My Pickleball App backend.
 
 ## Setup
 

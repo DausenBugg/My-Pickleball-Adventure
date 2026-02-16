@@ -187,6 +187,10 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
+    margin: spacing.md,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+    ...shadows.md,
   },
   headerRow: {
     flexDirection: 'row',

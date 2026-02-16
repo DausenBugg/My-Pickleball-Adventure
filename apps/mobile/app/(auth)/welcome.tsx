@@ -19,10 +19,27 @@ export default function WelcomeScreen() {
           style={[styles.hero, { backgroundColor: colors.primary }]}
         >
           <Text style={styles.heroEmoji}>🏓</Text>
-          <Text style={styles.heroTitle}>My Pickleball{'\n'}Adventure</Text>
-          <Text style={styles.heroSubtitle}>
-            Track matches, level up, and climb the leaderboards.
-          </Text>
+          <Text style={styles.heroTitle}>My Pickleball{'\n'}App</Text>
+          <View style={styles.featureCards}>
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Text style={styles.featureEmoji}>📊</Text>
+              </View>
+              <Text style={styles.featureLabel}>Track matches</Text>
+            </View>
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Text style={styles.featureEmoji}>⬆️</Text>
+              </View>
+              <Text style={styles.featureLabel}>Level up</Text>
+            </View>
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Text style={styles.featureEmoji}>🏆</Text>
+              </View>
+              <Text style={styles.featureLabel}>Climb the leaderboards</Text>
+            </View>
+          </View>
         </Animated.View>
 
         {/* Actions */}
@@ -83,11 +100,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 42,
   },
-  heroSubtitle: {
-    fontSize: typography.sizes.md,
-    color: 'rgba(255,255,255,0.85)',
+  featureCards: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  featureCard: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  featureIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.lg,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureEmoji: {
+    fontSize: 26,
+  },
+  featureLabel: {
+    fontSize: typography.sizes.sm,
+    color: 'rgba(255,255,255,0.9)',
     textAlign: 'center',
-    lineHeight: 22,
+    fontWeight: typography.weights.medium,
   },
   actions: {
     gap: spacing.sm,

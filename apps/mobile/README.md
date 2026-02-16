@@ -1,4 +1,4 @@
-# My Pickleball Adventure - Mobile App
+# My Pickleball App - Mobile App
 
 React Native mobile app built with Expo and Expo Router.
 
