@@ -252,7 +252,7 @@ export default function AddMatchScreen() {
             <AnimatedPressable
               style={[
                 styles.segmentButton,
-                matchType === 'singles' && { backgroundColor: colors.primary },
+                matchType === 'singles' ? { backgroundColor: colors.primary } : {},
               ]}
               onPress={() => setMatchType('singles')}
             >
@@ -260,7 +260,7 @@ export default function AddMatchScreen() {
                 style={[
                   styles.segmentText,
                   { color: colors.muted },
-                  matchType === 'singles' && { color: colors.textOnPrimary },
+                  matchType === 'singles' ? { color: colors.textOnPrimary } : undefined,
                 ]}
               >
                 Singles
@@ -269,7 +269,7 @@ export default function AddMatchScreen() {
             <AnimatedPressable
               style={[
                 styles.segmentButton,
-                matchType === 'doubles' && { backgroundColor: colors.primary },
+                matchType === 'doubles' ? { backgroundColor: colors.primary } : {},
               ]}
               onPress={() => setMatchType('doubles')}
             >
@@ -277,7 +277,7 @@ export default function AddMatchScreen() {
                 style={[
                   styles.segmentText,
                   { color: colors.muted },
-                  matchType === 'doubles' && { color: colors.textOnPrimary },
+                  matchType === 'doubles' ? { color: colors.textOnPrimary } : undefined,
                 ]}
               >
                 Doubles
@@ -293,7 +293,7 @@ export default function AddMatchScreen() {
             <AnimatedPressable
               style={[
                 styles.segmentButton,
-                matchMode === 'casual' && { backgroundColor: colors.primary },
+                matchMode === 'casual' ? { backgroundColor: colors.primary } : {},
               ]}
               onPress={() => setMatchMode('casual')}
             >
@@ -301,7 +301,7 @@ export default function AddMatchScreen() {
                 style={[
                   styles.segmentText,
                   { color: colors.muted },
-                  matchMode === 'casual' && { color: colors.textOnPrimary },
+                  matchMode === 'casual' ? { color: colors.textOnPrimary } : undefined,
                 ]}
               >
                 Casual
@@ -310,7 +310,7 @@ export default function AddMatchScreen() {
             <AnimatedPressable
               style={[
                 styles.segmentButton,
-                matchMode === 'ranked' && { backgroundColor: colors.primary },
+                matchMode === 'ranked' ? { backgroundColor: colors.primary } : {},
               ]}
               onPress={() => setMatchMode('ranked')}
             >
@@ -318,7 +318,7 @@ export default function AddMatchScreen() {
                 style={[
                   styles.segmentText,
                   { color: colors.muted },
-                  matchMode === 'ranked' && { color: colors.textOnPrimary },
+                  matchMode === 'ranked' ? { color: colors.textOnPrimary } : undefined,
                 ]}
               >
                 Ranked
@@ -446,7 +446,7 @@ export default function AddMatchScreen() {
             style={[
               styles.submitButton,
               { backgroundColor: colors.secondary },
-              (!validation.valid || submitting) && { opacity: 0.5 },
+              (!validation.valid || submitting) ? { opacity: 0.5 } : {},
             ]}
             disabled={submitting}
             onPress={handleSubmit}

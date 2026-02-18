@@ -194,7 +194,7 @@ export default function RegisterScreen() {
           ) : null}
 
           <AnimatedPressable
-            style={[styles.primary, { backgroundColor: colors.secondary }, !canSubmit && { opacity: 0.5 }]}
+            style={[styles.primary, { backgroundColor: colors.secondary }, !canSubmit ? { opacity: 0.5 } : {}]}
             onPress={handleRegister}
           >
             {loading ? (

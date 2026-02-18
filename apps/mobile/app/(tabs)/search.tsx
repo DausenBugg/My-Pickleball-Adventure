@@ -44,6 +44,7 @@ export default function SearchScreen() {
     }
 
     const fetchFriendProfiles = async () => {
+      if (!supabase) return;
       setFriendProfilesLoading(true);
       const { data } = await supabase
         .from('profiles')
@@ -127,7 +128,7 @@ export default function SearchScreen() {
             style={[
               styles.filterChip,
               { backgroundColor: colors.borderLight },
-              filter === 'all' && { backgroundColor: colors.primary },
+              filter === 'all' ? { backgroundColor: colors.primary } : {},
             ]}
             onPress={() => setFilter('all')}
           >
@@ -135,7 +136,7 @@ export default function SearchScreen() {
               style={[
                 styles.filterText,
                 { color: colors.muted },
-                filter === 'all' && { color: colors.textOnPrimary },
+                filter === 'all' ? { color: colors.textOnPrimary } : undefined,
               ]}
             >
               All players
@@ -145,7 +146,7 @@ export default function SearchScreen() {
             style={[
               styles.filterChip,
               { backgroundColor: colors.borderLight },
-              filter === 'friends' && { backgroundColor: colors.primary },
+              filter === 'friends' ? { backgroundColor: colors.primary } : {},
             ]}
             onPress={() => setFilter('friends')}
           >
@@ -153,7 +154,7 @@ export default function SearchScreen() {
               style={[
                 styles.filterText,
                 { color: colors.muted },
-                filter === 'friends' && { color: colors.textOnPrimary },
+                filter === 'friends' ? { color: colors.textOnPrimary } : undefined,
               ]}
             >
               Friends
@@ -230,8 +231,8 @@ export default function SearchScreen() {
                       style={[
                         styles.actionButton,
                         { backgroundColor: colors.secondary },
-                        status === 'friend' && { backgroundColor: colors.borderLight },
-                        status === 'pending' && { backgroundColor: colors.secondaryGhost },
+                        status === 'friend' ? { backgroundColor: colors.borderLight } : {},
+                        status === 'pending' ? { backgroundColor: colors.secondaryGhost } : {},
                       ]}
                       onPress={() =>
                         status === 'none' ? handleAddFriend(player.id) : null
@@ -241,7 +242,7 @@ export default function SearchScreen() {
                       <Text
                         style={[
                           styles.actionText,
-                          status !== 'none' && { color: colors.muted },
+                          status !== 'none' ? { color: colors.muted } : undefined,
                         ]}
                       >
                         {status === 'friend'

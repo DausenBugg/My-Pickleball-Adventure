@@ -19,8 +19,9 @@ Since you already have a Supabase project:
 
 ## Migrations
 
-Migrations are ordered by timestamp:
+Migrations are ordered by timestamp (22 total):
 
+**Core Schema (20260211):**
 1. `20260211000001_create_profiles.sql` - User profiles and auth trigger
 2. `20260211000002_create_ratings.sql` - Elo rating system
 3. `20260211000003_create_friendships.sql` - Friend requests and connections
@@ -29,6 +30,17 @@ Migrations are ordered by timestamp:
 6. `20260211000006_create_xp_events.sql` - XP tracking per match
 7. `20260211000007_create_achievements.sql` - Achievement definitions and unlocks
 8. `20260211000008_create_notifications.sql` - In-app notifications
+9. `20260211000009_add_helper_functions.sql` - Helper database functions
+10. `20260211000010_create_rating_history.sql` - Rating history tracking
+11. `20260211000011_add_self_play_prevention.sql` - Prevent self-matches
+
+**Extended Features (20260212):**
+12. `20260212000001_create_storage_bucket.sql` - Storage for avatars
+13. `20260212000002_add_push_tokens.sql` - Push notification tokens
+14. `20260212000003_fix_match_participants_policy.sql` - RLS policy fix
+15. `20260212000004_add_achievement_requirements.sql` - Achievement requirements
+16. `20260212000005_allow_match_notifications.sql` - Match notifications
+17-22. Additional RLS and notification policy refinements
 
 ## Row Level Security (RLS)
 
@@ -57,14 +69,16 @@ All tables have RLS enabled with policies that:
 - Auto-create rating on profile creation
 - Auto-update `updated_at` timestamps
 
-## Edge Functions (Coming Next)
+## Edge Functions
 
-Functions will live in `supabase/functions/` and handle:
-- Match validation and approval logic
-- Rating calculations (Elo updates)
-- XP calculations and level-ups
-- Achievement triggers
-- Notification dispatching
+Edge Functions are in `supabase/functions/`:
+
+- **check-achievements/** - Achievement trigger checks
+- **process-match-approval/** - Match validation and approval logic
+- **send-push-notifications/** - Push notification dispatching
+- **update-ratings/** - Elo rating calculations
+
+See [docs/edge-functions.md](../docs/edge-functions.md) for deployment instructions.
 
 ## Testing
 

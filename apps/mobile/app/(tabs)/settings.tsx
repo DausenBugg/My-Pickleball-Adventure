@@ -254,7 +254,7 @@ export default function SettingsScreen() {
 
         <Animated.View entering={FadeInDown.delay(400).duration(400)}>
           <AnimatedPressable
-            style={[styles.signOutButton, { backgroundColor: colors.secondary }, loading && styles.signOutDisabled]}
+            style={[styles.signOutButton, { backgroundColor: colors.secondary }, loading ? styles.signOutDisabled : {}]}
             onPress={confirmSignOut}
             disabled={loading}
           >

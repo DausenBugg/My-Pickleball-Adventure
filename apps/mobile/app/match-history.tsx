@@ -44,7 +44,7 @@ export default function MatchHistoryScreen() {
       style={[
         styles.filterButton,
         { backgroundColor: colors.borderLight, borderColor: colors.borderLight },
-        active && { backgroundColor: colors.primary, borderColor: colors.primary },
+        active ? { backgroundColor: colors.primary, borderColor: colors.primary } : {},
       ]}
       onPress={onPress}
     >
@@ -52,7 +52,7 @@ export default function MatchHistoryScreen() {
         style={[
           styles.filterText,
           { color: colors.muted },
-          active && { color: colors.textOnPrimary },
+          active ? { color: colors.textOnPrimary } : undefined,
         ]}
       >
         {label}

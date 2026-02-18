@@ -12,8 +12,44 @@ export const palette = {
   black: '#000000',
 } as const;
 
+// ── Color Type Definition ────────────────────────────────
+export interface AppColors {
+  primary: string;
+  primaryLight: string;
+  primaryDark: string;
+  secondary: string;
+  secondaryLight: string;
+  secondaryDark: string;
+  ink: string;
+  muted: string;
+  textOnPrimary: string;
+  textOnSecondary: string;
+  surface: string;
+  background: string;
+  cardBackground: string;
+  border: string;
+  borderLight: string;
+  success: string;
+  warning: string;
+  error: string;
+  primaryGhost: string;
+  secondaryGhost: string;
+  successGhost: string;
+  tabBarBackground: string;
+  tabBarActive: string;
+  tabBarInactive: string;
+  overlay: string;
+  shimmer: string;
+  winBg: string;
+  lossBg: string;
+  unreadBg: string;
+  unreadBorder: string;
+  blue: string;
+  coral: string;
+}
+
 // ── Semantic color tokens (light) ────────────────────────
-export const lightColors = {
+export const lightColors: AppColors = {
   // Core
   primary: palette.blue,
   primaryLight: palette.blueLight,
@@ -63,10 +99,10 @@ export const lightColors = {
   // Legacy compat aliases
   blue: palette.blue,
   coral: palette.coral,
-} as const;
+};
 
 // ── Semantic color tokens (dark) ─────────────────────────
-export const darkColors: typeof lightColors = {
+export const darkColors: AppColors = {
   primary: palette.blueLight,
   primaryLight: '#6db3ff',
   primaryDark: palette.blue,
@@ -107,12 +143,10 @@ export const darkColors: typeof lightColors = {
 
   blue: palette.blueLight,
   coral: palette.coralLight,
-} as const;
+};
 
 // Backwards-compat: default to light
 export const colors = lightColors;
-
-export type AppColors = typeof lightColors;
 
 // ── Spacing ──────────────────────────────────────────────
 export const spacing = {

@@ -176,7 +176,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 });
-
-// Legacy export for backwards compatibility
-export const LeagueBadge = LeagueRatingDisplay;
-export default LeagueRatingDisplay;

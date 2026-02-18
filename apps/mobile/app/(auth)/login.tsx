@@ -114,7 +114,7 @@ export default function LoginScreen() {
           </Text>
 
           <AnimatedPressable
-            style={[styles.primary, { backgroundColor: colors.primary }, !canSubmit && { opacity: 0.5 }]}
+            style={[styles.primary, { backgroundColor: colors.primary }, !canSubmit ? { opacity: 0.5 } : {}]}
             onPress={handleSignIn}
           >
             {loading ? (

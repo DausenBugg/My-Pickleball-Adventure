@@ -38,3 +38,6 @@ Thumbs.db
 *.mobileprovision
 /ios
 /android
+
+# Supabase CLI
+.temp/
