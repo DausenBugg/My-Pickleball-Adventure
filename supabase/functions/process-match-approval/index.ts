@@ -1,8 +1,16 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(str: string): boolean {
+  return typeof str === 'string' && UUID_REGEX.test(str);
+}
+
+// No CORS wildcard for mobile-only app
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': '',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
@@ -12,16 +20,46 @@ serve(async (req) => {
   }
 
   try {
+    // Create admin client for database operations
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Verify JWT and get authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('[process-match-approval] Missing Authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing or invalid Authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Verify the JWT token
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('[process-match-approval] Invalid token:', authError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('[process-match-approval] Authenticated user:', user.id);
+
     const { matchId } = await req.json();
     console.log('[process-match-approval] Processing match:', matchId);
 
-    if (!matchId) {
-      throw new Error('Match ID is required');
+    // Validate UUID format
+    if (!matchId || !isValidUUID(matchId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or missing match ID' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Get match details
@@ -65,6 +103,16 @@ serve(async (req) => {
     }
 
     console.log('[process-match-approval] Participants:', participants.length);
+
+    // Authorization: Only match participants can trigger approval processing
+    const isParticipant = participants.some((p: any) => p.user_id === user.id);
+    if (!isParticipant) {
+      console.error('[process-match-approval] User not a participant:', user.id);
+      return new Response(
+        JSON.stringify({ error: 'Only match participants can process approvals' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get all approvals
     const { data: approvals, error: approvalsError } = await supabaseClient

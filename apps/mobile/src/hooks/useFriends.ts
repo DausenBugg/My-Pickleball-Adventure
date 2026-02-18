@@ -25,75 +25,73 @@ export function useFriends() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refresh = async () => {
     if (!session?.user?.id || !supabase) {
       setLoading(false);
       return;
     }
 
-    const fetchFriendships = async () => {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      if (!supabase) return;
+    // Get friendships where user is either requester or addressee
+    const { data, error: fetchError } = await supabase
+      .from('friendships')
+      .select('*')
+      .or(`requester_id.eq.${session.user.id},addressee_id.eq.${session.user.id}`);
 
-      // Get friendships where user is either requester or addressee
-      const { data, error: fetchError } = await supabase
-        .from('friendships')
-        .select('*')
-        .or(`requester_id.eq.${session.user.id},addressee_id.eq.${session.user.id}`);
-
-      if (fetchError) {
-        setError(fetchError.message);
-        setLoading(false);
-        return;
-      }
-
-      const acceptedFriends: string[] = [];
-      const sentPending: string[] = [];
-      const receivedPending: string[] = [];
-
-      data?.forEach((friendship) => {
-        if (friendship.status === 'accepted') {
-          // Add the other user as friend
-          if (friendship.requester_id === session.user.id) {
-            acceptedFriends.push(friendship.addressee_id);
-          } else {
-            acceptedFriends.push(friendship.requester_id);
-          }
-        } else if (friendship.status === 'pending') {
-          // Separate sent vs received pending requests
-          if (friendship.requester_id === session.user.id) {
-            sentPending.push(friendship.addressee_id);
-          } else {
-            receivedPending.push(friendship.requester_id);
-          }
-        }
-      });
-
-      setFriends(acceptedFriends);
-      setPendingSent(sentPending);
-      setPendingReceived(receivedPending);
-
-      if (receivedPending.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', receivedPending);
-
-        const resolvedProfiles = profiles?.map((profile) => ({
-          id: profile.id,
-          full_name: profile.full_name,
-        })) || [];
-
-        setPendingReceivedUsers(resolvedProfiles);
-      } else {
-        setPendingReceivedUsers([]);
-      }
+    if (fetchError) {
+      setError(fetchError.message);
       setLoading(false);
-    };
+      return;
+    }
 
-    fetchFriendships();
+    const acceptedFriends: string[] = [];
+    const sentPending: string[] = [];
+    const receivedPending: string[] = [];
+
+    data?.forEach((friendship) => {
+      if (friendship.status === 'accepted') {
+        // Add the other user as friend
+        if (friendship.requester_id === session.user.id) {
+          acceptedFriends.push(friendship.addressee_id);
+        } else {
+          acceptedFriends.push(friendship.requester_id);
+        }
+      } else if (friendship.status === 'pending') {
+        // Separate sent vs received pending requests
+        if (friendship.requester_id === session.user.id) {
+          sentPending.push(friendship.addressee_id);
+        } else {
+          receivedPending.push(friendship.requester_id);
+        }
+      }
+    });
+
+    setFriends(acceptedFriends);
+    setPendingSent(sentPending);
+    setPendingReceived(receivedPending);
+
+    if (receivedPending.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', receivedPending);
+
+      const resolvedProfiles = profiles?.map((profile) => ({
+        id: profile.id,
+        full_name: profile.full_name,
+      })) || [];
+
+      setPendingReceivedUsers(resolvedProfiles);
+    } else {
+      setPendingReceivedUsers([]);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    refresh();
   }, [session?.user?.id]);
 
   const sendFriendRequest = async (friendId: string) => {
@@ -161,14 +159,15 @@ export function useFriends() {
   const rejectFriendRequest = async (userId: string) => {
     if (!session?.user?.id || !supabase) return false;
 
-    const { error: updateError } = await supabase
+    // Delete the friendship record so the user can send another request later
+    const { error: deleteError } = await supabase
       .from('friendships')
-      .update({ status: 'rejected' })
+      .delete()
       .eq('requester_id', userId)
       .eq('addressee_id', session.user.id);
 
-    if (updateError) {
-      console.error('Failed to reject friend request:', updateError);
+    if (deleteError) {
+      console.error('Failed to reject friend request:', deleteError);
       return false;
     }
 
@@ -184,6 +183,7 @@ export function useFriends() {
     pendingReceivedUsers,
     loading,
     error,
+    refresh,
     sendFriendRequest,
     acceptFriendRequest,
     rejectFriendRequest,
