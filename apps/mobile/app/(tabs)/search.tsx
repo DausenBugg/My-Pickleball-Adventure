@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -31,7 +32,15 @@ export default function SearchScreen() {
     pendingSent,
     loading: friendsLoading,
     sendFriendRequest,
+    refresh: refreshFriends,
   } = useFriends();
+
+  // Refresh friends data when tab gains focus (e.g., after accepting friend request)
+  useFocusEffect(
+    useCallback(() => {
+      refreshFriends();
+    }, [])
+  );
 
   // Fetch friend profiles so friends tab works without a search query
   const [friendProfiles, setFriendProfiles] = useState<Player[]>([]);

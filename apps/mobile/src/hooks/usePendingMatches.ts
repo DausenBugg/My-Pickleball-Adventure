@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { supabase, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
+import { supabase, supabaseUrl } from '../lib/supabase';
 import { useAuth } from '../state/auth';
 
 export type PendingMatch = {
@@ -84,53 +84,70 @@ export function usePendingMatches() {
         return;
       }
 
-      // For each match, get participants and approvals
-      const enrichedMatches = await Promise.all(
-        matchesData.map(async (match: any) => {
-          if (!supabase) return null;
-          
-          // Get participants
-          const { data: participants } = await supabase
-            .from('match_participants')
-            .select(
-              `
-              user_id,
-              team,
-              profiles(full_name)
-            `
-            )
-            .eq('match_id', match.id);
+      // Batch fetch all participants and approvals (fixes N+1 query)
+      const pendingMatchIds = matchesData.map((m: any) => m.id);
+      
+      // Fetch all participants for all pending matches in one query
+      const { data: allParticipants } = await supabase
+        .from('match_participants')
+        .select(
+          `
+          match_id,
+          user_id,
+          team,
+          profiles(full_name)
+        `
+        )
+        .in('match_id', pendingMatchIds);
 
-          // Get approvals
-          const { data: approvals } = await supabase
-            .from('match_approvals')
-            .select('user_id, approved')
-            .eq('match_id', match.id);
+      // Fetch all approvals for all pending matches in one query
+      const { data: allApprovals } = await supabase
+        .from('match_approvals')
+        .select('match_id, user_id, approved')
+        .in('match_id', pendingMatchIds);
 
-          return {
-            id: match.id,
-            submitter_id: match.submitter_id,
-            match_type: match.match_type,
-            match_mode: match.match_mode,
-            team_a_score: match.team_a_score,
-            team_b_score: match.team_b_score,
-            winner_team: match.winner_team,
-            created_at: match.created_at,
-            submitter_name: match.submitter?.full_name || null,
-            participants:
-              participants?.map((p: any) => ({
-                user_id: p.user_id,
-                full_name: p.profiles?.full_name || null,
-                team: p.team,
-              })) || [],
-            approvals:
-              approvals?.map((a) => ({
-                user_id: a.user_id,
-                approved: a.approved,
-              })) || [],
-          };
-        })
-      );
+      // Group participants by match_id
+      const participantsByMatch = new Map<string, any[]>();
+      (allParticipants || []).forEach((p: any) => {
+        const existing = participantsByMatch.get(p.match_id) || [];
+        existing.push(p);
+        participantsByMatch.set(p.match_id, existing);
+      });
+
+      // Group approvals by match_id
+      const approvalsByMatch = new Map<string, any[]>();
+      (allApprovals || []).forEach((a: any) => {
+        const existing = approvalsByMatch.get(a.match_id) || [];
+        existing.push(a);
+        approvalsByMatch.set(a.match_id, existing);
+      });
+
+      // Enrich matches with pre-fetched data
+      const enrichedMatches = matchesData.map((match: any) => {
+        const participants = participantsByMatch.get(match.id) || [];
+        const approvals = approvalsByMatch.get(match.id) || [];
+
+        return {
+          id: match.id,
+          submitter_id: match.submitter_id,
+          match_type: match.match_type,
+          match_mode: match.match_mode,
+          team_a_score: match.team_a_score,
+          team_b_score: match.team_b_score,
+          winner_team: match.winner_team,
+          created_at: match.created_at,
+          submitter_name: match.submitter?.full_name || null,
+          participants: participants.map((p: any) => ({
+            user_id: p.user_id,
+            full_name: p.profiles?.full_name || null,
+            team: p.team,
+          })),
+          approvals: approvals.map((a: any) => ({
+            user_id: a.user_id,
+            approved: a.approved,
+          })),
+        };
+      });
 
       setMatches(enrichedMatches.filter((m): m is PendingMatch => m !== null));
     } catch (err: any) {
@@ -162,20 +179,28 @@ export function usePendingMatches() {
       }
 
       // Call Edge Function to process match approval
-      if (!supabaseUrl || !supabaseAnonKey) {
+      if (!supabaseUrl || !supabase) {
         console.error('Supabase not configured for edge function calls');
         return false;
       }
 
+      // Get the user's access token for authenticated edge function call
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession?.access_token) {
+        console.error('No valid session for edge function call');
+        return false;
+      }
+
       console.log('Calling process-match-approval for match:', matchId);
+      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
       const approvalResponse = await fetch(
         `${supabaseUrl}/functions/v1/process-match-approval`,
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${supabaseAnonKey}`,
-            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${currentSession.access_token}`,
             'Content-Type': 'application/json',
+            'apikey': anonKey,
           },
           body: JSON.stringify({ matchId }),
         }
@@ -213,19 +238,27 @@ export function usePendingMatches() {
       if (insertError) throw insertError;
 
       // Call Edge Function to process rejection (update status)
-      if (!supabaseUrl || !supabaseAnonKey) {
+      if (!supabaseUrl || !supabase) {
         console.error('Supabase not configured for edge function calls');
         return false;
       }
 
+      // Get the user's access token for authenticated edge function call
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession?.access_token) {
+        console.error('No valid session for edge function call');
+        return false;
+      }
+
+      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
       const rejectionResponse = await fetch(
         `${supabaseUrl}/functions/v1/process-match-approval`,
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${supabaseAnonKey}`,
-            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${currentSession.access_token}`,
             'Content-Type': 'application/json',
+            'apikey': anonKey,
           },
           body: JSON.stringify({ matchId }),
         }

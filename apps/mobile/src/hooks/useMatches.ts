@@ -105,72 +105,70 @@ export function useMatches(filters: MatchFilters = {}) {
 
       if (matchesError) throw matchesError;
 
-      // Enrich with player data
-      const supabaseClient = supabase; // Capture for type checking
-      const enrichedMatches = await Promise.all(
-        matchesData.map(async (match) => {
-          try {
-            if (!supabaseClient) return null;
-            const mappedMatch = {
-              id: match.id,
-              match_type: match.match_type,
-              is_ranked: match.match_mode === 'ranked',
-              winning_team: match.winner_team === 'team_a' ? 1 : 2,
-              status: match.status,
-              score_team1: match.team_a_score ?? 0,
-              score_team2: match.team_b_score ?? 0,
-              created_at: match.created_at,
-            };
-            
-            const { data: parts, error: partsError } = await supabaseClient
-              .from('match_participants')
-              .select(
-                `
-                user_id,
-                team,
-                profiles!inner (
-                  id,
-                  full_name,
-                  avatar_url
-                )
-              `
-              )
-              .eq('match_id', match.id);
+      // Batch fetch all participants for all matches (fixes N+1 query)
+      const filteredMatchIds = matchesData.map((m) => m.id);
+      const { data: allParticipants, error: partsError } = await supabase
+        .from('match_participants')
+        .select(
+          `
+          match_id,
+          user_id,
+          team,
+          profiles!inner (
+            id,
+            full_name,
+            avatar_url
+          )
+        `
+        )
+        .in('match_id', filteredMatchIds);
 
-            if (partsError) {
-              console.error('Error fetching participants:', partsError);
-              return null;
-            }
+      if (partsError) {
+        console.error('Error fetching participants:', partsError);
+      }
 
-            const team1 = parts?.filter((p) => p.team === 'team_a') || [];
-            const team2 = parts?.filter((p) => p.team === 'team_b') || [];
+      // Group participants by match_id for efficient lookup
+      const participantsByMatch = new Map<string, any[]>();
+      (allParticipants || []).forEach((p) => {
+        const existing = participantsByMatch.get(p.match_id) || [];
+        existing.push(p);
+        participantsByMatch.set(p.match_id, existing);
+      });
 
-            // Validate that we have at least one player per team
-            if (team1.length === 0 || team2.length === 0) {
-              console.warn('Match missing team data:', match.id);
-              return null;
-            }
+      // Enrich matches with pre-fetched participant data
+      const enrichedMatches = matchesData.map((match) => {
+        const parts = participantsByMatch.get(match.id) || [];
+        const team1 = parts.filter((p) => p.team === 'team_a');
+        const team2 = parts.filter((p) => p.team === 'team_b');
 
-            // Create safe player objects with fallbacks
-            const createPlayerObject = (part: any) => ({
-              id: part?.profiles?.id || part?.user_id || '',
-              full_name: part?.profiles?.full_name || 'Unknown Player',
-              avatar_url: part?.profiles?.avatar_url || null,
-            });
+        // Validate that we have at least one player per team
+        if (team1.length === 0 || team2.length === 0) {
+          console.warn('Match missing team data:', match.id);
+          return null;
+        }
 
-            return {
-              ...mappedMatch,
-              team1_player1: team1[0] ? createPlayerObject(team1[0]) : null,
-              team1_player2: team1[1] ? createPlayerObject(team1[1]) : undefined,
-              team2_player1: team2[0] ? createPlayerObject(team2[0]) : null,
-              team2_player2: team2[1] ? createPlayerObject(team2[1]) : undefined,
-            };
-          } catch (err) {
-            console.error('Error enriching match:', err);
-            return null;
-          }
-        })
-      );
+        // Create safe player objects with fallbacks
+        const createPlayerObject = (part: any) => ({
+          id: part?.profiles?.id || part?.user_id || '',
+          full_name: part?.profiles?.full_name || 'Unknown Player',
+          avatar_url: part?.profiles?.avatar_url || null,
+        });
+
+        return {
+          id: match.id,
+          match_type: match.match_type,
+          is_ranked: match.match_mode === 'ranked',
+          winning_team: match.winner_team === 'team_a' ? 1 : 2,
+          status: match.status,
+          score_team1: match.team_a_score ?? 0,
+          score_team2: match.team_b_score ?? 0,
+          created_at: match.created_at,
+          team1_player1: team1[0] ? createPlayerObject(team1[0]) : null,
+          team1_player2: team1[1] ? createPlayerObject(team1[1]) : undefined,
+          team2_player1: team2[0] ? createPlayerObject(team2[0]) : null,
+          team2_player2: team2[1] ? createPlayerObject(team2[1]) : undefined,
+        };
+      });
 
       // Filter out null matches (errors during enrichment)
       const validMatches = enrichedMatches.filter((m) => m !== null);
