@@ -185,14 +185,7 @@ serve(async (req) => {
       }
     }
 
-    // Update win/loss counts in profiles
-    for (const participant of participants) {
-      if (participant.result === 'win') {
-        await supabaseClient.rpc('increment_wins', { user_id: participant.user_id });
-      } else if (participant.result === 'loss') {
-        await supabaseClient.rpc('increment_losses', { user_id: participant.user_id });
-      }
-    }
+    // Win/loss counts are handled by process-match-approval for all match modes
 
     console.log('[update-ratings] Completed updates:', ratingUpdates.length);
     return new Response(

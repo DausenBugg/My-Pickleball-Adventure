@@ -2,88 +2,108 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useLeaderboard } from '../../src/hooks/useLeaderboard';
-import { colors, radii, spacing, typography } from '../../src/theme';
+import { useTheme } from '../../src/theme';
+import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
+import AnimatedPressable from '../../src/components/AnimatedPressable';
+import { LeagueRatingBadge, LeagueInlineBadge } from '../../src/components/LeagueBadge';
 
 type BoardType = 'global' | 'friends';
+
+const MEDAL_COLORS = ['#ffd700', '#c0c0c0', '#cd7f32']; // gold, silver, bronze
 
 export default function LeaderboardScreen() {
   const [boardType, setBoardType] = useState<BoardType>('global');
   const { entries, loading } = useLeaderboard(boardType);
+  const { colors } = useTheme();
 
   const podium = useMemo(() => entries.slice(0, 3), [entries]);
   const rest = useMemo(() => entries.slice(3), [entries]);
 
-  const Avatar = ({ url, name }: { url: string | null; name: string }) => {
+  const Avatar = ({ url, name, size = 48, borderColor }: { url: string | null; name: string; size?: number; borderColor?: string }) => {
+    const style = {
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+      borderWidth: borderColor ? 3 : 0,
+      borderColor: borderColor || 'transparent',
+    };
     if (url) {
-      return <Image source={{ uri: url }} style={styles.avatar} />;
+      return <Image source={{ uri: url }} style={[styles.avatar, style]} />;
     }
     return (
-      <View style={styles.avatarPlaceholder}>
-        <Text style={styles.avatarText}>{name[0]?.toUpperCase() || 'P'}</Text>
+      <View style={[styles.avatarPlaceholder, style, { backgroundColor: colors.primary }]}>
+        <Text style={[styles.avatarText, { fontSize: size * 0.38 }]}>{name[0]?.toUpperCase() || 'P'}</Text>
       </View>
     );
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Leaderboard</Text>
-          <Text style={styles.subtitle}>Top players by ranking points.</Text>
-        </View>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+          <Text style={[styles.title, { color: colors.ink }]}>Leaderboard</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>Top players by ranking points.</Text>
+        </Animated.View>
 
-        <View style={styles.segment}>
-          <Pressable
-            style={[
-              styles.segmentButton,
-              boardType === 'global' && styles.segmentActive,
-            ]}
-            onPress={() => setBoardType('global')}
-          >
-            <Text
+        {/* Segment control */}
+        <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+          <View style={[styles.segment, { backgroundColor: colors.borderLight }]}>
+            <AnimatedPressable
               style={[
-                styles.segmentText,
-                boardType === 'global' && styles.segmentTextActive,
+                styles.segmentButton,
+                boardType === 'global' ? { backgroundColor: colors.primary } : {},
               ]}
+              onPress={() => setBoardType('global')}
             >
-              Global
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.segmentButton,
-              boardType === 'friends' && styles.segmentActive,
-            ]}
-            onPress={() => setBoardType('friends')}
-          >
-            <Text
+              <Text
+                style={[
+                  styles.segmentText,
+                  { color: colors.muted },
+                  boardType === 'global' && { color: colors.textOnPrimary },
+                ]}
+              >
+                Global
+              </Text>
+            </AnimatedPressable>
+            <AnimatedPressable
               style={[
-                styles.segmentText,
-                boardType === 'friends' && styles.segmentTextActive,
+                styles.segmentButton,
+                boardType === 'friends' ? { backgroundColor: colors.primary } : {},
               ]}
+              onPress={() => setBoardType('friends')}
             >
-              Friends
-            </Text>
-          </Pressable>
-        </View>
+              <Text
+                style={[
+                  styles.segmentText,
+                  { color: colors.muted },
+                  boardType === 'friends' && { color: colors.textOnPrimary },
+                ]}
+              >
+                Friends
+              </Text>
+            </AnimatedPressable>
+          </View>
+        </Animated.View>
 
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.blue} />
-            <Text style={styles.loadingText}>Loading rankings...</Text>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.muted }]}>Loading rankings...</Text>
           </View>
         ) : entries.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
+            <Ionicons name="trophy-outline" size={48} color={colors.muted} />
+            <Text style={[styles.emptyText, { color: colors.muted }]}>
               {boardType === 'friends'
                 ? 'No friends on the leaderboard yet'
                 : 'No players ranked yet'}
@@ -91,47 +111,77 @@ export default function LeaderboardScreen() {
           </View>
         ) : (
           <>
-            {podium.length > 0 ? (
-              <View style={styles.podiumRow}>
+            {/* Podium */}
+            {podium.length > 0 && (
+              <Animated.View entering={FadeInDown.delay(200).duration(500)} style={styles.podiumRow}>
                 {podium.map((player, index) => (
-                  <View
+                  <AnimatedPressable
                     key={player.id}
-                    style={[styles.podiumCard, index === 0 && styles.podiumTop]}
+                    style={[
+                      styles.podiumCard,
+                      {
+                        backgroundColor: colors.cardBackground,
+                        borderColor: MEDAL_COLORS[index] || colors.borderLight,
+                        borderWidth: index === 0 ? 2.5 : 1.5,
+                      },
+                      index === 0 ? styles.podiumTop : {},
+                    ]}
                   >
-                    <Text style={styles.podiumRank}>#{index + 1}</Text>
-                    <Avatar url={player.avatar_url} name={player.full_name || 'Player'} />
-                    <Text style={styles.podiumName} numberOfLines={2}>
+                    <Text style={[styles.podiumRank, { color: MEDAL_COLORS[index] || colors.primary }]}>
+                      #{index + 1}
+                    </Text>
+                    <Avatar
+                      url={player.avatar_url}
+                      name={player.full_name || 'Player'}
+                      size={index === 0 ? 56 : 48}
+                      borderColor={MEDAL_COLORS[index]}
+                    />
+                    <Text style={[styles.podiumName, { color: colors.ink }]} numberOfLines={2}>
                       {player.full_name || 'Player'}
                     </Text>
-                    <Text style={styles.podiumMeta}>
-                      Rating {player.rating}
+                    <LeagueRatingBadge rating={player.rating} rank={index + 1} />
+                    <Text style={[styles.podiumMeta, { color: colors.muted }]}>
+                      {player.wins}W · {player.losses}L
                     </Text>
-                  </View>
+                  </AnimatedPressable>
                 ))}
-              </View>
-            ) : null}
+              </Animated.View>
+            )}
 
-            {rest.length > 0 ? (
+            {/* Remaining list */}
+            {rest.length > 0 && (
               <View style={styles.list}>
                 {rest.map((player, index) => (
-                  <View key={player.id} style={styles.listItem}>
-                    <Text style={styles.listRank}>#{index + 4}</Text>
-                    <Avatar url={player.avatar_url} name={player.full_name || 'Player'} />
-                    <View style={styles.listInfo}>
-                      <Text style={styles.listName} numberOfLines={1}>
-                        {player.full_name || 'Player'}
-                      </Text>
-                      <Text style={styles.listMeta}>
-                        Level {player.level} · Wins {player.wins}
-                      </Text>
-                    </View>
-                    <Text style={styles.listRating}>{player.rating}</Text>
-                  </View>
+                  <Animated.View
+                    key={player.id}
+                    entering={FadeInDown.delay(300 + index * 50).duration(400)}
+                  >
+                    <AnimatedPressable
+                      style={[
+                        styles.listItem,
+                        { backgroundColor: colors.cardBackground, borderColor: colors.borderLight },
+                      ]}
+                    >
+                      <Text style={[styles.listRank, { color: colors.primary }]}>#{index + 4}</Text>
+                      <Avatar url={player.avatar_url} name={player.full_name || 'Player'} size={40} />
+                      <View style={styles.listInfo}>
+                        <Text style={[styles.listName, { color: colors.ink }]} numberOfLines={1}>
+                          {player.full_name || 'Player'}
+                        </Text>
+                        <Text style={[styles.listMeta, { color: colors.muted }]}>
+                          Level {player.level} · {player.wins}W · {player.losses}L
+                        </Text>
+                      </View>
+                      <LeagueInlineBadge rating={player.rating} rank={index + 4} ratingColor={colors.ink} />
+                    </AnimatedPressable>
+                  </Animated.View>
                 ))}
               </View>
-            ) : null}
+            )}
           </>
         )}
+
+        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -140,7 +190,6 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   container: {
     padding: spacing.lg,
@@ -153,37 +202,23 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.ink,
   },
-  subtitle: {
-    color: colors.muted,
-  },
+  subtitle: {},
   segment: {
     flexDirection: 'row',
-    backgroundColor: '#eef2f7',
-    borderRadius: radii.lg,
+    borderRadius: radii.pill,
     padding: 4,
-    gap: 6,
+    gap: 4,
   },
   segmentButton: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: radii.sm,
+    borderRadius: radii.pill,
     alignItems: 'center',
   },
-  segmentActive: {
-    backgroundColor: colors.surface,
-    shadowColor: '#000000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
   segmentText: {
-    color: colors.muted,
     fontWeight: typography.weights.semibold,
-  },
-  segmentTextActive: {
-    color: colors.ink,
+    fontSize: typography.sizes.base,
   },
   loadingContainer: {
     paddingVertical: spacing.xxl,
@@ -191,15 +226,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   loadingText: {
-    color: colors.muted,
     fontSize: typography.sizes.base,
   },
   emptyContainer: {
-    paddingVertical: spacing.xxl,
+    paddingVertical: spacing.xxl * 2,
     alignItems: 'center',
+    gap: spacing.sm,
   },
   emptyText: {
-    color: colors.muted,
     fontSize: typography.sizes.base,
     textAlign: 'center',
   },
@@ -210,73 +244,67 @@ const styles = StyleSheet.create({
   },
   podiumCard: {
     flex: 1,
-    backgroundColor: colors.surface,
     borderRadius: radii.lg,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
     alignItems: 'center',
+    ...shadows.sm,
   },
   podiumTop: {
-    borderColor: '#ffd700',
-    borderWidth: 2,
-    backgroundColor: '#fffef7',
+    marginTop: -8,
+    paddingTop: spacing.lg,
   },
   podiumRank: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.blue,
-    marginBottom: 8,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.heavy,
+    marginBottom: 6,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
     marginBottom: 8,
   },
   avatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.blue,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
   avatarText: {
-    fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     color: '#ffffff',
   },
   podiumName: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
-    color: colors.ink,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
+  },
+  podiumRatingBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+  },
+  podiumRatingText: {
+    color: '#ffffff',
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
   },
   podiumMeta: {
     fontSize: typography.sizes.xs,
-    color: colors.muted,
   },
   list: {
     gap: spacing.sm,
     marginTop: spacing.sm,
   },
   listItem: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    ...shadows.sm,
   },
   listRank: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
-    color: colors.blue,
     width: 40,
   },
   listInfo: {
@@ -285,16 +313,13 @@ const styles = StyleSheet.create({
   listName: {
     fontSize: typography.sizes.base,
     fontWeight: typography.weights.semibold,
-    color: colors.ink,
     marginBottom: 2,
   },
   listMeta: {
     fontSize: typography.sizes.sm,
-    color: colors.muted,
   },
   listRating: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
-    color: colors.ink,
   },
 });

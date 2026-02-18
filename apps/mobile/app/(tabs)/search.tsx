@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,18 +8,24 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useFriends } from '../../src/hooks/useFriends';
-import { usePlayerSearch } from '../../src/hooks/usePlayerSearch';
-import { colors, radii, spacing, typography } from '../../src/theme';
+import { Player, usePlayerSearch } from '../../src/hooks/usePlayerSearch';
+import { supabase } from '../../src/lib/supabase';
+import { useTheme } from '../../src/theme';
+import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
+import AnimatedPressable from '../../src/components/AnimatedPressable';
 
 type Filter = 'all' | 'friends';
 
 export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const { colors } = useTheme();
 
-  const { players,  loading: searchLoading } = usePlayerSearch(query);
+  const { players, loading: searchLoading } = usePlayerSearch(query);
   const {
     friends,
     pendingSent,
@@ -28,20 +33,60 @@ export default function SearchScreen() {
     sendFriendRequest,
   } = useFriends();
 
+  // Fetch friend profiles so friends tab works without a search query
+  const [friendProfiles, setFriendProfiles] = useState<Player[]>([]);
+  const [friendProfilesLoading, setFriendProfilesLoading] = useState(false);
+
+  useEffect(() => {
+    if (!supabase || friends.length === 0) {
+      setFriendProfiles([]);
+      return;
+    }
+
+    const fetchFriendProfiles = async () => {
+      if (!supabase) return;
+      setFriendProfilesLoading(true);
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, level, wins, losses, ratings(rating)')
+        .in('id', friends)
+        .order('full_name');
+
+      const mapped: Player[] = (data || []).map((p: any) => ({
+        id: p.id,
+        full_name: p.full_name,
+        email: p.email,
+        level: p.level,
+        wins: p.wins,
+        losses: p.losses,
+        rating: p.ratings?.[0]?.rating ?? p.ratings?.rating ?? 1200,
+      }));
+      setFriendProfiles(mapped);
+      setFriendProfilesLoading(false);
+    };
+
+    fetchFriendProfiles();
+  }, [friends]);
+
   const results = useMemo(() => {
     if (filter === 'friends') {
-      // Only show friends
-      return players.filter((player) => friends.includes(player.id));
+      // If user typed a query, filter the friend profiles by query
+      if (query.trim().length >= 2) {
+        return players.filter((player) => friends.includes(player.id));
+      }
+      // Otherwise show all friend profiles
+      return friendProfiles;
     }
     return players;
-  }, [filter, players, friends]);
+  }, [filter, players, friends, friendProfiles, query]);
 
-  const loading = searchLoading || friendsLoading;
+  const loading = filter === 'friends'
+    ? friendsLoading || friendProfilesLoading
+    : searchLoading || friendsLoading;
 
   const handleAddFriend = async (userId: string) => {
     const success = await sendFriendRequest(userId);
     if (success) {
-      // Optionally show a success message
       console.log('Friend request sent');
     }
   };
@@ -53,123 +98,168 @@ export default function SearchScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Search players</Text>
-          <Text style={styles.subtitle}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+          <Text style={[styles.title, { color: colors.ink }]}>Search players</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>
             Find friends and view their progress.
           </Text>
-        </View>
+        </Animated.View>
 
-        <View style={styles.searchBox}>
-          <TextInput
-            placeholder="Search by name or email"
-            style={styles.input}
-            value={query}
-            onChangeText={setQuery}
-            autoCapitalize="none"
-          />
-        </View>
+        {/* Search bar */}
+        <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+          <View style={[styles.searchBox, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
+            <Ionicons name="search" size={20} color={colors.muted} style={{ marginRight: 8 }} />
+            <TextInput
+              placeholder="Search by name or email"
+              placeholderTextColor={colors.muted}
+              style={[styles.input, { color: colors.ink }]}
+              value={query}
+              onChangeText={setQuery}
+              autoCapitalize="none"
+            />
+          </View>
+        </Animated.View>
 
-        <View style={styles.filters}>
-          <Pressable
-            style={[styles.filterChip, filter === 'all' && styles.filterActive]}
+        {/* Filter chips */}
+        <Animated.View entering={FadeInDown.delay(150).duration(400)} style={styles.filters}>
+          <AnimatedPressable
+            style={[
+              styles.filterChip,
+              { backgroundColor: colors.borderLight },
+              filter === 'all' ? { backgroundColor: colors.primary } : {},
+            ]}
             onPress={() => setFilter('all')}
           >
             <Text
               style={[
                 styles.filterText,
-                filter === 'all' && styles.filterTextActive,
+                { color: colors.muted },
+                filter === 'all' ? { color: colors.textOnPrimary } : undefined,
               ]}
             >
               All players
             </Text>
-          </Pressable>
-          <Pressable
+          </AnimatedPressable>
+          <AnimatedPressable
             style={[
               styles.filterChip,
-              filter === 'friends' && styles.filterActive,
+              { backgroundColor: colors.borderLight },
+              filter === 'friends' ? { backgroundColor: colors.primary } : {},
             ]}
             onPress={() => setFilter('friends')}
           >
             <Text
               style={[
                 styles.filterText,
-                filter === 'friends' && styles.filterTextActive,
+                { color: colors.muted },
+                filter === 'friends' ? { color: colors.textOnPrimary } : undefined,
               ]}
             >
               Friends
             </Text>
-          </Pressable>
-        </View>
+          </AnimatedPressable>
+        </Animated.View>
 
-        {loading && query.length > 0 ? (
+        {loading && (query.length > 0 || filter === 'friends') ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.blue} />
-            <Text style={styles.loadingText}>Searching...</Text>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.muted }]}>Searching...</Text>
           </View>
         ) : null}
 
         <View style={styles.results}>
-          {!loading && query.length < 2 ? (
-            <Text style={styles.emptyText}>
-              Enter at least 2 characters to search
-            </Text>
+          {!loading && filter === 'all' && query.length < 2 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={44} color={colors.muted} />
+              <Text style={[styles.emptyText, { color: colors.muted }]}>
+                Enter at least 2 characters to search
+              </Text>
+            </View>
+          ) : !loading && filter === 'friends' && results.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people-outline" size={44} color={colors.muted} />
+              <Text style={[styles.emptyText, { color: colors.muted }]}>
+                {friends.length === 0 ? 'No friends yet. Add some!' : 'No friends match your search.'}
+              </Text>
+            </View>
           ) : !loading && results.length === 0 && query.length >= 2 ? (
-            <Text style={styles.emptyText}>No players found.</Text>
+            <View style={styles.emptyContainer}>
+              <Ionicons name="search-outline" size={44} color={colors.muted} />
+              <Text style={[styles.emptyText, { color: colors.muted }]}>No players found.</Text>
+            </View>
           ) : (
-            results.map((player) => {
+            results.map((player, idx) => {
               const status = getFriendStatus(player.id);
               return (
-                <View key={player.id} style={styles.card}>
-                  <View style={styles.cardHeader}>
-                    <View>
-                      <Text style={styles.name}>
-                        {player.full_name || 'Player'}
-                      </Text>
-                      <Text style={styles.meta}>Level {player.level}</Text>
-                    </View>
-                    <View style={styles.ratingPill}>
-                      <Text style={styles.ratingLabel}>Rating</Text>
-                      <Text style={styles.ratingValue}>1200</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.statsRow}>
-                    <Text style={styles.stat}>Wins {player.wins}</Text>
-                    <Text style={styles.stat}>Losses {player.losses}</Text>
-                  </View>
-
-                  <Pressable
+                <Animated.View
+                  key={player.id}
+                  entering={FadeInDown.delay(200 + idx * 60).duration(400)}
+                >
+                  <View
                     style={[
-                      styles.actionButton,
-                      status === 'friend' && styles.actionMuted,
-                      status === 'pending' && styles.actionPending,
+                      styles.card,
+                      { backgroundColor: colors.cardBackground, borderColor: colors.borderLight },
                     ]}
-                    onPress={() =>
-                      status === 'none' ? handleAddFriend(player.id) : null
-                    }
-                    disabled={status !== 'none'}
                   >
-                    <Text
+                    <View style={styles.cardHeader}>
+                      <View>
+                        <Text style={[styles.name, { color: colors.ink }]}>
+                          {player.full_name || 'Player'}
+                        </Text>
+                        <Text style={[styles.meta, { color: colors.muted }]}>
+                          Level {player.level}
+                        </Text>
+                      </View>
+                      <View style={[styles.ratingPill, { backgroundColor: colors.primaryGhost }]}>
+                        <Text style={[styles.ratingLabel, { color: colors.primary }]}>Rating</Text>
+                        <Text style={[styles.ratingValue, { color: colors.primary }]}>{player.rating}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.statsRow}>
+                      <Text style={[styles.stat, { color: colors.muted }]}>
+                        Wins {player.wins}
+                      </Text>
+                      <Text style={[styles.stat, { color: colors.muted }]}>
+                        Losses {player.losses}
+                      </Text>
+                    </View>
+
+                    <AnimatedPressable
                       style={[
-                        styles.actionText,
-                        status !== 'none' && styles.actionTextMuted,
+                        styles.actionButton,
+                        { backgroundColor: colors.secondary },
+                        status === 'friend' ? { backgroundColor: colors.borderLight } : {},
+                        status === 'pending' ? { backgroundColor: colors.secondaryGhost } : {},
                       ]}
+                      onPress={() =>
+                        status === 'none' ? handleAddFriend(player.id) : null
+                      }
+                      disabled={status !== 'none'}
                     >
-                      {status === 'friend'
-                        ? 'Friends'
-                        : status === 'pending'
-                          ? 'Pending'
-                          : 'Add friend'}
-                    </Text>
-                  </Pressable>
-                </View>
+                      <Text
+                        style={[
+                          styles.actionText,
+                          status !== 'none' ? { color: colors.muted } : undefined,
+                        ]}
+                      >
+                        {status === 'friend'
+                          ? 'Friends'
+                          : status === 'pending'
+                            ? 'Pending'
+                            : 'Add friend'}
+                      </Text>
+                    </AnimatedPressable>
+                  </View>
+                </Animated.View>
               );
             })
           )}
         </View>
+
+        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -178,7 +268,6 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   container: {
     padding: spacing.lg,
@@ -191,21 +280,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.ink,
   },
-  subtitle: {
-    color: colors.muted,
-  },
+  subtitle: {},
   searchBox: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radii.xl,
     borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
+    ...shadows.sm,
   },
   input: {
+    flex: 1,
     height: 48,
-    color: colors.ink,
     fontSize: typography.sizes.base,
   },
   filters: {
@@ -213,23 +300,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
     borderRadius: radii.pill,
-    backgroundColor: '#eef2f7',
-  },
-  filterActive: {
-    backgroundColor: colors.blue,
   },
   filterText: {
-    color: colors.muted,
     fontWeight: typography.weights.semibold,
     fontSize: typography.sizes.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  filterTextActive: {
-    color: '#ffffff',
   },
   loadingContainer: {
     paddingVertical: spacing.xl,
@@ -237,24 +314,26 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   loadingText: {
-    color: colors.muted,
     fontSize: typography.sizes.base,
   },
   results: {
     gap: 14,
   },
+  emptyContainer: {
+    paddingVertical: spacing.xxl,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   emptyText: {
-    color: colors.muted,
     textAlign: 'center',
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.sm,
   },
   card: {
-    backgroundColor: colors.surface,
     borderRadius: radii.lg,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.sm,
+    ...shadows.sm,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -264,27 +343,22 @@ const styles = StyleSheet.create({
   name: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
-    color: colors.ink,
   },
   meta: {
-    color: colors.muted,
     marginTop: 4,
   },
   ratingPill: {
-    backgroundColor: '#eaf1ff',
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     alignItems: 'center',
   },
   ratingLabel: {
-    color: colors.blue,
     fontSize: typography.sizes.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   ratingValue: {
-    color: colors.blue,
     fontWeight: typography.weights.bold,
     marginTop: 2,
   },
@@ -293,26 +367,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   stat: {
-    color: colors.muted,
     fontSize: typography.sizes.sm,
   },
   actionButton: {
-    backgroundColor: colors.coral,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     paddingVertical: 10,
     alignItems: 'center',
-  },
-  actionMuted: {
-    backgroundColor: '#eff2f7',
-  },
-  actionPending: {
-    backgroundColor: '#ffe9e6',
   },
   actionText: {
     color: '#ffffff',
     fontWeight: typography.weights.semibold,
-  },
-  actionTextMuted: {
-    color: colors.muted,
   },
 });

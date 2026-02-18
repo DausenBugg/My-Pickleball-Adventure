@@ -1,6 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Dimensions, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import ReAnimated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { PendingMatch, usePendingMatches } from '../../src/hooks/usePendingMatches';
 import { useMatches } from '../../src/hooks/useMatches';
@@ -13,9 +27,16 @@ import {
   useProfile,
   useRating,
 } from '../../src/hooks/useProfile';
-import { colors, radii, spacing, typography } from '../../src/theme';
+import { useTheme } from '../../src/theme';
+import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
+import CircularProgress from '../../src/components/CircularProgress';
+import AnimatedPressable from '../../src/components/AnimatedPressable';
+import ConfettiBurst from '../../src/components/ConfettiBurst';
+import { LeagueLabel } from '../../src/components/LeagueBadge';
 
 export default function HomeScreen() {
+  const { colors } = useTheme();
+  const router = useRouter();
   const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useProfile();
   const { rating, loading: ratingLoading, refresh: refreshRating } = useRating();
   const { matches: pendingMatches, approveMatch, rejectMatch, refresh: refreshPendingMatches } = usePendingMatches();
@@ -29,11 +50,22 @@ export default function HomeScreen() {
   } = useNotifications();
   const [showFriendPrompt, setShowFriendPrompt] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [dismissedNotifications, setDismissedNotifications] = useState<Set<string>>(new Set());
+  const prevLevelRef = useRef<number | null>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const screenWidth = Dimensions.get('window').width;
   const panelWidth = Math.min(360, screenWidth * 0.9);
 
   const loading = profileLoading || ratingLoading;
+
+  // Refresh profile when tab gains focus (e.g. after avatar change in settings)
+  useFocusEffect(
+    useCallback(() => {
+      refreshProfile();
+      refreshRating();
+    }, [])
+  );
 
   const xpToNext = useMemo(() => {
     if (!profile) return 0;
@@ -65,8 +97,16 @@ export default function HomeScreen() {
     return Math.max(1, xpForNextLevel - xpForCurrentLevel);
   }, [xpForCurrentLevel, xpForNextLevel]);
 
-  // Estimate wins needed (assuming 120 XP per win)
   const winsToNext = useMemo(() => Math.ceil(xpToNext / 120), [xpToNext]);
+
+  // Detect level-up and trigger confetti
+  useEffect(() => {
+    if (!profile) return;
+    if (prevLevelRef.current !== null && profile.level > prevLevelRef.current) {
+      setShowConfetti(true);
+    }
+    prevLevelRef.current = profile.level;
+  }, [profile?.level]);
 
   const pendingMatchById = useMemo(() => {
     return new Map(pendingMatches.map((match) => [match.id, match]));
@@ -79,12 +119,12 @@ export default function HomeScreen() {
   const recentMatches = useMemo(() => {
     return recentMatchesRaw.slice(0, 5);
   }, [recentMatchesRaw]);
+
   useEffect(() => {
     if (pendingReceivedUsers.length === 0) {
       setShowFriendPrompt(false);
       return;
     }
-
     setShowFriendPrompt(true);
     const timer = setTimeout(() => setShowFriendPrompt(false), 8000);
     return () => clearTimeout(timer);
@@ -126,9 +166,13 @@ export default function HomeScreen() {
   };
 
   const handleApproveMatchNotification = async (matchId: string, notificationId?: string) => {
+    if (notificationId) {
+      setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+    }
     const success = await approveMatch(matchId);
     if (success) {
       if (notificationId) await markAsRead(notificationId);
+      closeNotifications();
       refreshPendingMatches();
       refreshNotifications();
       refreshProfile();
@@ -138,9 +182,13 @@ export default function HomeScreen() {
   };
 
   const handleRejectMatchNotification = async (matchId: string, notificationId?: string) => {
+    if (notificationId) {
+      setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+    }
     const success = await rejectMatch(matchId);
     if (success) {
       if (notificationId) await markAsRead(notificationId);
+      closeNotifications();
       refreshPendingMatches();
       refreshNotifications();
       refreshProfile();
@@ -150,16 +198,24 @@ export default function HomeScreen() {
   };
 
   const handleAcceptFriendNotification = async (requesterId: string, notificationId?: string) => {
+    if (notificationId) {
+      setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+    }
     const success = await acceptFriendRequest(requesterId);
     if (success) {
       if (notificationId) await markAsRead(notificationId);
+      refreshNotifications();
     }
   };
 
   const handleRejectFriendNotification = async (requesterId: string, notificationId?: string) => {
+    if (notificationId) {
+      setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+    }
     const success = await rejectFriendRequest(requesterId);
     if (success) {
       if (notificationId) await markAsRead(notificationId);
+      refreshNotifications();
     }
   };
 
@@ -167,7 +223,6 @@ export default function HomeScreen() {
     const names = match.participants
       .filter((participant) => participant.team === team)
       .map((participant) => participant.full_name || 'Player');
-
     return names.length > 0 ? names.join(' & ') : 'TBD';
   };
 
@@ -207,168 +262,200 @@ export default function HomeScreen() {
     };
   };
 
+  // ── Loading / error states ──
+
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.blue} />
-          <Text style={styles.loadingText}>Loading your stats...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.muted }]}>Loading your stats...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (profileError) {
+  if (profileError || !profile) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Failed to load profile data</Text>
-          <Text style={styles.errorHint}>
-            Make sure you've run the database migrations
+          <Ionicons name="alert-circle" size={48} color={colors.secondary} />
+          <Text style={[styles.errorText, { color: colors.secondary }]}>
+            {profileError ? 'Failed to load profile data' : 'No profile found'}
           </Text>
+          {profileError && (
+            <Text style={[styles.errorHint, { color: colors.muted }]}>
+              Make sure you've run the database migrations
+            </Text>
+          )}
         </View>
       </SafeAreaView>
     );
   }
 
-  if (!profile) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>No profile found</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // ── Dynamic styles using theme colors ──
+
+  const dynamicStyles = {
+    safeArea: { backgroundColor: colors.background },
+    card: { backgroundColor: colors.cardBackground, borderColor: colors.borderLight },
+    ink: { color: colors.ink },
+    muted: { color: colors.muted },
+    primary: { color: colors.primary },
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, dynamicStyles.safeArea]}>
       <ScrollView
         contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={loading} colors={[colors.blue]} />
+          <RefreshControl refreshing={loading} colors={[colors.primary]} tintColor={colors.primary} />
         }
       >
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Your KPIs</Text>
-            <Text style={styles.subtitle}>
-              {profile.full_name || 'Player'}'s overview
+        {/* ── Header: greeting + bell + avatar ── */}
+        <ReAnimated.View entering={FadeInDown.duration(400)} style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={[styles.greeting, dynamicStyles.ink]}>
+              Hey, {profile.full_name?.split(' ')[0] || 'Player'}!
+            </Text>
+            <Text style={[styles.greetingSub, dynamicStyles.muted]}>
+              Let's see how you're doing
             </Text>
           </View>
-          <View style={styles.headerActions}>
-            <Pressable style={styles.bellButton} onPress={openNotifications}>
-              <Text style={styles.bellIcon}>🔔</Text>
+          <View style={styles.headerRight}>
+            <AnimatedPressable
+              style={[styles.bellButton, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}
+              onPress={openNotifications}
+            >
+              <Ionicons name="notifications-outline" size={20} color={colors.ink} />
               {unreadCount > 0 && (
-                <View style={styles.bellBadge}>
+                <View style={[styles.bellBadge, { backgroundColor: colors.secondary }]}>
                   <Text style={styles.bellBadgeText}>{unreadCount}</Text>
                 </View>
               )}
-            </Pressable>
-            <View style={styles.rankPill}>
-              <Text style={styles.rankLabel}>Rating</Text>
-              <Text style={styles.rankValue}>{rating?.rating ?? 1200}</Text>
-            </View>
-          </View>
-        </View>
-
-        {showFriendPrompt && (
-          <View style={styles.prompts}>
-            {showFriendPrompt && pendingReceivedUsers.length > 0 && (
-              <View style={styles.promptCard}>
-                <View style={styles.promptHeader}>
-                  <Text style={styles.promptTitle}>New friend request</Text>
-                  <Text style={styles.promptMeta}>Tap to respond</Text>
-                </View>
-                <Text style={styles.promptBody}>
-                  {pendingReceivedUsers.length === 1
-                    ? `${pendingReceivedUsers[0]?.full_name || 'Someone'} sent you a friend request.`
-                    : `${pendingReceivedUsers[0]?.full_name || 'Someone'} and ${pendingReceivedUsers.length - 1} others sent requests.`}
+            </AnimatedPressable>
+            {profile.avatar_url ? (
+              <Image source={{ uri: profile.avatar_url }} style={styles.headerAvatar} />
+            ) : (
+              <View style={[styles.headerAvatar, { backgroundColor: colors.primary }]}>
+                <Text style={styles.headerAvatarText}>
+                  {(profile.full_name || 'P')[0].toUpperCase()}
                 </Text>
-                <View style={styles.promptActions}>
-                  <Pressable style={[styles.promptButton, styles.promptDecline]} onPress={handleRejectFriend}>
-                    <Text style={styles.promptDeclineText}>Decline</Text>
-                  </Pressable>
-                  <Pressable style={[styles.promptButton, styles.promptAccept]} onPress={handleAcceptFriend}>
-                    <Text style={styles.promptAcceptText}>Accept</Text>
-                  </Pressable>
-                </View>
               </View>
             )}
+          </View>
+        </ReAnimated.View>
 
-          </View>
-        )}
-
-        <View style={styles.grid}>
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Wins</Text>
-            <Text style={styles.cardValue}>{profile.wins}</Text>
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Losses</Text>
-            <Text style={styles.cardValue}>{profile.losses}</Text>
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Level</Text>
-            <Text style={styles.cardValue}>{profile.level}</Text>
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>XP to next</Text>
-            <Text style={styles.cardValue}>{xpToNext}</Text>
-          </View>
-        </View>
-
-        <View style={styles.progressCard}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>Level {profile.level} progress</Text>
-            <Text style={styles.progressMeta}>
-              {xpInCurrentLevel} / {xpNeededForLevel} XP
+        {/* ── Hero: circular XP progress (center stage) ── */}
+        <ReAnimated.View entering={FadeInDown.delay(100).duration(500)} style={[styles.heroCard, { backgroundColor: colors.primary }]}>
+          <View style={styles.heroContent}>
+            <View>
+              <CircularProgress
+                progress={levelProgress}
+                size={170}
+                strokeWidth={12}
+                progressColor="#ffffff"
+                trackColor="rgba(255,255,255,0.25)"
+                centerLabel={`${profile.level}`}
+                centerSub={`Level`}
+                centerHint={`${xpInCurrentLevel} / ${xpNeededForLevel} XP`}
+                labelColor="#ffffff"
+                subColor="rgba(255,255,255,0.85)"
+              />
+              <ConfettiBurst
+                playing={showConfetti}
+                onComplete={() => setShowConfetti(false)}
+              />
+            </View>
+            <Text style={styles.heroHint}>
+              {winsToNext} {winsToNext === 1 ? 'win' : 'wins'} to Level {profile.level + 1}
             </Text>
           </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${levelProgress}%` }]} />
-          </View>
-          <Text style={styles.progressHint}>
-            {winsToNext} {winsToNext === 1 ? 'win' : 'wins'} away from Level{' '}
-            {profile.level + 1}
-          </Text>
-        </View>
+        </ReAnimated.View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent matches</Text>
+        {/* ── Quick stats row ── */}
+        <ReAnimated.View entering={FadeInDown.delay(200).duration(400)} style={styles.statsRow}>
+          <View style={[styles.statChip, { backgroundColor: colors.primary }]}>
+            <Text style={styles.statChipValue}>{profile.wins}</Text>
+            <Text style={styles.statChipLabel}>Wins</Text>
+          </View>
+          <View style={[styles.statChip, { backgroundColor: colors.secondary }]}>
+            <Text style={styles.statChipValue}>{profile.losses}</Text>
+            <Text style={styles.statChipLabel}>Losses</Text>
+          </View>
+          <View style={[styles.statChip, { backgroundColor: colors.cardBackground, borderWidth: 1, borderColor: colors.borderLight }]}>
+            <Text style={[styles.statChipValue, { color: colors.ink }]}>{rating?.rating ?? 1200}</Text>
+            <LeagueLabel rating={rating?.rating ?? 1200} size="sm" />
+          </View>
+        </ReAnimated.View>
+
+        {/* ── Recent matches ── */}
+        <ReAnimated.View entering={FadeInDown.delay(300).duration(400)}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, dynamicStyles.ink]}>Recent Matches</Text>
+            <AnimatedPressable onPress={() => router.push('/match-history')}>
+              <Text style={[styles.sectionLink, { color: colors.primary }]}>View all</Text>
+            </AnimatedPressable>
+          </View>
+
           {recentMatchesLoading ? (
-            <View style={styles.matchCard}>
-              <Text style={styles.matchSubtitle}>Loading recent matches...</Text>
+            <View style={[styles.matchCardPlaceholder, dynamicStyles.card]}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={[styles.placeholderText, dynamicStyles.muted]}>Loading matches...</Text>
             </View>
           ) : recentMatches.length === 0 ? (
-            <View style={styles.matchCard}>
-              <View>
-                <Text style={styles.matchTitle}>No matches logged yet</Text>
-                <Text style={styles.matchSubtitle}>Play your first match to see it here.</Text>
-              </View>
+            <View style={[styles.matchCardPlaceholder, dynamicStyles.card]}>
+              <Ionicons name="game-controller-outline" size={32} color={colors.muted} />
+              <Text style={[styles.placeholderText, dynamicStyles.muted]}>
+                No matches yet. Play your first!
+              </Text>
             </View>
           ) : (
             <View style={styles.matchList}>
               {recentMatches.map((match) => {
                 const summary = formatRecentMatch(match);
+                const isWin = summary.result === 'Win';
                 return (
-                  <View key={match.id} style={styles.matchCard}>
-                    <View>
-                      <Text style={styles.matchTitle}>{summary.title}</Text>
-                      <Text style={styles.matchSubtitle}>{summary.subtitle}</Text>
-                    </View>
-                    <View style={summary.result === 'Win' ? styles.matchBadgeWin : styles.matchBadgeLoss}>
-                      <Text style={styles.matchBadgeText}>{summary.result}</Text>
+                  <View
+                    key={match.id}
+                    style={[
+                      styles.matchCard,
+                      {
+                        backgroundColor: colors.cardBackground,
+                        borderColor: isWin ? colors.success : colors.borderLight,
+                        borderWidth: isWin ? 1.5 : 1,
+                      },
+                    ]}
+                  >
+                    <View style={styles.matchCardRow}>
+                      <View style={[styles.matchBadge, { backgroundColor: isWin ? colors.winBg : colors.lossBg }]}>
+                        <Text style={[styles.matchBadgeText, { color: isWin ? colors.success : colors.error }]}>
+                          {summary.result}
+                        </Text>
+                      </View>
+                      <View style={styles.matchCardInfo}>
+                        <Text style={[styles.matchTitle, dynamicStyles.ink]} numberOfLines={1}>
+                          {summary.title}
+                        </Text>
+                        <Text style={[styles.matchSubtitle, dynamicStyles.muted]}>
+                          {summary.subtitle}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 );
               })}
             </View>
           )}
-        </View>
+        </ReAnimated.View>
+
+        {/* Spacer for floating tab bar */}
+        <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* ── Notifications panel (slide-in) ── */}
       {isNotificationsOpen && (
-        <Pressable style={styles.overlay} onPress={closeNotifications} />
+        <Pressable style={[styles.overlay, { backgroundColor: colors.overlay }]} onPress={closeNotifications} />
       )}
       <Animated.View
         pointerEvents={isNotificationsOpen ? 'auto' : 'none'}
@@ -376,6 +463,8 @@ export default function HomeScreen() {
           styles.notificationsPanel,
           {
             width: panelWidth,
+            backgroundColor: colors.surface,
+            borderLeftColor: colors.border,
             transform: [
               {
                 translateX: slideAnim.interpolate({
@@ -388,19 +477,25 @@ export default function HomeScreen() {
         ]}
       >
         <View style={styles.panelHeader}>
-          <Text style={styles.panelTitle}>Notifications</Text>
-          <Pressable style={styles.panelClose} onPress={closeNotifications}>
-            <Text style={styles.panelCloseText}>Close</Text>
-          </Pressable>
+          <Text style={[styles.panelTitle, { color: colors.ink }]}>Notifications</Text>
+          <AnimatedPressable
+            style={[styles.panelClose, { borderColor: colors.border }]}
+            onPress={closeNotifications}
+          >
+            <Ionicons name="close" size={18} color={colors.muted} />
+          </AnimatedPressable>
         </View>
         <ScrollView contentContainerStyle={styles.panelList}>
           {notifications.length === 0 && (
             <View style={styles.panelEmpty}>
-              <Text style={styles.panelEmptyText}>No notifications yet</Text>
+              <Text style={[styles.panelEmptyText, { color: colors.muted }]}>No notifications yet</Text>
             </View>
           )}
           {notifications
-            .filter((notification) => !(notification.type === 'match_approval' && notification.read))
+            .filter((notification) => !(
+              (notification.type === 'match_approval' || notification.type === 'friend_request') && notification.read
+            ))
+            .filter((notification) => !dismissedNotifications.has(notification.id))
             .map((notification) => {
             const matchId = notification.data?.match_id as string | undefined;
             const requesterId = notification.data?.requester_id as string | undefined;
@@ -412,66 +507,67 @@ export default function HomeScreen() {
             return (
               <View key={notification.id} style={[
                 styles.panelCard,
-                !notification.read && styles.panelCardUnread,
+                { backgroundColor: colors.cardBackground, borderColor: colors.borderLight },
+                !notification.read && { borderColor: colors.unreadBorder, backgroundColor: colors.unreadBg },
               ]}>
                 <View style={styles.panelCardHeader}>
-                  <Text style={styles.panelCardTitle}>{notification.title}</Text>
-                  <Text style={styles.panelCardTime}>{new Date(notification.created_at).toLocaleDateString()}</Text>
+                  <Text style={[styles.panelCardTitle, { color: colors.ink }]}>{notification.title}</Text>
+                  <Text style={[styles.panelCardTime, { color: colors.muted }]}>{new Date(notification.created_at).toLocaleDateString()}</Text>
                 </View>
-                <Text style={styles.panelCardMessage}>{notification.message}</Text>
+                <Text style={[styles.panelCardMessage, { color: colors.ink }]}>{notification.message}</Text>
 
                 {notification.type === 'match_approval' && (
                   <View style={styles.panelDetails}>
                     {matchSummary ? (
                       <>
-                        <Text style={styles.panelDetailText}>{matchSummary.title}</Text>
-                        <Text style={styles.panelDetailText}>{matchSummary.teams}</Text>
-                        <Text style={styles.panelDetailText}>Score: {matchSummary.score}</Text>
-                        <Text style={styles.panelDetailText}>Winner: {matchSummary.winner}</Text>
+                        <Text style={[styles.panelDetailText, { color: colors.muted }]}>{matchSummary.title}</Text>
+                        <Text style={[styles.panelDetailText, { color: colors.muted }]}>{matchSummary.teams}</Text>
+                        <Text style={[styles.panelDetailText, { color: colors.muted }]}>Score: {matchSummary.score}</Text>
+                        <Text style={[styles.panelDetailText, { color: colors.muted }]}>Winner: {matchSummary.winner}</Text>
                       </>
                     ) : (
-                      <Text style={styles.panelDetailText}>Match details unavailable.</Text>
+                      <Text style={[styles.panelDetailText, { color: colors.muted }]}>Match details unavailable.</Text>
                     )}
                     <View style={styles.panelActions}>
-                      <Pressable
-                        style={[styles.panelButton, styles.panelButtonGhost]}
+                      <AnimatedPressable
+                        style={[styles.panelButton, { borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface }]}
                         onPress={() => matchId && handleRejectMatchNotification(matchId, notification.id)}
                       >
-                        <Text style={styles.panelButtonGhostText}>Decline</Text>
-                      </Pressable>
-                      <Pressable
-                        style={[styles.panelButton, styles.panelButtonPrimary]}
+                        <Text style={[styles.panelButtonText, { color: colors.muted }]}>Decline</Text>
+                      </AnimatedPressable>
+                      <AnimatedPressable
+                        style={[styles.panelButton, { backgroundColor: colors.primary }]}
                         onPress={() => matchId && handleApproveMatchNotification(matchId, notification.id)}
                       >
-                        <Text style={styles.panelButtonPrimaryText}>Approve</Text>
-                      </Pressable>
+                        <Text style={[styles.panelButtonText, { color: colors.textOnPrimary }]}>Approve</Text>
+                      </AnimatedPressable>
                     </View>
                   </View>
                 )}
 
                 {notification.type === 'friend_request' && (
                   <View style={styles.panelDetails}>
-                    <Text style={styles.panelDetailText}>{requesterName} sent you a friend request.</Text>
+                    <Text style={[styles.panelDetailText, { color: colors.muted }]}>{requesterName} sent you a friend request.</Text>
                     <View style={styles.panelActions}>
-                      <Pressable
-                        style={[styles.panelButton, styles.panelButtonGhost]}
+                      <AnimatedPressable
+                        style={[styles.panelButton, { borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface }]}
                         onPress={() => requesterId && handleRejectFriendNotification(requesterId, notification.id)}
                       >
-                        <Text style={styles.panelButtonGhostText}>Decline</Text>
-                      </Pressable>
-                      <Pressable
-                        style={[styles.panelButton, styles.panelButtonPrimary]}
+                        <Text style={[styles.panelButtonText, { color: colors.muted }]}>Decline</Text>
+                      </AnimatedPressable>
+                      <AnimatedPressable
+                        style={[styles.panelButton, { backgroundColor: colors.primary }]}
                         onPress={() => requesterId && handleAcceptFriendNotification(requesterId, notification.id)}
                       >
-                        <Text style={styles.panelButtonPrimaryText}>Accept</Text>
-                      </Pressable>
+                        <Text style={[styles.panelButtonText, { color: colors.textOnPrimary }]}>Accept</Text>
+                      </AnimatedPressable>
                     </View>
                   </View>
                 )}
 
                 {notification.type === 'achievement' && notification.data?.details && (
                   <View style={styles.panelDetails}>
-                    <Text style={styles.panelDetailText}>{notification.data.details}</Text>
+                    <Text style={[styles.panelDetailText, { color: colors.muted }]}>{notification.data.details}</Text>
                   </View>
                 )}
 
@@ -480,7 +576,7 @@ export default function HomeScreen() {
                     style={styles.panelMarkRead}
                     onPress={() => markAsRead(notification.id)}
                   >
-                    <Text style={styles.panelMarkReadText}>Mark as read</Text>
+                    <Text style={[styles.panelMarkReadText, { color: colors.primary }]}>Mark as read</Text>
                   </Pressable>
                 )}
               </View>
@@ -492,16 +588,18 @@ export default function HomeScreen() {
   );
 }
 
+// ── Styles ─────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   container: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: 40,
   },
+
+  // Loading / error
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -510,7 +608,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: typography.sizes.base,
-    color: colors.muted,
   },
   errorContainer: {
     flex: 1,
@@ -522,72 +619,49 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    color: colors.coral,
     textAlign: 'center',
   },
   errorHint: {
     fontSize: typography.sizes.sm,
-    color: colors.muted,
     textAlign: 'center',
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
-  headerActions: {
+  headerLeft: {
+    flex: 1,
+  },
+  greeting: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+  },
+  greetingSub: {
+    fontSize: typography.sizes.base,
+    marginTop: 2,
+  },
+  headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-  title: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.ink,
-  },
-  subtitle: {
-    fontSize: typography.sizes.base,
-    color: colors.muted,
-    marginTop: 4,
-  },
-  rankPill: {
-    backgroundColor: colors.blue,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-  },
-  rankLabel: {
-    color: '#d7e7ff',
-    fontSize: typography.sizes.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  rankValue: {
-    color: '#ffffff',
-    fontWeight: typography.weights.bold,
-    fontSize: typography.sizes.md,
-    marginTop: 2,
-  },
   bellButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  bellIcon: {
-    fontSize: 18,
+    ...shadows.sm,
   },
   bellBadge: {
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: colors.coral,
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -599,213 +673,186 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: typography.weights.bold,
   },
-  prompts: {
+  headerAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerAvatarText: {
+    color: '#ffffff',
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+  },
+
+  // Hero XP card
+  heroCard: {
+    borderRadius: radii.xl,
+    padding: spacing.xl,
+    marginBottom: spacing.lg,
+    ...shadows.lg,
+  },
+  heroContent: {
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  heroHint: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: typography.sizes.sm,
+  },
+
+  // Quick stats
+  statsRow: {
+    flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.lg,
   },
-  promptCard: {
-    backgroundColor: colors.surface,
+  statChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: radii.lg,
+    ...shadows.sm,
+  },
+  statChipValue: {
+    color: '#ffffff',
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+  },
+  statChipLabel: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginTop: 2,
+  },
+
+  // Pending actions
+  pendingCard: {
     borderRadius: radii.lg,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.sm,
-  },
-  promptHeader: {
-    gap: 2,
-  },
-  promptTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.ink,
-  },
-  promptMeta: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-  },
-  promptBody: {
-    fontSize: typography.sizes.sm,
-    color: colors.ink,
-  },
-  promptActions: {
+    borderWidth: 1.5,
     flexDirection: 'row',
     gap: spacing.sm,
+    marginBottom: spacing.lg,
+    ...shadows.sm,
   },
-  promptButton: {
+  pendingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#ff4538',
+    marginTop: 4,
+  },
+  pendingContent: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  pendingTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+  },
+  pendingBody: {
+    fontSize: typography.sizes.sm,
+  },
+  pendingActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  pendingBtn: {
     flex: 1,
     alignItems: 'center',
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
   },
-  promptDecline: {
-    backgroundColor: '#fff4f2',
-    borderWidth: 1,
-    borderColor: '#ffd6d1',
-  },
-  promptAccept: {
-    backgroundColor: colors.blue,
-  },
-  promptDeclineText: {
-    color: colors.coral,
+  pendingBtnText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
   },
-  promptAcceptText: {
-    color: '#ffffff',
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  card: {
-    width: '48%',
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardLabel: {
-    color: colors.muted,
-    fontSize: typography.sizes.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  cardValue: {
-    fontSize: 22,
-    fontWeight: typography.weights.bold,
-    color: colors.ink,
-    marginTop: 8,
-  },
-  progressCard: {
-    marginTop: 18,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  progressHeader: {
+
+  // Section header
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  progressTitle: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
-    color: colors.ink,
-  },
-  progressMeta: {
-    color: colors.muted,
-    fontSize: typography.sizes.sm,
-  },
-  progressTrack: {
-    height: 10,
-    backgroundColor: '#e7ecf4',
-    borderRadius: radii.pill,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.coral,
-    borderRadius: radii.pill,
-  },
-  progressHint: {
-    marginTop: 10,
-    color: colors.muted,
-    fontSize: typography.sizes.sm,
-  },
-  section: {
-    marginTop: 28,
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
   sectionTitle: {
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.ink,
-    marginBottom: spacing.sm,
+    fontWeight: typography.weights.bold,
   },
+  sectionLink: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+  },
+
+  // Recent matches (vertical list)
   matchList: {
     gap: spacing.sm,
   },
-  viewAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginTop: spacing.sm,
-    gap: spacing.xs,
-  },
-  viewAllText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.blue,
-  },
-  viewAllChevron: {
-    fontSize: typography.sizes.md,
-    color: colors.blue,
-  },
   matchCard: {
-    backgroundColor: colors.surface,
     borderRadius: radii.lg,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    ...shadows.sm,
+  },
+  matchCardRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.sm,
   },
-  matchTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.ink,
+  matchCardInfo: {
+    flex: 1,
+    gap: 2,
   },
-  matchSubtitle: {
-    color: colors.muted,
-    marginTop: 6,
+  matchCardPlaceholder: {
+    borderRadius: radii.lg,
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
   },
-  matchBadgeWin: {
-    backgroundColor: '#e7f6ef',
+  placeholderText: {
+    fontSize: typography.sizes.sm,
+    textAlign: 'center',
+  },
+  matchBadge: {
+    alignSelf: 'flex-start',
     borderRadius: radii.pill,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  matchBadgeLoss: {
-    backgroundColor: '#ffecec',
-    borderRadius: radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
   matchBadgeText: {
-    color: colors.ink,
     fontSize: 11,
-    fontWeight: typography.weights.semibold,
+    fontWeight: typography.weights.bold,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
+  matchTitle: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
+  },
+  matchSubtitle: {
+    fontSize: typography.sizes.sm,
+  },
+
+  // Notification panel
   overlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(5, 10, 20, 0.45)',
   },
   notificationsPanel: {
     position: 'absolute',
     top: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.surface,
     borderLeftWidth: 1,
-    borderLeftColor: colors.border,
-    paddingTop: spacing.lg,
+    paddingTop: 54,
   },
   panelHeader: {
     paddingHorizontal: spacing.lg,
@@ -817,19 +864,14 @@ const styles = StyleSheet.create({
   panelTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.ink,
   },
   panelClose: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.pill,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  panelCloseText: {
-    color: colors.muted,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   panelList: {
     paddingHorizontal: spacing.lg,
@@ -841,20 +883,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
   },
   panelEmptyText: {
-    color: colors.muted,
     fontSize: typography.sizes.sm,
   },
   panelCard: {
-    backgroundColor: '#f7f8fb',
     borderRadius: radii.lg,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.xs,
-  },
-  panelCardUnread: {
-    borderColor: colors.blue,
-    backgroundColor: '#eef4ff',
   },
   panelCardHeader: {
     flexDirection: 'row',
@@ -864,17 +899,14 @@ const styles = StyleSheet.create({
   panelCardTitle: {
     fontSize: typography.sizes.base,
     fontWeight: typography.weights.semibold,
-    color: colors.ink,
     flex: 1,
   },
   panelCardTime: {
     fontSize: typography.sizes.xs,
-    color: colors.muted,
     marginLeft: spacing.sm,
   },
   panelCardMessage: {
     fontSize: typography.sizes.sm,
-    color: colors.ink,
     lineHeight: 18,
   },
   panelDetails: {
@@ -883,7 +915,6 @@ const styles = StyleSheet.create({
   },
   panelDetailText: {
     fontSize: typography.sizes.sm,
-    color: colors.muted,
   },
   panelActions: {
     flexDirection: 'row',
@@ -896,21 +927,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
   },
-  panelButtonGhost: {
-    borderWidth: 1,
-    borderColor: '#d9e1f2',
-    backgroundColor: '#ffffff',
-  },
-  panelButtonGhostText: {
-    color: colors.muted,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-  },
-  panelButtonPrimary: {
-    backgroundColor: colors.blue,
-  },
-  panelButtonPrimaryText: {
-    color: '#ffffff',
+  panelButtonText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
   },
@@ -919,65 +936,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   panelMarkReadText: {
-    color: colors.blue,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-  },
-  alertRow: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: radii.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  alertInfo: {
-    gap: 2,
-  },
-  alertTitle: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.ink,
-  },
-  alertMeta: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-  },
-  alertActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  alertButton: {
-    flex: 1,
-    backgroundColor: colors.blue,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-  },
-  alertButtonText: {
-    color: '#ffffff',
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-  },
-  alertButtonGhost: {
-    flex: 1,
-    backgroundColor: '#fff4f2',
-    borderRadius: radii.md,
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-    borderWidth: 1,
-    borderColor: '#ffd6d1',
-  },
-  alertButtonGhostText: {
-    color: colors.coral,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-  },
-  alertLink: {
-    alignSelf: 'flex-start',
-  },
-  alertLinkText: {
-    color: colors.blue,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
   },

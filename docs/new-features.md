@@ -1,7 +1,7 @@
 # New Features Implementation Summary
 
 ## Overview
-This document summarizes the three major features added to My Pickleball Adventure:
+This document summarizes the three major features added to My Pickleball App:
 
 1. **Profile Photo Upload**
 2. **Match History Screen with Filters**

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,14 +9,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useMatches, MatchFilters } from '../src/hooks/useMatches';
-import { colors, radii, spacing, typography } from '../src/theme';
+import { useTheme } from '../src/theme';
+import { radii, shadows, spacing, typography } from '../src/theme/tokens';
 import { useAuth } from '../src/state/auth';
+import AnimatedPressable from '../src/components/AnimatedPressable';
 
 export default function MatchHistoryScreen() {
   const router = useRouter();
   const { session } = useAuth();
+  const { colors } = useTheme();
   const [filters, setFilters] = useState<MatchFilters>({
     matchType: 'all',
     isRanked: 'all',
@@ -36,16 +40,24 @@ export default function MatchHistoryScreen() {
     active: boolean;
     onPress: () => void;
   }) => (
-    <Pressable
-      style={[styles.filterButton, active && styles.filterButtonActive]}
+    <AnimatedPressable
+      style={[
+        styles.filterButton,
+        { backgroundColor: colors.borderLight, borderColor: colors.borderLight },
+        active ? { backgroundColor: colors.primary, borderColor: colors.primary } : {},
+      ]}
       onPress={onPress}
     >
       <Text
-        style={[styles.filterText, active && styles.filterTextActive]}
+        style={[
+          styles.filterText,
+          { color: colors.muted },
+          active ? { color: colors.textOnPrimary } : undefined,
+        ]}
       >
         {label}
       </Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 
   const Avatar = ({ url, name }: { url: string | null; name: string }) => {
@@ -53,27 +65,29 @@ export default function MatchHistoryScreen() {
       return <Image source={{ uri: url }} style={styles.playerAvatar} />;
     }
     return (
-      <View style={styles.playerAvatarPlaceholder}>
+      <View style={[styles.playerAvatarPlaceholder, { backgroundColor: colors.primary }]}>
         <Text style={styles.playerAvatarText}>{name[0]?.toUpperCase() || 'P'}</Text>
       </View>
     );
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backText}>‹ Back</Text>
-          </Pressable>
-          <Text style={styles.title}>Match History</Text>
-          <Text style={styles.subtitle}>Your complete match record</Text>
-        </View>
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+          <AnimatedPressable onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            <Text style={[styles.backText, { color: colors.primary }]}>Back</Text>
+          </AnimatedPressable>
+          <Text style={[styles.title, { color: colors.ink }]}>Match History</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>Your complete match record</Text>
+        </Animated.View>
 
         {/* Filters */}
-        <View style={styles.filters}>
-          <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Type:</Text>
+        <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+          <View style={[styles.filters, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
+            <View style={styles.filterRow}>
+              <Text style={[styles.filterLabel, { color: colors.muted }]}>Type:</Text>
             <View style={styles.filterButtons}>
               <FilterButton
                 label="All"
@@ -94,7 +108,7 @@ export default function MatchHistoryScreen() {
           </View>
 
           <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Mode:</Text>
+            <Text style={[styles.filterLabel, { color: colors.muted }]}>Mode:</Text>
             <View style={styles.filterButtons}>
               <FilterButton
                 label="All"
@@ -115,7 +129,7 @@ export default function MatchHistoryScreen() {
           </View>
 
           <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Result:</Text>
+            <Text style={[styles.filterLabel, { color: colors.muted }]}>Result:</Text>
             <View style={styles.filterButtons}>
               <FilterButton
                 label="All"
@@ -135,30 +149,32 @@ export default function MatchHistoryScreen() {
             </View>
           </View>
         </View>
+        </Animated.View>
 
         {/* Matches */}
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.blue} />
-            <Text style={styles.loadingText}>Loading matches...</Text>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.muted }]}>Loading matches...</Text>
           </View>
         ) : error ? (
-          <View style={styles.errorContainer}>
+          <View style={[styles.errorContainer, { backgroundColor: colors.secondaryGhost, borderColor: colors.secondary }]}>
             {error.includes('does not exist') && error.includes('match_participants') ? (
               <>
-                <Text style={styles.errorText}>No matches logged yet</Text>
-                <Text style={styles.errorHint}>
+                <Text style={[styles.errorText, { color: colors.secondary }]}>No matches logged yet</Text>
+                <Text style={[styles.errorHint, { color: colors.muted }]}>
                   Play your first match to start tracking your history.
                 </Text>
               </>
             ) : (
-              <Text style={styles.errorText}>Error: {error}</Text>
+              <Text style={[styles.errorText, { color: colors.secondary }]}>Error: {error}</Text>
             )}
           </View>
         ) : matches.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No matches found</Text>
-            <Text style={styles.emptySubtext}>
+            <Ionicons name="document-text-outline" size={44} color={colors.muted} />
+            <Text style={[styles.emptyText, { color: colors.ink }]}>No matches found</Text>
+            <Text style={[styles.emptySubtext, { color: colors.muted }]}>
               Try adjusting your filters or play some matches!
             </Text>
           </View>
@@ -180,20 +196,26 @@ export default function MatchHistoryScreen() {
                 (!userInTeam1 && match.winning_team === 2);
 
               return (
-                <View
+                <Animated.View
                   key={match.id}
+                  entering={FadeInDown.delay(200 + (matches.indexOf(match)) * 50).duration(400)}
+                >
+                <View
                   style={[
                     styles.matchCard,
-                    userWon ? styles.matchWin : styles.matchLoss,
+                    { backgroundColor: colors.cardBackground },
+                    userWon
+                      ? { borderColor: colors.success }
+                      : { borderColor: colors.secondary },
                   ]}
                 >
                   <View style={styles.matchHeader}>
                     <View style={styles.matchMeta}>
-                      <Text style={styles.matchType}>
+                      <Text style={[styles.matchType, { color: colors.muted }]}>
                         {match.match_type === 'singles' ? '1v1' : '2v2'}
                       </Text>
                       {match.is_ranked && (
-                        <View style={styles.rankedBadge}>
+                        <View style={[styles.rankedBadge, { backgroundColor: colors.primary }]}>
                           <Text style={styles.rankedText}>RANKED</Text>
                         </View>
                       )}
@@ -201,17 +223,13 @@ export default function MatchHistoryScreen() {
                     <View
                       style={[
                         styles.resultBadge,
-                        userWon
-                          ? styles.resultBadgeWin
-                          : styles.resultBadgeLoss,
+                        { backgroundColor: userWon ? colors.successGhost : colors.secondaryGhost },
                       ]}
                     >
                       <Text
                         style={[
                           styles.resultText,
-                          userWon
-                            ? styles.resultTextWin
-                            : styles.resultTextLoss,
+                          { color: userWon ? colors.success : colors.secondary },
                         ]}
                       >
                         {userWon ? 'WIN' : 'LOSS'}
@@ -228,7 +246,7 @@ export default function MatchHistoryScreen() {
                             url={match.team1_player1.avatar_url}
                             name={match.team1_player1.full_name || 'Player'}
                           />
-                          <Text style={styles.playerName} numberOfLines={1}>
+                          <Text style={[styles.playerName, { color: colors.ink }]} numberOfLines={1}>
                             {match.team1_player1.full_name || 'Player'}
                           </Text>
                           {match.team1_player2 && (
@@ -237,7 +255,7 @@ export default function MatchHistoryScreen() {
                                 url={match.team1_player2.avatar_url}
                                 name={match.team1_player2.full_name || 'Player'}
                               />
-                              <Text style={styles.playerName} numberOfLines={1}>
+                              <Text style={[styles.playerName, { color: colors.ink }]} numberOfLines={1}>
                                 {match.team1_player2.full_name || 'Player'}
                               </Text>
                             </>
@@ -246,7 +264,8 @@ export default function MatchHistoryScreen() {
                         <Text
                           style={[
                             styles.teamScore,
-                            match.winning_team === 1 && styles.teamScoreWin,
+                            { color: colors.muted },
+                            match.winning_team === 1 && { color: colors.ink },
                           ]}
                         >
                           {match.score_team1}
@@ -254,7 +273,7 @@ export default function MatchHistoryScreen() {
                       </View>
                     )}
 
-                    <Text style={styles.vs}>vs</Text>
+                    <Text style={[styles.vs, { color: colors.muted }]}>vs</Text>
 
                     {/* Team 2 */}
                     {match.team2_player1 && (
@@ -264,7 +283,7 @@ export default function MatchHistoryScreen() {
                             url={match.team2_player1.avatar_url}
                             name={match.team2_player1.full_name || 'Player'}
                           />
-                          <Text style={styles.playerName} numberOfLines={1}>
+                          <Text style={[styles.playerName, { color: colors.ink }]} numberOfLines={1}>
                             {match.team2_player1.full_name || 'Player'}
                           </Text>
                           {match.team2_player2 && (
@@ -273,7 +292,7 @@ export default function MatchHistoryScreen() {
                                 url={match.team2_player2.avatar_url}
                                 name={match.team2_player2.full_name || 'Player'}
                               />
-                              <Text style={styles.playerName} numberOfLines={1}>
+                              <Text style={[styles.playerName, { color: colors.ink }]} numberOfLines={1}>
                                 {match.team2_player2.full_name || 'Player'}
                               </Text>
                             </>
@@ -282,7 +301,8 @@ export default function MatchHistoryScreen() {
                         <Text
                           style={[
                             styles.teamScore,
-                            match.winning_team === 2 && styles.teamScoreWin,
+                            { color: colors.muted },
+                            match.winning_team === 2 && { color: colors.ink },
                           ]}
                         >
                           {match.score_team2}
@@ -291,7 +311,7 @@ export default function MatchHistoryScreen() {
                     )}
                   </View>
 
-                  <Text style={styles.matchDate}>
+                  <Text style={[styles.matchDate, { color: colors.muted }]}>
                     {new Date(match.created_at).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
@@ -301,6 +321,7 @@ export default function MatchHistoryScreen() {
                     })}
                   </Text>
                 </View>
+                </Animated.View>
               );
             })}
           </View>
@@ -313,7 +334,6 @@ export default function MatchHistoryScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   container: {
     padding: spacing.lg,
@@ -323,28 +343,28 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     marginBottom: spacing.xs,
   },
   backText: {
-    color: colors.blue,
     fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
   },
   title: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
-    color: colors.ink,
   },
   subtitle: {
     fontSize: typography.sizes.base,
-    color: colors.muted,
   },
   filters: {
-    backgroundColor: colors.surface,
     borderRadius: radii.lg,
     padding: spacing.md,
     gap: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    ...shadows.sm,
   },
   filterRow: {
     gap: spacing.xs,
@@ -352,7 +372,6 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
-    color: colors.muted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
@@ -363,22 +382,12 @@ const styles = StyleSheet.create({
   filterButton: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: radii.md,
-    backgroundColor: '#f5f5f5',
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  filterButtonActive: {
-    backgroundColor: colors.blue,
-    borderColor: colors.blue,
   },
   filterText: {
     fontSize: typography.sizes.sm,
-    color: colors.muted,
     fontWeight: typography.weights.semibold,
-  },
-  filterTextActive: {
-    color: '#ffffff',
   },
   loadingContainer: {
     padding: spacing.xl,
@@ -386,55 +395,42 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   loadingText: {
-    color: colors.muted,
     fontSize: typography.sizes.sm,
   },
   errorContainer: {
     padding: spacing.lg,
-    backgroundColor: '#fff4f2',
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: '#ffd6d1',
   },
   errorText: {
-    color: colors.coral,
     fontSize: typography.sizes.sm,
   },
   errorHint: {
-    color: colors.muted,
     fontSize: typography.sizes.sm,
     marginTop: spacing.xs,
   },
   emptyContainer: {
     padding: spacing.xl,
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   emptyText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    color: colors.ink,
   },
   emptySubtext: {
     fontSize: typography.sizes.sm,
-    color: colors.muted,
     textAlign: 'center',
   },
   matchList: {
     gap: spacing.md,
   },
   matchCard: {
-    backgroundColor: colors.surface,
     borderRadius: radii.lg,
     padding: spacing.md,
     gap: spacing.sm,
     borderWidth: 2,
-  },
-  matchWin: {
-    borderColor: '#4caf50',
-  },
-  matchLoss: {
-    borderColor: colors.coral,
+    ...shadows.sm,
   },
   matchHeader: {
     flexDirection: 'row',
@@ -449,13 +445,11 @@ const styles = StyleSheet.create({
   matchType: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
-    color: colors.muted,
   },
   rankedBadge: {
-    backgroundColor: colors.blue,
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
-    borderRadius: radii.sm,
+    borderRadius: radii.pill,
   },
   rankedText: {
     fontSize: 10,
@@ -466,24 +460,12 @@ const styles = StyleSheet.create({
   resultBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    borderRadius: radii.sm,
-  },
-  resultBadgeWin: {
-    backgroundColor: '#e8f5e9',
-  },
-  resultBadgeLoss: {
-    backgroundColor: '#fff4f2',
+    borderRadius: radii.pill,
   },
   resultText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
     letterSpacing: 0.8,
-  },
-  resultTextWin: {
-    color: '#4caf50',
-  },
-  resultTextLoss: {
-    color: colors.coral,
   },
   matchTeams: {
     gap: spacing.xs,
@@ -508,7 +490,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.blue,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -519,26 +500,19 @@ const styles = StyleSheet.create({
   },
   playerName: {
     fontSize: typography.sizes.sm,
-    color: colors.ink,
     flex: 1,
   },
   teamScore: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.muted,
-  },
-  teamScoreWin: {
-    color: colors.ink,
   },
   vs: {
     fontSize: typography.sizes.xs,
-    color: colors.muted,
     textAlign: 'center',
     fontWeight: typography.weights.semibold,
   },
   matchDate: {
     fontSize: typography.sizes.xs,
-    color: colors.muted,
     textAlign: 'center',
   },
 });

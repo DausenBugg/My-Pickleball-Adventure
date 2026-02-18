@@ -1,4 +1,4 @@
-# My Pickleball Adventure - Mobile App
+# My Pickleball App - Mobile App
 
 React Native mobile app built with Expo and Expo Router.
 
@@ -18,25 +18,50 @@ apps/mobile/
 │   ├── (auth)/              # Auth flow (grouped route)
 │   │   ├── welcome.tsx      # Landing/welcome screen
 │   │   ├── login.tsx        # Sign in screen
-│   │   └── register.tsx     # Sign up screen
+│   │   ├── register.tsx     # Sign up screen
+│   │   └── onboarding.tsx   # Onboarding carousel
 │   ├── (tabs)/              # Main app tabs (grouped route)
 │   │   ├── home.tsx         # KPI dashboard
 │   │   ├── add-match.tsx    # Match submission form
 │   │   ├── search.tsx       # Player search + friends
 │   │   ├── leaderboard.tsx  # Rankings (global/friends)
 │   │   └── settings.tsx     # Account settings
+│   ├── achievements.tsx     # Achievements display
+│   ├── approvals.tsx        # Match approvals screen
+│   ├── match-history.tsx    # Match history view
 │   ├── _layout.tsx          # Root layout (AuthProvider + AuthGate)
 │   └── index.tsx            # Redirect to auth or tabs
 ├── src/
 │   ├── components/          # Reusable UI components
-│   │   └── AuthGate.tsx     # Auth-aware route protection
-│   ├── lib/                 # Third-party clients
+│   │   ├── AnimatedPressable.tsx
+│   │   ├── AuthGate.tsx
+│   │   ├── CircularProgress.tsx
+│   │   ├── ConfettiBurst.tsx
+│   │   └── LeagueBadge.tsx
+│   ├── hooks/               # Custom React hooks
+│   │   ├── useAchievements.ts
+│   │   ├── useFriends.ts
+│   │   ├── useLeaderboard.ts
+│   │   ├── useMatches.ts
+│   │   ├── useNotifications.ts
+│   │   ├── usePendingMatches.ts
+│   │   ├── usePlayerSearch.ts
+│   │   ├── useProfile.ts
+│   │   ├── usePushNotificationHandler.ts
+│   │   └── useSubmitMatch.ts
+│   ├── lib/                 # Utilities and clients
+│   │   ├── leagues.ts       # League system logic
+│   │   ├── notifications.ts # Push notification helpers
 │   │   └── supabase.ts      # Supabase client setup
 │   ├── state/               # Global state management
 │   │   └── auth.tsx         # Auth context + session provider
-│   └── theme/               # Design tokens
-│       ├── index.ts         # Exports
-│       └── tokens.ts        # Colors, spacing, radii, typography
+│   ├── tests/               # Test utilities
+│   │   └── edge-cases.test.ts
+│   ├── theme/               # Design tokens
+│   │   ├── index.ts
+│   │   ├── tokens.ts
+│   │   └── ThemeContext.tsx
+│   └── types/               # TypeScript definitions
 ├── .env.example             # Environment variable template
 ├── app.json                 # Expo app configuration
 ├── babel.config.js          # Babel config (Reanimated plugin)
@@ -101,11 +126,12 @@ apps/mobile/
 
 ## Next Steps
 
-- Wire Supabase database calls for matches, friends, rankings
-- Add match approval workflow
-- Implement achievements/notifications
-- Build Settings screen with profile editing + sign out
-- Add error boundaries and loading states
+- ✅ Wire Supabase database calls for matches, friends, rankings
+- ✅ Add match approval workflow
+- ✅ Implement achievements/notifications
+- ✅ Build Settings screen with profile editing + sign out
+- 🚧 Add error boundaries and loading states
+- 🚧 Real-time subscriptions for notifications
 
 ## Troubleshooting
 

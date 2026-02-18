@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import * as ExpoFileSystem from 'expo-file-system';
 
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../state/auth';
@@ -117,8 +117,8 @@ export function useProfile() {
 
       const base64Data = image.base64
         ? image.base64
-        : await FileSystem.readAsStringAsync(image.uri, {
-            encoding: FileSystem.EncodingType.Base64,
+        : await ExpoFileSystem.readAsStringAsync(image.uri, {
+            encoding: 'base64',
           });
 
       const binaryString = globalThis.atob
