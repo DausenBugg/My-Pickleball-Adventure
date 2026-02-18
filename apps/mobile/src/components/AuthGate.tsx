@@ -26,17 +26,28 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     if (loading || !onboardingChecked) return;
 
     const inAuth = segments[0] === '(auth)';
+    const onVerifyPage = segments[1] === 'verify-email';
 
+    // Not logged in
     if (!session && !inAuth) {
       if (!hasSeenOnboarding) {
         router.replace('/(auth)/onboarding');
       } else {
         router.replace('/(auth)/welcome');
       }
+      return;
     }
 
-    if (session && inAuth) {
+    // Logged in but email not verified
+    if (session && !session.user.email_confirmed_at && !onVerifyPage) {
+      router.replace('/(auth)/verify-email');
+      return;
+    }
+
+    // Logged in with verified email, but still in auth section
+    if (session && session.user.email_confirmed_at && inAuth) {
       router.replace('/(tabs)/home');
+      return;
     }
   }, [loading, router, segments, session, onboardingChecked, hasSeenOnboarding]);
 

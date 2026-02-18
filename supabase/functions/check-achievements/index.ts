@@ -1,27 +1,81 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(str: string): boolean {
+  return typeof str === 'string' && UUID_REGEX.test(str);
+}
+
+// No CORS headers needed for mobile-only app (functions called server-to-server or with auth)
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': '', // Disabled for mobile-only
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
+  // Handle preflight (though not needed for mobile)
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const supabaseClient = createClient(
+    // Create admin client for database operations
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { userId } = await req.json();
-
-    if (!userId) {
-      throw new Error('User ID is required');
+    // Verify JWT and get authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Missing or invalid Authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Verify the JWT token
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Parse request body - userId is optional, defaults to authenticated user
+    let userId: string;
+    try {
+      const body = await req.json();
+      userId = body.userId || user.id;
+    } catch {
+      userId = user.id;
+    }
+
+    // Validate UUID format
+    if (!isValidUUID(userId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid user ID format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Authorization: Users can only check their own achievements
+    // (Service-to-service calls from other edge functions use service role)
+    const isServiceCall = authHeader.includes(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? 'NONE');
+    if (!isServiceCall && userId !== user.id) {
+      return new Response(
+        JSON.stringify({ error: 'Not authorized to check achievements for this user' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseClient = supabaseAdmin;
 
     // Get user's current stats
     const { data: profile } = await supabaseClient
@@ -58,19 +112,20 @@ serve(async (req) => {
       );
     }
 
+    // Batch fetch all user's unlocked achievements (fixes N+1 query)
+    const { data: unlockedAchievements } = await supabaseClient
+      .from('user_achievements')
+      .select('achievement_id')
+      .eq('user_id', userId);
+    
+    const unlockedSet = new Set(unlockedAchievements?.map(a => a.achievement_id) || []);
+
     // Check which achievements should be unlocked
     const newUnlocks = [];
 
     for (const achievement of achievements) {
-      // Check if already unlocked
-      const { data: existingUnlock } = await supabaseClient
-        .from('user_achievements')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('achievement_id', achievement.id)
-        .single();
-
-      if (existingUnlock) continue; // Already unlocked
+      // Check if already unlocked (using pre-fetched set)
+      if (unlockedSet.has(achievement.id)) continue; // Already unlocked
 
       // Check if requirement is met
       let shouldUnlock = false;

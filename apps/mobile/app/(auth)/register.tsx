@@ -32,7 +32,15 @@ export default function RegisterScreen() {
 
   const nameValid = useMemo(() => name.trim().length >= 2, [name]);
   const emailValid = useMemo(() => email.includes('@') && email.includes('.'), [email]);
-  const passwordValid = useMemo(() => password.length >= 8, [password]);
+  
+  // Password complexity: 8+ chars, at least one uppercase, one number
+  const passwordValid = useMemo(() => {
+    if (password.length < 8) return false;
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    return hasUppercase && hasNumber;
+  }, [password]);
+  
   const confirmValid = useMemo(() => confirmPassword === password && password.length > 0, [confirmPassword, password]);
   const canSubmit = nameValid && emailValid && passwordValid && confirmValid;
 
@@ -41,7 +49,15 @@ export default function RegisterScreen() {
     const errors: string[] = [];
     if (!nameValid) errors.push('Name must be at least 2 characters');
     if (!emailValid) errors.push('Enter a valid email address');
-    if (!passwordValid) errors.push('Password must be at least 8 characters');
+    if (!passwordValid) {
+      if (password.length < 8) {
+        errors.push('Password must be at least 8 characters');
+      } else if (!/[A-Z]/.test(password)) {
+        errors.push('Password must include an uppercase letter');
+      } else if (!/[0-9]/.test(password)) {
+        errors.push('Password must include a number');
+      }
+    }
     if (!confirmValid && confirmPassword.length > 0) errors.push('Passwords must match');
     if (confirmPassword.length === 0 && password.length > 0) errors.push('Confirm your password');
     return errors;
@@ -79,8 +95,10 @@ export default function RegisterScreen() {
       }
 
       if (data.user) {
-        // Account created successfully
-        setNotice('Account created successfully! Logging you in...');
+        // Account created - user needs to verify their email
+        setNotice(
+          '✉️ Account created! Please check your email and click the verification link to complete your registration.'
+        );
         
         // Clear form
         setName('');

@@ -40,7 +40,7 @@ export default function HomeScreen() {
   const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useProfile();
   const { rating, loading: ratingLoading, refresh: refreshRating } = useRating();
   const { matches: pendingMatches, approveMatch, rejectMatch, refresh: refreshPendingMatches } = usePendingMatches();
-  const { pendingReceived, pendingReceivedUsers, acceptFriendRequest, rejectFriendRequest } = useFriends();
+  const { pendingReceived, pendingReceivedUsers, acceptFriendRequest, rejectFriendRequest, refresh: refreshFriends } = useFriends();
   const { matches: recentMatchesRaw, loading: recentMatchesLoading, refresh: refreshRecentMatches } = useMatches({ status: 'approved' });
   const {
     notifications,
@@ -205,6 +205,7 @@ export default function HomeScreen() {
     if (success) {
       if (notificationId) await markAsRead(notificationId);
       refreshNotifications();
+      refreshFriends(); // Refresh friends list so search screen shows updated status
     }
   };
 
@@ -216,6 +217,7 @@ export default function HomeScreen() {
     if (success) {
       if (notificationId) await markAsRead(notificationId);
       refreshNotifications();
+      refreshFriends(); // Refresh friends list so search screen shows updated status
     }
   };
 
@@ -571,7 +573,8 @@ export default function HomeScreen() {
                   </View>
                 )}
 
-                {!notification.read && (
+                {/* Show mark as read only for notifications without action buttons */}
+                {!notification.read && notification.type !== 'match_approval' && notification.type !== 'friend_request' && (
                   <Pressable
                     style={styles.panelMarkRead}
                     onPress={() => markAsRead(notification.id)}

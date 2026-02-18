@@ -3,6 +3,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(str: string): boolean {
+  return typeof str === 'string' && UUID_REGEX.test(str);
+}
+
 interface PushNotification {
   to: string;
   sound: string;
@@ -12,7 +19,7 @@ interface PushNotification {
   badge?: number;
 }
 
-async function sendPushNotifications(notifications: PushNotification[]) {
+async function sendPushNotificationsToExpo(notifications: PushNotification[]) {
   const response = await fetch(EXPO_PUSH_URL, {
     method: 'POST',
     headers: {
@@ -38,6 +45,36 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Verify authentication - this function is called by other edge functions
+    // so it accepts both user JWTs and service role calls
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('[send-push-notifications] Missing Authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing or invalid Authorization header' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    
+    // Allow service role calls (from other edge functions)
+    const isServiceCall = token === serviceRoleKey;
+    
+    if (!isServiceCall) {
+      // Verify user JWT
+      const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+      
+      if (authError || !user) {
+        console.error('[send-push-notifications] Invalid token:', authError?.message);
+        return new Response(
+          JSON.stringify({ error: 'Invalid or expired token' }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     const { notificationIds } = await req.json();
 
     // Validate input
@@ -48,10 +85,10 @@ serve(async (req) => {
       );
     }
 
-    // Validate notification IDs are strings
-    if (!notificationIds.every((id) => typeof id === 'string')) {
+    // Validate notification IDs are valid UUIDs
+    if (!notificationIds.every((id) => typeof id === 'string' && isValidUUID(id))) {
       return new Response(
-        JSON.stringify({ error: 'All notification IDs must be strings' }),
+        JSON.stringify({ error: 'All notification IDs must be valid UUIDs' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -138,7 +175,7 @@ serve(async (req) => {
     }
 
     // Send push notifications
-    const result = await sendPushNotifications(pushNotifications);
+    const result = await sendPushNotificationsToExpo(pushNotifications);
 
     return new Response(
       JSON.stringify({ 
