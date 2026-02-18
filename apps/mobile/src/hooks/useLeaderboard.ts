@@ -55,7 +55,12 @@ export function useLeaderboard(type: 'global' | 'friends') {
         .order('rating', { ascending: false })
         .limit(50);
 
-      if (type === 'friends' && friends.length > 0) {
+      if (type === 'friends') {
+        if (friends.length === 0) {
+          setEntries([]);
+          setLoading(false);
+          return;
+        }
         // Only include friends
         query = query.in('user_id', friends);
       }

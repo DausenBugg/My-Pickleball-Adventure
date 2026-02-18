@@ -1,4 +1,4 @@
-# My Pickleball Adventure
+# My Pickleball App
 
 Gamify your pickleball progress. Every match played levels up your pickleball level. Connect with friends, climb the leaderboards, and journal your pickleball matches as you become the best.
 
@@ -87,15 +87,15 @@ The app requires a Supabase project for authentication and data:
 - ✅ Design system tokens (colors, spacing, typography)
 
 ### Backend (Supabase)
-- ✅ Database schema (8 migrations)
+- ✅ Database schema (22 migrations)
 - ✅ Row Level Security policies
 - ✅ Auto-profile creation on signup
 - ✅ Auto-rating creation on profile creation
 - ✅ Achievement seeds (9 achievements)
-- 🚧 Edge Functions (match approval, rating updates)
+- ✅ Edge Functions (match approval, rating updates, achievements, push notifications)
 - 🚧 Real-time subscriptions
 
-### PRun database migrations** (Required to use the app):
+### Run database migrations** (Required to use the app):
    - Open Supabase Dashboard → SQL Editor
    - Copy/paste each file from `supabase/migrations/` in order
    - Execute one by one (see [supabase/README.md](supabase/README.md))

@@ -1,6 +1,6 @@
 # Deploying Supabase Edge Functions
 
-This guide explains how to deploy the Edge Functions for My Pickleball Adventure.
+This guide explains how to deploy the Edge Functions for My Pickleball App.
 
 ## Prerequisites
 

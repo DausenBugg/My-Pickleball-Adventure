@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -10,19 +9,25 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { PendingMatch, usePendingMatches } from '../src/hooks/usePendingMatches';
 import { useAuth } from '../src/state/auth';
-import { colors, radii, spacing, typography } from '../src/theme';
+import { useTheme } from '../src/theme';
+import { radii, shadows, spacing, typography } from '../src/theme/tokens';
+import AnimatedPressable from '../src/components/AnimatedPressable';
 
 function MatchCard({
   match,
   onApprove,
   onReject,
+  colors,
 }: {
   match: PendingMatch;
   onApprove: () => Promise<boolean>;
   onReject: () => Promise<boolean>;
+  colors: ReturnType<typeof useTheme>['colors'];
 }) {
   const { session } = useAuth();
   const [processing, setProcessing] = useState(false);
@@ -82,41 +87,41 @@ function MatchCard({
   };
 
   return (
-    <View style={styles.matchCard}>
+    <View style={[styles.matchCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
       <View style={styles.matchHeader}>
         <View>
-          <Text style={styles.matchType}>
+          <Text style={[styles.matchType, { color: colors.ink }]}>
             {match.match_type === 'singles' ? 'Singles' : 'Doubles'} •{' '}
             {match.match_mode === 'casual' ? 'Casual' : 'Ranked'}
           </Text>
-          <Text style={styles.matchSubmitter}>
+          <Text style={[styles.matchSubmitter, { color: colors.muted }]}>
             Submitted by {match.submitter_name || 'Unknown'}
           </Text>
         </View>
-        <View style={[styles.resultBadge, isWinner ? styles.winBadge : styles.lossBadge]}>
-          <Text style={styles.resultText}>{isWinner ? 'Win' : 'Loss'}</Text>
+        <View style={[styles.resultBadge, { backgroundColor: isWinner ? colors.successGhost : colors.secondaryGhost }]}>
+          <Text style={[styles.resultText, { color: isWinner ? colors.success : colors.secondary }]}>{isWinner ? 'Win' : 'Loss'}</Text>
         </View>
       </View>
 
       <View style={styles.teamsContainer}>
         <View style={styles.team}>
-          <Text style={styles.teamLabel}>Team A</Text>
+          <Text style={[styles.teamLabel, { color: colors.muted }]}>Team A</Text>
           {teamAPlayers.map((p: any) => (
-            <Text key={p.user_id} style={styles.playerName}>
+            <Text key={p.user_id} style={[styles.playerName, { color: colors.ink }]}>
               {p.full_name || 'Player'}
               {p.user_id === session?.user?.id ? ' (You)' : ''}
             </Text>
           ))}
         </View>
         <View style={styles.scoreContainer}>
-          <Text style={styles.score}>
+          <Text style={[styles.score, { color: colors.ink }]}>
             {match.team_a_score} - {match.team_b_score}
           </Text>
         </View>
         <View style={styles.team}>
-          <Text style={styles.teamLabel}>Team B</Text>
+          <Text style={[styles.teamLabel, { color: colors.muted }]}>Team B</Text>
           {teamBPlayers.map((p: any) => (
-            <Text key={p.user_id} style={styles.playerName}>
+            <Text key={p.user_id} style={[styles.playerName, { color: colors.ink }]}>
               {p.full_name || 'Player'}
               {p.user_id === session?.user?.id ? ' (You)' : ''}
             </Text>
@@ -124,35 +129,35 @@ function MatchCard({
         </View>
       </View>
 
-      <View style={styles.approvalStatus}>
-        <Text style={styles.approvalText}>
+      <View style={[styles.approvalStatus, { backgroundColor: colors.primaryGhost }]}>
+        <Text style={[styles.approvalText, { color: colors.primary }]}>
           Approvals: {approvalCount} / {requiredApprovals}
         </Text>
       </View>
 
       {hasApproved ? (
-        <View style={styles.approvedBanner}>
-          <Text style={styles.approvedText}>✓ You approved this match</Text>
+        <View style={[styles.approvedBanner, { backgroundColor: colors.successGhost }]}>
+          <Text style={[styles.approvedText, { color: colors.success }]}>✓ You approved this match</Text>
         </View>
       ) : hasRejected ? (
-        <View style={styles.rejectedBanner}>
-          <Text style={styles.rejectedText}>✗ You rejected this match</Text>
+        <View style={[styles.rejectedBanner, { backgroundColor: colors.secondaryGhost }]}>
+          <Text style={[styles.rejectedText, { color: colors.secondary }]}>✗ You rejected this match</Text>
         </View>
       ) : (
         <View style={styles.actions}>
-          <Pressable
-            style={[styles.actionButton, styles.rejectButton]}
+          <AnimatedPressable
+            style={[styles.actionButton, styles.rejectButton, { backgroundColor: colors.secondaryGhost, borderColor: colors.secondary }]}
             onPress={handleReject}
             disabled={processing}
           >
             {processing ? (
-              <ActivityIndicator size="small" color={colors.coral} />
+              <ActivityIndicator size="small" color={colors.secondary} />
             ) : (
-              <Text style={styles.rejectButtonText}>Reject</Text>
+              <Text style={[styles.rejectButtonText, { color: colors.secondary }]}>Reject</Text>
             )}
-          </Pressable>
-          <Pressable
-            style={[styles.actionButton, styles.approveButton]}
+          </AnimatedPressable>
+          <AnimatedPressable
+            style={[styles.actionButton, styles.approveButton, { backgroundColor: colors.primary }]}
             onPress={handleApprove}
             disabled={processing}
           >
@@ -161,7 +166,7 @@ function MatchCard({
             ) : (
               <Text style={styles.approveButtonText}>Approve</Text>
             )}
-          </Pressable>
+          </AnimatedPressable>
         </View>
       )}
     </View>
@@ -170,43 +175,47 @@ function MatchCard({
 
 export default function ApprovalsScreen() {
   const { matches, loading, approveMatch, rejectMatch, refresh } = usePendingMatches();
+  const { colors } = useTheme();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.container}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={refresh} colors={[colors.blue]} />
+          <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.primary} colors={[colors.primary]} />
         }
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Pending Approvals</Text>
-          <Text style={styles.subtitle}>
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+          <Text style={[styles.title, { color: colors.ink }]}>Pending Approvals</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>
             Review and approve matches you participated in.
           </Text>
-        </View>
+        </Animated.View>
 
         {loading && matches.length === 0 ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.blue} />
-            <Text style={styles.loadingText}>Loading matches...</Text>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.muted }]}>Loading matches...</Text>
           </View>
         ) : matches.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No pending approvals</Text>
-            <Text style={styles.emptyHint}>
+            <Ionicons name="checkmark-done-circle-outline" size={48} color={colors.muted} />
+            <Text style={[styles.emptyText, { color: colors.ink }]}>No pending approvals</Text>
+            <Text style={[styles.emptyHint, { color: colors.muted }]}>
               Matches you participate in will appear here for approval.
             </Text>
           </View>
         ) : (
           <View style={styles.matches}>
-            {matches.map((match: any) => (
-              <MatchCard
-                key={match.id}
-                match={match}
-                onApprove={async () => await approveMatch(match.id)}
-                onReject={async () => await rejectMatch(match.id)}
-              />
+            {matches.map((match: any, idx: number) => (
+              <Animated.View key={match.id} entering={FadeInDown.delay(100 + idx * 60).duration(400)}>
+                <MatchCard
+                  match={match}
+                  onApprove={async () => await approveMatch(match.id)}
+                  onReject={async () => await rejectMatch(match.id)}
+                  colors={colors}
+                />
+              </Animated.View>
             ))}
           </View>
         )}
@@ -218,7 +227,6 @@ export default function ApprovalsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   container: {
     padding: spacing.lg,
@@ -230,12 +238,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.ink,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: typography.sizes.base,
-    color: colors.muted,
   },
   loadingContainer: {
     paddingVertical: spacing.xxl,
@@ -243,35 +249,30 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   loadingText: {
-    color: colors.muted,
     fontSize: typography.sizes.base,
   },
   emptyContainer: {
     paddingVertical: spacing.xxl,
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   emptyText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    color: colors.ink,
-    marginBottom: 4,
   },
   emptyHint: {
     fontSize: typography.sizes.sm,
-    color: colors.muted,
     textAlign: 'center',
   },
   matches: {
     gap: spacing.md,
   },
   matchCard: {
-    backgroundColor: colors.surface,
     borderRadius: radii.lg,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.md,
+    ...shadows.sm,
   },
   matchHeader: {
     flexDirection: 'row',
@@ -281,23 +282,15 @@ const styles = StyleSheet.create({
   matchType: {
     fontSize: typography.sizes.base,
     fontWeight: typography.weights.semibold,
-    color: colors.ink,
     marginBottom: 2,
   },
   matchSubmitter: {
     fontSize: typography.sizes.sm,
-    color: colors.muted,
   },
   resultBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs - 2,
     borderRadius: radii.pill,
-  },
-  winBadge: {
-    backgroundColor: '#e8f5e9',
-  },
-  lossBadge: {
-    backgroundColor: '#ffebee',
   },
   resultText: {
     fontSize: typography.sizes.sm,
@@ -314,13 +307,11 @@ const styles = StyleSheet.create({
   teamLabel: {
     fontSize: typography.sizes.xs,
     textTransform: 'uppercase',
-    color: colors.muted,
     marginBottom: 4,
     letterSpacing: 0.6,
   },
   playerName: {
     fontSize: typography.sizes.sm,
-    color: colors.ink,
     marginBottom: 2,
   },
   scoreContainer: {
@@ -329,18 +320,16 @@ const styles = StyleSheet.create({
   score: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.ink,
   },
   approvalStatus: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    backgroundColor: '#f5f7fa',
-    borderRadius: radii.sm,
+    borderRadius: radii.lg,
   },
   approvalText: {
     fontSize: typography.sizes.sm,
-    color: colors.muted,
     textAlign: 'center',
+    fontWeight: typography.weights.semibold,
   },
   actions: {
     flexDirection: 'row',
@@ -349,47 +338,38 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     paddingVertical: spacing.sm,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 44,
   },
   rejectButton: {
-    backgroundColor: '#fff2f0',
     borderWidth: 1,
-    borderColor: '#ffd6d1',
   },
   rejectButtonText: {
-    color: colors.coral,
     fontWeight: typography.weights.semibold,
     fontSize: typography.sizes.base,
   },
-  approveButton: {
-    backgroundColor: colors.blue,
-  },
+  approveButton: {},
   approveButtonText: {
     color: '#ffffff',
     fontWeight: typography.weights.semibold,
     fontSize: typography.sizes.base,
   },
   approvedBanner: {
-    backgroundColor: '#e8f5e9',
     padding: spacing.sm,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
   },
   approvedText: {
-    color: '#2e7d32',
     fontSize: typography.sizes.base,
     fontWeight: typography.weights.semibold,
     textAlign: 'center',
   },
   rejectedBanner: {
-    backgroundColor: '#ffebee',
     padding: spacing.sm,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
   },
   rejectedText: {
-    color: '#c62828',
     fontSize: typography.sizes.base,
     fontWeight: typography.weights.semibold,
     textAlign: 'center',

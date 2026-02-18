@@ -10,6 +10,7 @@ export type Player = {
   level: number;
   wins: number;
   losses: number;
+  rating: number;
 };
 
 export function usePlayerSearch(query: string) {
@@ -35,7 +36,7 @@ export function usePlayerSearch(query: string) {
 
       const { data, error: searchError } = await supabase
         .from('profiles')
-        .select('id, full_name, email, level, wins, losses')
+        .select('id, full_name, email, level, wins, losses, ratings(rating)')
         .neq('id', session.user.id) // Exclude current user
         .or(`full_name.ilike.${searchTerm},email.ilike.${searchTerm}`)
         .order('full_name')
@@ -45,7 +46,16 @@ export function usePlayerSearch(query: string) {
         setError(searchError.message);
         setPlayers([]);
       } else {
-        setPlayers(data || []);
+        const mapped = (data || []).map((p: any) => ({
+          id: p.id,
+          full_name: p.full_name,
+          email: p.email,
+          level: p.level,
+          wins: p.wins,
+          losses: p.losses,
+          rating: p.ratings?.[0]?.rating ?? p.ratings?.rating ?? 1200,
+        }));
+        setPlayers(mapped);
       }
 
       setLoading(false);

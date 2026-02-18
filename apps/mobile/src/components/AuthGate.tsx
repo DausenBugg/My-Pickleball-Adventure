@@ -1,33 +1,49 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useAuth } from '../state/auth';
-import { colors } from '../theme';
+import { useTheme } from '../theme';
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
+  const { colors } = useTheme();
   const segments = useSegments();
   const router = useRouter();
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(true);
+
+  // Check if onboarding has been seen
+  useEffect(() => {
+    AsyncStorage.getItem('hasSeenOnboarding').then((value) => {
+      setHasSeenOnboarding(value === 'true');
+      setOnboardingChecked(true);
+    });
+  }, []);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || !onboardingChecked) return;
 
     const inAuth = segments[0] === '(auth)';
 
     if (!session && !inAuth) {
-      router.replace('/(auth)/welcome');
+      if (!hasSeenOnboarding) {
+        router.replace('/(auth)/onboarding');
+      } else {
+        router.replace('/(auth)/welcome');
+      }
     }
 
     if (session && inAuth) {
       router.replace('/(tabs)/home');
     }
-  }, [loading, router, segments, session]);
+  }, [loading, router, segments, session, onboardingChecked, hasSeenOnboarding]);
 
-  if (loading) {
+  if (loading || !onboardingChecked) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.blue} />
+      <View style={[styles.loading, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -38,7 +54,6 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
