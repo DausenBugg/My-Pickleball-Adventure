@@ -8,6 +8,28 @@ function isValidUUID(str: string): boolean {
   return typeof str === 'string' && UUID_REGEX.test(str);
 }
 
+function getUserIdFromAuthHeader(authHeader: string | null): string | null {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+
+  try {
+    const token = authHeader.replace('Bearer ', '').trim();
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+
+    const payloadPart = parts[1]
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+    const padded = payloadPart + '='.repeat((4 - (payloadPart.length % 4)) % 4);
+    const decoded = atob(padded);
+    const payload = JSON.parse(decoded);
+    const userId = payload?.sub;
+
+    return isValidUUID(userId) ? userId : null;
+  } catch {
+    return null;
+  }
+}
+
 // No CORS wildcard for mobile-only app
 const corsHeaders = {
   'Access-Control-Allow-Origin': '',
@@ -26,30 +48,17 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Verify JWT and get authenticated user
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('[process-match-approval] Missing Authorization header');
+    const userId = getUserIdFromAuthHeader(authHeader);
+    if (!userId) {
+      console.error('[process-match-approval] Missing/invalid Authorization header');
       return new Response(
         JSON.stringify({ error: 'Missing or invalid Authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verify the JWT token
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-    
-    if (authError || !user) {
-      console.error('[process-match-approval] Invalid token:', authError?.message);
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('[process-match-approval] Authenticated user:', user.id);
+    console.log('[process-match-approval] Authenticated user:', userId);
 
     const { matchId } = await req.json();
     console.log('[process-match-approval] Processing match:', matchId);
@@ -105,9 +114,9 @@ serve(async (req) => {
     console.log('[process-match-approval] Participants:', participants.length);
 
     // Authorization: Only match participants can trigger approval processing
-    const isParticipant = participants.some((p: any) => p.user_id === user.id);
+    const isParticipant = participants.some((p: any) => p.user_id === userId);
     if (!isParticipant) {
-      console.error('[process-match-approval] User not a participant:', user.id);
+      console.error('[process-match-approval] User not a participant:', userId);
       return new Response(
         JSON.stringify({ error: 'Only match participants can process approvals' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

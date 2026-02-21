@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import * as ImagePicker from 'expo-image-picker';
 import * as ExpoFileSystem from 'expo-file-system';
 
 import { supabase } from '../lib/supabase';
@@ -86,20 +85,47 @@ export function useProfile() {
   const uploadAvatar = async () => {
     if (!session?.user?.id || !supabase) return { error: 'Not authenticated' };
 
+    let imagePickerModule: any;
+    try {
+      imagePickerModule = require('expo-image-picker');
+    } catch {
+      return { error: 'Image upload requires a development/production build (not Expo Go)' };
+    }
+
+    const ImagePicker = imagePickerModule?.default ?? imagePickerModule;
+    if (
+      !ImagePicker?.requestMediaLibraryPermissionsAsync ||
+      !ImagePicker?.launchImageLibraryAsync
+    ) {
+      return { error: 'Image picker is unavailable in this build. Reinstall your dev client.' };
+    }
+
     // Request permission
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    let status = 'denied';
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      status = permission?.status;
+    } catch {
+      return { error: 'Unable to access media permissions. Please reinstall your dev client.' };
+    }
+
     if (status !== 'granted') {
       return { error: 'Permission to access photos was denied' };
     }
 
     // Pick image
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'] as ImagePicker.MediaType[],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-      base64: true,
-    });
+    let result: any;
+    try {
+      result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+    } catch {
+      return { error: 'Failed to open image picker. Please reinstall your dev client.' };
+    }
 
     if (result.canceled) {
       return { error: 'Cancelled' };

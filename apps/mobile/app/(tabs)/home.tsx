@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   ActivityIndicator,
   Animated,
   Dimensions,
@@ -13,6 +14,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
+import AdBanner from '../../src/components/AdBanner';
+import { AD_UNIT_IDS } from '../../src/lib/adUnitIds';
 import { Ionicons } from '@expo/vector-icons';
 import ReAnimated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
@@ -39,7 +42,13 @@ export default function HomeScreen() {
   const router = useRouter();
   const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useProfile();
   const { rating, loading: ratingLoading, refresh: refreshRating } = useRating();
-  const { matches: pendingMatches, approveMatch, rejectMatch, refresh: refreshPendingMatches } = usePendingMatches();
+  const {
+    matches: pendingMatches,
+    approveMatch,
+    rejectMatch,
+    error: pendingMatchesError,
+    refresh: refreshPendingMatches,
+  } = usePendingMatches();
   const { pendingReceived, pendingReceivedUsers, acceptFriendRequest, rejectFriendRequest, refresh: refreshFriends } = useFriends();
   const { matches: recentMatchesRaw, loading: recentMatchesLoading, refresh: refreshRecentMatches } = useMatches({ status: 'approved' });
   const {
@@ -76,6 +85,11 @@ export default function HomeScreen() {
     if (!profile) return 0;
     return calculateLevelProgress(profile.level, profile.total_xp);
   }, [profile]);
+
+  useEffect(() => {
+    if (!pendingMatchesError) return;
+    Alert.alert('Match request', pendingMatchesError);
+  }, [pendingMatchesError]);
 
   const xpForCurrentLevel = useMemo(() => {
     if (!profile) return 0;
@@ -166,11 +180,11 @@ export default function HomeScreen() {
   };
 
   const handleApproveMatchNotification = async (matchId: string, notificationId?: string) => {
-    if (notificationId) {
-      setDismissedNotifications((prev) => new Set(prev).add(notificationId));
-    }
     const success = await approveMatch(matchId);
     if (success) {
+      if (notificationId) {
+        setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+      }
       if (notificationId) await markAsRead(notificationId);
       closeNotifications();
       refreshPendingMatches();
@@ -182,11 +196,11 @@ export default function HomeScreen() {
   };
 
   const handleRejectMatchNotification = async (matchId: string, notificationId?: string) => {
-    if (notificationId) {
-      setDismissedNotifications((prev) => new Set(prev).add(notificationId));
-    }
     const success = await rejectMatch(matchId);
     if (success) {
+      if (notificationId) {
+        setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+      }
       if (notificationId) await markAsRead(notificationId);
       closeNotifications();
       refreshPendingMatches();
@@ -391,6 +405,9 @@ export default function HomeScreen() {
           </View>
         </ReAnimated.View>
 
+        {/* ── Ad banner ── */}
+        <AdBanner adUnitId={AD_UNIT_IDS.HOME_BANNER} />
+
         {/* ── Recent matches ── */}
         <ReAnimated.View entering={FadeInDown.delay(300).duration(400)}>
           <View style={styles.sectionHeader}>
@@ -499,8 +516,24 @@ export default function HomeScreen() {
             ))
             .filter((notification) => !dismissedNotifications.has(notification.id))
             .map((notification) => {
-            const matchId = notification.data?.match_id as string | undefined;
-            const requesterId = notification.data?.requester_id as string | undefined;
+            const parsedData = (() => {
+              if (!notification.data) return {} as Record<string, unknown>;
+              if (typeof notification.data === 'string') {
+                try {
+                  return JSON.parse(notification.data) as Record<string, unknown>;
+                } catch {
+                  return {} as Record<string, unknown>;
+                }
+              }
+              return notification.data as Record<string, unknown>;
+            })();
+
+            const matchId =
+              (parsedData.match_id as string | undefined) ||
+              (parsedData.matchId as string | undefined);
+            const requesterId =
+              (parsedData.requester_id as string | undefined) ||
+              (parsedData.requesterId as string | undefined);
             const pendingMatch = matchId ? pendingMatchById.get(matchId) : undefined;
             const requester = requesterId ? pendingFriendById.get(requesterId) : undefined;
             const matchSummary = pendingMatch ? formatMatchSummary(pendingMatch) : null;

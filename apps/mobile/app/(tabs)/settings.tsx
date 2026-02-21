@@ -13,6 +13,8 @@ import { useTheme, type ThemeMode } from '../../src/theme/ThemeContext';
 import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
 import { useAuth } from '../../src/state/auth';
 import AnimatedPressable from '../../src/components/AnimatedPressable';
+import AdBanner from '../../src/components/AdBanner';
+import { AD_UNIT_IDS } from '../../src/lib/adUnitIds';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -178,6 +180,9 @@ export default function SettingsScreen() {
             </View>
           </Animated.View>
         ) : null}
+
+        {/* Ad banner */}
+        <AdBanner adUnitId={AD_UNIT_IDS.SETTINGS_BANNER} />
 
         <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.ink }]}>Account</Text>

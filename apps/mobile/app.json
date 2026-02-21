@@ -15,11 +15,16 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.dbugg.mypickleballadventure",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
+      "package": "com.dbugg.mypickleballadventure",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -28,18 +33,30 @@
       "predictiveBackGestureEnabled": false,
       "useNextNotificationsApi": true
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "extra": {
+      "eas": {
+        "projectId": "0e4cabb7-6d47-44af-bcc5-0f7c18dee1b6"
+      },
+      "router": {}
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
+      "expo-image-picker",
       [
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
           "color": "#FF6B6B"
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-7596986183502466~7745740291"
+        }
       ]
-    ]
+    ],
+    "owner": "dbugg"
   }
 }

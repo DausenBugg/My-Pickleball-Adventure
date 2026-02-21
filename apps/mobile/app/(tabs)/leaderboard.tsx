@@ -11,6 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import AdBanner from '../../src/components/AdBanner';
+import { AD_UNIT_IDS } from '../../src/lib/adUnitIds';
 import { useLeaderboard } from '../../src/hooks/useLeaderboard';
 import { useTheme } from '../../src/theme';
 import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
@@ -54,6 +56,9 @@ export default function LeaderboardScreen() {
           <Text style={[styles.title, { color: colors.ink }]}>Leaderboard</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>Top players by ranking points.</Text>
         </Animated.View>
+
+        {/* Ad banner */}
+        <AdBanner adUnitId={AD_UNIT_IDS.LEADERBOARD_BANNER} />
 
         {/* Segment control */}
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>

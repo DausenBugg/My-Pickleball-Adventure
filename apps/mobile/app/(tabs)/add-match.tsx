@@ -12,6 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import AdBanner from '../../src/components/AdBanner';
+import { AD_UNIT_IDS } from '../../src/lib/adUnitIds';
 
 import { Player, usePlayerSearch } from '../../src/hooks/usePlayerSearch';
 import { MatchParticipant, useSubmitMatch } from '../../src/hooks/useSubmitMatch';
@@ -244,6 +246,9 @@ export default function AddMatchScreen() {
             Log a match and submit it for approval.
           </Text>
         </Animated.View>
+
+        {/* Ad banner */}
+        <AdBanner adUnitId={AD_UNIT_IDS.ADD_MATCH_BANNER} />
 
         {/* Match type */}
         <Animated.View entering={FadeInDown.delay(80).duration(400)} style={styles.section}>

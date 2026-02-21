@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
             }
           } catch (error) {
-            console.error('Error registering push notifications:', error);
+            if (__DEV__) console.error('Error registering push notifications:', error);
           }
         }
       }

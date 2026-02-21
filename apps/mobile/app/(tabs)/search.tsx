@@ -12,6 +12,8 @@ import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import AdBanner from '../../src/components/AdBanner';
+import { AD_UNIT_IDS } from '../../src/lib/adUnitIds';
 import { useFriends } from '../../src/hooks/useFriends';
 import { Player, usePlayerSearch } from '../../src/hooks/usePlayerSearch';
 import { supabase } from '../../src/lib/supabase';
@@ -115,6 +117,9 @@ export default function SearchScreen() {
             Find friends and view their progress.
           </Text>
         </Animated.View>
+
+        {/* Ad banner */}
+        <AdBanner adUnitId={AD_UNIT_IDS.SEARCH_BANNER} />
 
         {/* Search bar */}
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>
