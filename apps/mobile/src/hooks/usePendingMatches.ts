@@ -165,7 +165,7 @@ export function usePendingMatches() {
   const processMatchApproval = async (matchId: string) => {
     if (!supabase) return false;
 
-    await supabase.auth.refreshSession();
+    const jwtErrorRegex = /invalid jwt|jwt|token|auth|unauthorized|401/i;
 
     const invokeWithDetails = async () => {
       const { error: invokeError } = await supabase.functions.invoke('process-match-approval', {
@@ -196,16 +196,15 @@ export function usePendingMatches() {
       return { ok: false, message: detailedMessage || 'Failed to process match approval' };
     };
 
-    await supabase.auth.refreshSession();
     let result = await invokeWithDetails();
 
-    if (!result.ok && /invalid jwt|jwt|token|auth|unauthorized|401/i.test(result.message)) {
+    if (!result.ok && jwtErrorRegex.test(result.message)) {
       await supabase.auth.refreshSession();
       result = await invokeWithDetails();
     }
 
     if (!result.ok) {
-      if (/invalid jwt|jwt|token|auth|unauthorized|401/i.test(result.message)) {
+      if (jwtErrorRegex.test(result.message)) {
         setError('Session expired. Please sign out and sign back in.');
       } else {
         setError(result.message);

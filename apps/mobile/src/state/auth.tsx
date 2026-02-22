@@ -37,11 +37,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
-      async (_event, nextSession) => {
+      async (event, nextSession) => {
         setSession(nextSession);
         
         // Register for push notifications when user logs in
-        if (nextSession?.user && !session) {
+        if (
+          nextSession?.user &&
+          (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')
+        ) {
           try {
             const preference = await AsyncStorage.getItem('notifications_enabled');
             if (preference !== 'false') {

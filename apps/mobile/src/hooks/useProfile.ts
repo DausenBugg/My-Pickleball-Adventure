@@ -87,7 +87,7 @@ export function useProfile() {
 
     let imagePickerModule: any;
     try {
-      imagePickerModule = require('expo-image-picker');
+      imagePickerModule = await import('expo-image-picker');
     } catch {
       return { error: 'Image upload requires a development/production build (not Expo Go)' };
     }
