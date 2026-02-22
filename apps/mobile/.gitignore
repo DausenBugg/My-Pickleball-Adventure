@@ -38,7 +38,6 @@ yarn-error.*
 *.tsbuildinfo
 
 # Firebase / Google Services
-google-services.json
 GoogleService-Info.plist
 
 # EAS / Play Store credentials
