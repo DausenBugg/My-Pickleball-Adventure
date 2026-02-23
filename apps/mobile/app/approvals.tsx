@@ -22,11 +22,13 @@ function MatchCard({
   match,
   onApprove,
   onReject,
+  actionError,
   colors,
 }: {
   match: PendingMatch;
   onApprove: () => Promise<boolean>;
   onReject: () => Promise<boolean>;
+  actionError?: string | null;
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
   const { session, isAuthTransitioning } = useAuth();
@@ -63,7 +65,7 @@ function MatchCard({
     if (success) {
       Alert.alert('Match approved', 'Your approval has been recorded.');
     } else {
-      Alert.alert('Error', 'Failed to approve match. Please try again.');
+      Alert.alert('Error', actionError || 'Failed to approve match. Please try again.');
     }
   };
 
@@ -88,7 +90,7 @@ function MatchCard({
             if (success) {
               Alert.alert('Match rejected', 'Match has been rejected.');
             } else {
-              Alert.alert('Error', 'Failed to reject match. Please try again.');
+              Alert.alert('Error', actionError || 'Failed to reject match. Please try again.');
             }
           },
         },
@@ -184,7 +186,7 @@ function MatchCard({
 }
 
 export default function ApprovalsScreen() {
-  const { matches, loading, approveMatch, rejectMatch, refresh } = usePendingMatches();
+  const { matches, loading, error, approveMatch, rejectMatch, refresh } = usePendingMatches();
   const { colors } = useTheme();
 
   return (
@@ -223,6 +225,7 @@ export default function ApprovalsScreen() {
                   match={match}
                   onApprove={async () => await approveMatch(match.id)}
                   onReject={async () => await rejectMatch(match.id)}
+                  actionError={error}
                   colors={colors}
                 />
               </Animated.View>

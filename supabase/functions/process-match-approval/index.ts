@@ -8,26 +8,29 @@ function isValidUUID(str: string): boolean {
   return typeof str === 'string' && UUID_REGEX.test(str);
 }
 
-function getUserIdFromAuthHeader(authHeader: string | null): string | null {
+async function getUserIdFromAuthHeader(authHeader: string | null): Promise<string | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
 
-  try {
-    const token = authHeader.replace('Bearer ', '').trim();
-    const parts = token.split('.');
-    if (parts.length < 2) return null;
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  if (!supabaseUrl || !supabaseAnonKey) return null;
 
-    const payloadPart = parts[1]
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
-    const padded = payloadPart + '='.repeat((4 - (payloadPart.length % 4)) % 4);
-    const decoded = atob(padded);
-    const payload = JSON.parse(decoded);
-    const userId = payload?.sub;
+  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: authHeader,
+      },
+    },
+  });
 
-    return isValidUUID(userId) ? userId : null;
-  } catch {
+  const { data, error } = await authClient.auth.getUser();
+  if (error) {
+    console.error('[process-match-approval] auth.getUser failed:', error.message);
     return null;
   }
+
+  const userId = data.user?.id;
+  return userId && isValidUUID(userId) ? userId : null;
 }
 
 // No CORS wildcard for mobile-only app
@@ -49,11 +52,11 @@ serve(async (req) => {
     );
 
     const authHeader = req.headers.get('Authorization');
-    const userId = getUserIdFromAuthHeader(authHeader);
+    const userId = await getUserIdFromAuthHeader(authHeader);
     if (!userId) {
       console.error('[process-match-approval] Missing/invalid Authorization header');
       return new Response(
-        JSON.stringify({ error: 'Missing or invalid Authorization header' }),
+        JSON.stringify({ error: 'Invalid or expired session token. Please sign in again.' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

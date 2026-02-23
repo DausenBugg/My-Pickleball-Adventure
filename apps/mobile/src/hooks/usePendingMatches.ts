@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
 import { useAuth } from '../state/auth';
 
 export type PendingMatch = {
@@ -166,11 +166,12 @@ export function usePendingMatches() {
 
   const processMatchApproval = async (matchId: string, expectedUserId: string) => {
     if (!supabase) return false;
+    const client = supabase;
 
     const jwtErrorRegex = /invalid jwt|jwt|token|auth|unauthorized|401/i;
 
     const getLiveSessionForUser = async () => {
-      const { data: liveData } = await supabase.auth.getSession();
+      const { data: liveData } = await client.auth.getSession();
       const liveSession = liveData?.session;
 
       if (!liveSession?.access_token || !liveSession?.user?.id) {
@@ -187,36 +188,79 @@ export function usePendingMatches() {
       return { ok: true as const, token: liveSession.access_token };
     };
 
-    const invokeWithDetails = async (accessToken: string) => {
-      const { error: invokeError } = await supabase.functions.invoke('process-match-approval', {
-        body: { matchId },
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!invokeError) {
-        return { ok: true, message: '' };
+    const validateAccessToken = async (accessToken: string) => {
+      const { data: userData, error: userError } = await client.auth.getUser(accessToken);
+      if (userError || !userData?.user?.id) {
+        if (__DEV__) {
+          console.error('[usePendingMatches] access token validation failed', {
+            message: userError?.message,
+          });
+        }
+        return {
+          ok: false as const,
+          message: 'Session expired. Please sign out and sign back in.',
+        };
       }
 
-      let detailedMessage = invokeError.message || '';
-      const contextResponse: any = (invokeError as any).context;
-      if (contextResponse) {
+      if (userData.user.id !== expectedUserId) {
+        return {
+          ok: false as const,
+          message: 'Auth state changed. Please wait a moment and try again.',
+        };
+      }
+
+      return { ok: true as const };
+    };
+
+    const invokeWithDetails = async (accessToken: string) => {
+      if (!supabaseUrl || !supabaseAnonKey) {
+        return { ok: false, message: 'Supabase is not configured for this build.' };
+      }
+
+      try {
+        const response = await fetch(`${supabaseUrl}/functions/v1/process-match-approval`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            apikey: supabaseAnonKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ matchId }),
+        });
+
+        if (response.ok) {
+          return { ok: true, message: '' };
+        }
+
+        let detailedMessage = `Request failed (status ${response.status})`;
         try {
-          const errorPayload = await contextResponse.json();
-          if (errorPayload?.error) detailedMessage = errorPayload.error;
-          else if (errorPayload?.message) detailedMessage = errorPayload.message;
+          const payload = await response.json();
+          if (payload?.error) detailedMessage = payload.error;
+          else if (payload?.message) detailedMessage = payload.message;
         } catch {
           try {
-            const text = await contextResponse.text();
+            const text = await response.text();
             if (text) detailedMessage = text;
           } catch {
-            // keep original detailedMessage
+            // keep fallback
           }
         }
-      }
 
-      return { ok: false, message: detailedMessage || 'Failed to process match approval' };
+        if (__DEV__) {
+          console.error('[usePendingMatches] process-match-approval invoke error', {
+            status: response.status,
+            detailedMessage,
+          });
+        }
+
+        return { ok: false, message: detailedMessage };
+      } catch (networkError: any) {
+        const detailedMessage = networkError?.message || 'Network error while processing match approval';
+        if (__DEV__) {
+          console.error('[usePendingMatches] process-match-approval network error', detailedMessage);
+        }
+        return { ok: false, message: detailedMessage };
+      }
     };
 
     const liveSessionResult = await getLiveSessionForUser();
@@ -225,10 +269,65 @@ export function usePendingMatches() {
       return false;
     }
 
+    const liveTokenValidation = await validateAccessToken(liveSessionResult.token);
+    if (!liveTokenValidation.ok) {
+      setError(liveTokenValidation.message);
+      return false;
+    }
+
+    const detectIssuerMismatch = (accessToken: string) => {
+      if (!supabaseUrl) return null;
+
+      try {
+        const parts = accessToken.split('.');
+        if (parts.length < 2) return null;
+
+        const payloadPart = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const paddedPayload = payloadPart + '='.repeat((4 - (payloadPart.length % 4)) % 4);
+        const payload = JSON.parse(atob(paddedPayload));
+        const issuer = payload?.iss as string | undefined;
+        if (!issuer) return null;
+
+        const expectedIssuerPrefix = `${supabaseUrl}/auth/v1`;
+        const isMatch = issuer.startsWith(expectedIssuerPrefix);
+
+        if (__DEV__) {
+          console.log('[usePendingMatches] JWT issuer check', {
+            expectedIssuerPrefix,
+            issuer,
+            isMatch,
+          });
+        }
+
+        if (!isMatch) {
+          return 'App auth token is from a different Supabase project than EXPO_PUBLIC_SUPABASE_URL.';
+        }
+
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
+    const issuerMismatchMessage = detectIssuerMismatch(liveSessionResult.token);
+    if (issuerMismatchMessage) {
+      setError(issuerMismatchMessage);
+      return false;
+    }
+
+    if (__DEV__) {
+      console.log('[usePendingMatches] invoking process-match-approval', {
+        matchId,
+        expectedUserId,
+        liveUserId: liveSessionResult.token ? expectedUserId : null,
+        tokenLength: liveSessionResult.token?.length || 0,
+      });
+    }
+
     let result = await invokeWithDetails(liveSessionResult.token);
 
     if (!result.ok && jwtErrorRegex.test(result.message)) {
-      const { data: refreshedData, error: refreshError } = await supabase.auth.refreshSession();
+      const { data: refreshedData, error: refreshError } = await client.auth.refreshSession();
       const refreshedSession = refreshedData?.session;
 
       if (
@@ -237,8 +336,31 @@ export function usePendingMatches() {
         !refreshedSession?.user?.id ||
         refreshedSession.user.id !== expectedUserId
       ) {
+        if (__DEV__) {
+          console.error('[usePendingMatches] refreshSession failed', {
+            message: refreshError?.message,
+          });
+        }
+        if (refreshError && /refresh token|invalid refresh token/i.test(refreshError.message || '')) {
+          await client.auth.signOut({ scope: 'local' });
+        }
         setError('Session expired. Please sign out and sign back in.');
         return false;
+      }
+
+      const refreshedTokenValidation = await validateAccessToken(refreshedSession.access_token);
+      if (!refreshedTokenValidation.ok) {
+        setError(refreshedTokenValidation.message);
+        return false;
+      }
+
+      if (__DEV__) {
+        console.log('[usePendingMatches] retrying process-match-approval after refresh', {
+          matchId,
+          expectedUserId,
+          refreshedUserId: refreshedSession.user.id,
+          tokenLength: refreshedSession.access_token.length,
+        });
       }
 
       result = await invokeWithDetails(refreshedSession.access_token);

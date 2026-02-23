@@ -34,14 +34,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAuthTransitioning(false);
       return;
     }
+    const client = supabase;
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session ?? null);
-      setLoading(false);
-      setIsAuthTransitioning(false);
-    });
+    client.auth
+      .getSession()
+      .then(async ({ data }) => {
+        const initialSession = data.session ?? null;
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(
+        if (!initialSession?.access_token) {
+          setSession(null);
+          return;
+        }
+
+        const { data: userData, error: userError } = await client.auth.getUser(
+          initialSession.access_token
+        );
+
+        if (userError || !userData?.user) {
+          if (__DEV__) {
+            console.error('[AuthProvider] Invalid persisted session, clearing local auth state', {
+              message: userError?.message,
+            });
+          }
+          await client.auth.signOut({ scope: 'local' });
+          setSession(null);
+          return;
+        }
+
+        setSession(initialSession);
+      })
+      .finally(() => {
+        setLoading(false);
+        setIsAuthTransitioning(false);
+      });
+
+    const { data: subscription } = client.auth.onAuthStateChange(
       async (event, nextSession) => {
         setIsAuthTransitioning(true);
         setSession(nextSession);
