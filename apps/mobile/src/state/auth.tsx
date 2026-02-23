@@ -13,31 +13,37 @@ type AuthContextValue = {
   session: Session | null;
   loading: boolean;
   configured: boolean;
+  isAuthTransitioning: boolean;
 };
 
 const AuthContext = createContext<AuthContextValue>({
   session: null,
   loading: true,
   configured: false,
+  isAuthTransitioning: true,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthTransitioning, setIsAuthTransitioning] = useState(true);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
       setLoading(false);
+      setIsAuthTransitioning(false);
       return;
     }
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session ?? null);
       setLoading(false);
+      setIsAuthTransitioning(false);
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
       async (event, nextSession) => {
+        setIsAuthTransitioning(true);
         setSession(nextSession);
         
         // Register for push notifications when user logs in
@@ -57,6 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (__DEV__) console.error('Error registering push notifications:', error);
           }
         }
+
+        setIsAuthTransitioning(false);
       }
     );
 
@@ -66,8 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ session, loading, configured: isSupabaseConfigured }),
-    [session, loading]
+    () => ({ session, loading, configured: isSupabaseConfigured, isAuthTransitioning }),
+    [session, loading, isAuthTransitioning]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

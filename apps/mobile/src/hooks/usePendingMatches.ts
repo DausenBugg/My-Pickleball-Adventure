@@ -25,13 +25,15 @@ export type PendingMatch = {
 };
 
 export function usePendingMatches() {
-  const { session } = useAuth();
+  const { session, isAuthTransitioning } = useAuth();
   const [matches, setMatches] = useState<PendingMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchMatches = async () => {
     if (!session?.user?.id || !supabase) {
+      setMatches([]);
+      setError(null);
       setLoading(false);
       return;
     }
@@ -162,14 +164,35 @@ export function usePendingMatches() {
     fetchMatches();
   }, [session?.user?.id]);
 
-  const processMatchApproval = async (matchId: string) => {
+  const processMatchApproval = async (matchId: string, expectedUserId: string) => {
     if (!supabase) return false;
 
     const jwtErrorRegex = /invalid jwt|jwt|token|auth|unauthorized|401/i;
 
-    const invokeWithDetails = async () => {
+    const getLiveSessionForUser = async () => {
+      const { data: liveData } = await supabase.auth.getSession();
+      const liveSession = liveData?.session;
+
+      if (!liveSession?.access_token || !liveSession?.user?.id) {
+        return { ok: false as const, message: 'Session expired. Please sign out and sign back in.' };
+      }
+
+      if (liveSession.user.id !== expectedUserId) {
+        return {
+          ok: false as const,
+          message: 'Auth state changed. Please wait a moment and try again.',
+        };
+      }
+
+      return { ok: true as const, token: liveSession.access_token };
+    };
+
+    const invokeWithDetails = async (accessToken: string) => {
       const { error: invokeError } = await supabase.functions.invoke('process-match-approval', {
         body: { matchId },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
 
       if (!invokeError) {
@@ -196,11 +219,29 @@ export function usePendingMatches() {
       return { ok: false, message: detailedMessage || 'Failed to process match approval' };
     };
 
-    let result = await invokeWithDetails();
+    const liveSessionResult = await getLiveSessionForUser();
+    if (!liveSessionResult.ok) {
+      setError(liveSessionResult.message);
+      return false;
+    }
+
+    let result = await invokeWithDetails(liveSessionResult.token);
 
     if (!result.ok && jwtErrorRegex.test(result.message)) {
-      await supabase.auth.refreshSession();
-      result = await invokeWithDetails();
+      const { data: refreshedData, error: refreshError } = await supabase.auth.refreshSession();
+      const refreshedSession = refreshedData?.session;
+
+      if (
+        refreshError ||
+        !refreshedSession?.access_token ||
+        !refreshedSession?.user?.id ||
+        refreshedSession.user.id !== expectedUserId
+      ) {
+        setError('Session expired. Please sign out and sign back in.');
+        return false;
+      }
+
+      result = await invokeWithDetails(refreshedSession.access_token);
     }
 
     if (!result.ok) {
@@ -218,6 +259,19 @@ export function usePendingMatches() {
 
   const approveMatch = async (matchId: string) => {
     if (!session?.user?.id || !supabase) return false;
+    if (isAuthTransitioning) {
+      setError('Auth state is updating. Please try again in a moment.');
+      return false;
+    }
+
+    const expectedUserId = session.user.id;
+
+    const { data: liveData } = await supabase.auth.getSession();
+    const liveSession = liveData?.session;
+    if (!liveSession?.user?.id || liveSession.user.id !== expectedUserId) {
+      setError('Auth state changed. Please wait a moment and try again.');
+      return false;
+    }
 
     try {
       const { error: insertError } = await supabase
@@ -225,7 +279,7 @@ export function usePendingMatches() {
         .upsert(
           {
             match_id: matchId,
-            user_id: session.user.id,
+            user_id: expectedUserId,
             approved: true,
           },
           {
@@ -237,14 +291,14 @@ export function usePendingMatches() {
         throw insertError;
       }
 
-      const processed = await processMatchApproval(matchId);
+      const processed = await processMatchApproval(matchId, expectedUserId);
 
       if (!processed) {
         await supabase
           .from('match_approvals')
           .delete()
           .eq('match_id', matchId)
-          .eq('user_id', session.user.id);
+          .eq('user_id', expectedUserId);
       }
 
       // Refresh matches
@@ -258,6 +312,19 @@ export function usePendingMatches() {
 
   const rejectMatch = async (matchId: string) => {
     if (!session?.user?.id || !supabase) return false;
+    if (isAuthTransitioning) {
+      setError('Auth state is updating. Please try again in a moment.');
+      return false;
+    }
+
+    const expectedUserId = session.user.id;
+
+    const { data: liveData } = await supabase.auth.getSession();
+    const liveSession = liveData?.session;
+    if (!liveSession?.user?.id || liveSession.user.id !== expectedUserId) {
+      setError('Auth state changed. Please wait a moment and try again.');
+      return false;
+    }
 
     try {
       const { error: insertError } = await supabase
@@ -265,7 +332,7 @@ export function usePendingMatches() {
         .upsert(
           {
             match_id: matchId,
-            user_id: session.user.id,
+            user_id: expectedUserId,
             approved: false,
           },
           {
@@ -275,14 +342,14 @@ export function usePendingMatches() {
 
       if (insertError) throw insertError;
 
-      const processed = await processMatchApproval(matchId);
+      const processed = await processMatchApproval(matchId, expectedUserId);
 
       if (!processed) {
         await supabase
           .from('match_approvals')
           .delete()
           .eq('match_id', matchId)
-          .eq('user_id', session.user.id);
+          .eq('user_id', expectedUserId);
       }
 
       // Refresh matches

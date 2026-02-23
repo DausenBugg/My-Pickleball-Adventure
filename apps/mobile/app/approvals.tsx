@@ -29,7 +29,7 @@ function MatchCard({
   onReject: () => Promise<boolean>;
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
-  const { session } = useAuth();
+  const { session, isAuthTransitioning } = useAuth();
   const [processing, setProcessing] = useState(false);
 
   const userParticipant = match.participants.find(
@@ -52,6 +52,11 @@ function MatchCard({
   const requiredApprovals = match.match_type === 'singles' ? 2 : 3;
 
   const handleApprove = async () => {
+    if (isAuthTransitioning) {
+      Alert.alert('Please wait', 'Account switch is still in progress. Try again in a moment.');
+      return;
+    }
+
     setProcessing(true);
     const success = await onApprove();
     setProcessing(false);
@@ -63,6 +68,11 @@ function MatchCard({
   };
 
   const handleReject = async () => {
+    if (isAuthTransitioning) {
+      Alert.alert('Please wait', 'Account switch is still in progress. Try again in a moment.');
+      return;
+    }
+
     Alert.alert(
       'Reject match?',
       'Are you sure you want to reject this match? This cannot be undone.',
@@ -148,7 +158,7 @@ function MatchCard({
           <AnimatedPressable
             style={[styles.actionButton, styles.rejectButton, { backgroundColor: colors.secondaryGhost, borderColor: colors.secondary }]}
             onPress={handleReject}
-            disabled={processing}
+            disabled={processing || isAuthTransitioning}
           >
             {processing ? (
               <ActivityIndicator size="small" color={colors.secondary} />
@@ -159,7 +169,7 @@ function MatchCard({
           <AnimatedPressable
             style={[styles.actionButton, styles.approveButton, { backgroundColor: colors.primary }]}
             onPress={handleApprove}
-            disabled={processing}
+            disabled={processing || isAuthTransitioning}
           >
             {processing ? (
               <ActivityIndicator size="small" color="#ffffff" />
