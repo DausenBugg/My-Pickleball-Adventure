@@ -95,24 +95,10 @@ try {
 
 ---
 
-## Test Suite Created
+## Test Coverage Notes
 
-### Automated Test File
-- **Location**: `apps/mobile/src/tests/edge-cases.test.ts`
-- **Tests**: 10 unit tests covering all categories
-- **Usage**: Import and run `runAllEdgeCaseTests()`
-
-### Test Functions
-1. `testMissingFileExtension()` - File upload edge case
-2. `testLargeFileSize()` - Size validation
-3. `testNullProfileData()` - Null handling
-4. `testEmptyTeams()` - Array validation
-5. `testPushTokenValidation()` - Token checks
-6. `testDeviceModuleSafety()` - Module availability
-7. `testNotificationDataValidation()` - Data validation
-8. `testNullScores()` - Default values
-9. `testUserInMultipleTeams()` - Edge case logic
-10. `testStorageBucketError()` - Error handling
+- Edge-case handling is implemented directly in production hooks/functions listed below.
+- Validation should be verified through manual QA flows in this document and function-level integration tests.
 
 ---
 
@@ -128,10 +114,8 @@ try {
 7. ✅ `apps/mobile/app/(tabs)/leaderboard.tsx`
 8. ✅ `supabase/functions/send-push-notifications/index.ts`
 
-### Test & Documentation Files (3 files)
-1. ✅ `docs/edge-case-tests.md`
-2. ✅ `apps/mobile/src/tests/edge-cases.test.ts`
-3. ✅ `docs/edge-case-final-report.md`
+### Documentation Files
+1. ✅ `docs/edge-case-testing.md`
 
 ---
 

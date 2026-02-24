@@ -50,13 +50,10 @@ export default function SettingsScreen() {
       if (value) {
         const token = await registerForPushNotificationsAsync();
         if (token && typeof token === 'string') {
-          await savePushToken(session.user.id, token);
+          await savePushToken(token);
         }
       } else {
-        const { error: deleteError } = await supabase
-          .from('push_tokens')
-          .delete()
-          .eq('user_id', session.user.id);
+        const { error: deleteError } = await supabase.rpc('unregister_all_push_tokens');
 
         if (deleteError) {
           console.warn('Failed to remove push tokens:', deleteError);

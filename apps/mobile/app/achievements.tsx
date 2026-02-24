@@ -133,7 +133,7 @@ export default function AchievementsScreen() {
         {/* Summary */}
         <Animated.View entering={FadeInDown.duration(400)}>
           <View style={[styles.summary, { backgroundColor: colors.primaryGhost }]}>
-            <Text style={[styles.summaryEmoji]}>🏆</Text>
+            <Text style={styles.summaryIcon}>🏆</Text>
             <Text style={[styles.summaryText, { color: colors.ink }]}>
               {unlocked.length} of {achievements.length} unlocked
             </Text>
@@ -216,8 +216,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  summaryEmoji: {
-    fontSize: 36,
+  summaryIcon: {
+    width: 40,
+    height: 40,
   },
   summaryText: {
     fontSize: typography.sizes.lg,

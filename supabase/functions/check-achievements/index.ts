@@ -38,7 +38,11 @@ serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
     const isServiceCall = token === serviceRoleKey;
+    const internalAuthHeader = serviceRoleKey
+      ? `Bearer ${serviceRoleKey}`
+      : authHeader;
 
     let userIdFromToken: string | null = null;
 
@@ -179,6 +183,10 @@ serve(async (req) => {
         if (newNotification) {
           try {
             await supabaseClient.functions.invoke('send-push-notifications', {
+              headers: {
+                ...(internalAuthHeader ? { Authorization: internalAuthHeader } : {}),
+                ...(anonKey ? { apikey: anonKey } : {}),
+              },
               body: { notificationIds: [newNotification.id] },
             });
           } catch (pushError) {

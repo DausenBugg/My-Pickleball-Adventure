@@ -64,14 +64,14 @@ export async function registerForPushNotificationsAsync() {
   return token;
 }
 
-export async function savePushToken(userId: string, token: string) {
+export async function savePushToken(token: string) {
   if (!supabase) {
     if (__DEV__) console.error('Supabase not configured');
     return;
   }
 
-  if (!token || !userId) {
-    if (__DEV__) console.error('Invalid token or userId');
+  if (!token) {
+    if (__DEV__) console.error('Invalid token');
     return;
   }
 

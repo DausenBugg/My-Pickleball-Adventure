@@ -97,7 +97,7 @@ export default function RegisterScreen() {
       if (data.user) {
         // Account created - user needs to verify their email
         setNotice(
-          '✉️ Account created! Please check your email and click the verification link to complete your registration.'
+          'Account created! Please check your email and click the verification link to complete your registration.'
         );
         
         // Clear form
@@ -225,7 +225,12 @@ export default function RegisterScreen() {
             By continuing you agree to our Terms and Privacy Policy.
           </Text>
           {error ? <Text style={[styles.errorText, { color: colors.secondary }]}>{error}</Text> : null}
-          {notice ? <Text style={[styles.noticeText, { color: colors.primary }]}>{notice}</Text> : null}
+          {notice ? (
+            <View style={styles.noticeRow}>
+              <Text style={styles.noticeIcon}>📧</Text>
+              <Text style={[styles.noticeText, { color: colors.primary }]}>{notice}</Text>
+            </View>
+          ) : null}
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(200).duration(400)}>
@@ -338,7 +343,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   noticeText: {
-    textAlign: 'center',
+    flex: 1,
     fontSize: 12,
+  },
+  noticeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  noticeIcon: {
+    width: 16,
+    height: 16,
   },
 });

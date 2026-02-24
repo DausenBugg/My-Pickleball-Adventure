@@ -36,7 +36,7 @@ supabase/             # Backend migrations and functions (pending)
    ```
 
 3. Set up environment:
-   - Copy `.env.example` to `.env`
+   - Create `apps/mobile/.env`
    - Add Supabase credentials (see setup instructions below)
 
 4. Start the dev server:
@@ -87,7 +87,7 @@ The app requires a Supabase project for authentication and data:
 - ✅ Design system tokens (colors, spacing, typography)
 
 ### Backend (Supabase)
-- ✅ Database schema (22 migrations)
+- ✅ Database schema (27 migrations)
 - ✅ Row Level Security policies
 - ✅ Auto-profile creation on signup
 - ✅ Auto-rating creation on profile creation
@@ -105,9 +105,6 @@ The app requires a Supabase project for authentication and data:
    - Open in Expo Go or emulator
    - Register a new user
    - Verify profile is created in Supabase Dashboard
-- 🚧 Match approval workflow (backend + UI)
-- 🚧 Implement rating calculation Edge Function
-- 🚧 Wire achievements system
 
 ## What You Need to Do
 

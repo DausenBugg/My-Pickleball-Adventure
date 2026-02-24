@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (preference !== 'false') {
               const token = await registerForPushNotificationsAsync();
               if (token && typeof token === 'string') {
-                await savePushToken(nextSession.user.id, token);
+                await savePushToken(token);
               }
             }
           } catch (error) {

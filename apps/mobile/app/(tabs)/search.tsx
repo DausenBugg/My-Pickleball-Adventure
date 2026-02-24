@@ -15,7 +15,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import AdBanner from '../../src/components/AdBanner';
 import { AD_UNIT_IDS } from '../../src/lib/adUnitIds';
 import { useFriends } from '../../src/hooks/useFriends';
-import { Player, usePlayerSearch } from '../../src/hooks/usePlayerSearch';
+import { Player, PLAYER_SEARCH_SELECT, ProfileWithRating, mapProfileToPlayer, usePlayerSearch } from '../../src/hooks/usePlayerSearch';
 import { supabase } from '../../src/lib/supabase';
 import { useTheme } from '../../src/theme';
 import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
@@ -59,19 +59,11 @@ export default function SearchScreen() {
       setFriendProfilesLoading(true);
       const { data } = await supabase
         .from('profiles')
-        .select('id, full_name, email, level, wins, losses, ratings(rating)')
+        .select(PLAYER_SEARCH_SELECT)
         .in('id', friends)
         .order('full_name');
 
-      const mapped: Player[] = (data || []).map((p: any) => ({
-        id: p.id,
-        full_name: p.full_name,
-        email: p.email,
-        level: p.level,
-        wins: p.wins,
-        losses: p.losses,
-        rating: p.ratings?.[0]?.rating ?? p.ratings?.rating ?? 1200,
-      }));
+      const mapped: Player[] = (data || []).map((profile) => mapProfileToPlayer(profile as ProfileWithRating));
       setFriendProfiles(mapped);
       setFriendProfilesLoading(false);
     };
