@@ -8,6 +8,36 @@ function isValidUUID(str: string): boolean {
   return typeof str === 'string' && UUID_REGEX.test(str);
 }
 
+function parseIssuerFromAuthHeader(authHeader: string | null): string | null {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+
+  try {
+    const token = authHeader.slice(7).trim();
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+
+    const payloadPart = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const paddedPayload = payloadPart + '='.repeat((4 - (payloadPart.length % 4)) % 4);
+    const payloadJson = atob(paddedPayload);
+    const payload = JSON.parse(payloadJson);
+    return typeof payload?.iss === 'string' ? payload.iss : null;
+  } catch {
+    return null;
+  }
+}
+
+function getAuthDebug(authHeader: string | null) {
+  const hasBearerPrefix = !!authHeader && authHeader.startsWith('Bearer ');
+  const token = hasBearerPrefix ? authHeader!.slice(7).trim() : '';
+
+  return {
+    hasAuthHeader: !!authHeader,
+    hasBearerPrefix,
+    tokenLength: token.length,
+    tokenIssuer: parseIssuerFromAuthHeader(authHeader),
+  };
+}
+
 async function getUserIdFromAuthHeader(authHeader: string | null): Promise<string | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
 
@@ -25,7 +55,11 @@ async function getUserIdFromAuthHeader(authHeader: string | null): Promise<strin
 
   const { data, error } = await authClient.auth.getUser();
   if (error) {
-    console.error('[process-match-approval] auth.getUser failed:', error.message);
+    console.error('[process-match-approval] auth.getUser failed:', {
+      message: error.message,
+      status: (error as any)?.status,
+      name: (error as any)?.name,
+    });
     return null;
   }
 
@@ -52,9 +86,10 @@ serve(async (req) => {
     );
 
     const authHeader = req.headers.get('Authorization');
+    const authDebug = getAuthDebug(authHeader);
     const userId = await getUserIdFromAuthHeader(authHeader);
     if (!userId) {
-      console.error('[process-match-approval] Missing/invalid Authorization header');
+      console.error('[process-match-approval] Missing/invalid Authorization header', authDebug);
       return new Response(
         JSON.stringify({ error: 'Invalid or expired session token. Please sign in again.' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

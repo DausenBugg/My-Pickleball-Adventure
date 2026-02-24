@@ -27,7 +27,6 @@ apps/mobile/
 │   │   ├── leaderboard.tsx  # Rankings (global/friends)
 │   │   └── settings.tsx     # Account settings
 │   ├── achievements.tsx     # Achievements display
-│   ├── approvals.tsx        # Match approvals screen
 │   ├── match-history.tsx    # Match history view
 │   ├── _layout.tsx          # Root layout (AuthProvider + AuthGate)
 │   └── index.tsx            # Redirect to auth or tabs

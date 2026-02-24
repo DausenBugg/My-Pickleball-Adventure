@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import AdBanner from '../../src/components/AdBanner';
 import { AD_UNIT_IDS } from '../../src/lib/adUnitIds';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,6 +40,7 @@ import { LeagueLabel } from '../../src/components/LeagueBadge';
 export default function HomeScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { openNotifications: openNotificationsParam } = useLocalSearchParams<{ openNotifications?: string }>();
   const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useProfile();
   const { rating, loading: ratingLoading, refresh: refreshRating } = useRating();
   const {
@@ -168,6 +169,12 @@ export default function HomeScreen() {
       useNativeDriver: true,
     }).start();
   };
+
+  useEffect(() => {
+    if (openNotificationsParam === '1' && !isNotificationsOpen) {
+      openNotifications();
+    }
+  }, [openNotificationsParam, isNotificationsOpen]);
 
   const closeNotifications = () => {
     Animated.timing(slideAnim, {

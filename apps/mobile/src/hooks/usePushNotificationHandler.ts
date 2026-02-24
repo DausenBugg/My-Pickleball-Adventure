@@ -36,7 +36,7 @@ export function usePushNotificationHandler() {
           if (data.achievement_id && typeof data.achievement_id === 'string') {
             router.push('/achievements');
           } else if (data.match_id && typeof data.match_id === 'string') {
-            router.push('/approvals');
+            router.push('/(tabs)/home?openNotifications=1');
           } else if (data.friend_request_id && typeof data.friend_request_id === 'string') {
             router.push('/(tabs)/search');
           } else {

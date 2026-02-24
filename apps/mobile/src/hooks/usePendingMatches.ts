@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { supabase, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
+import { supabase, supabaseUrl } from '../lib/supabase';
 import { useAuth } from '../state/auth';
 
 export type PendingMatch = {
@@ -212,43 +212,38 @@ export function usePendingMatches() {
       return { ok: true as const };
     };
 
-    const invokeWithDetails = async (accessToken: string) => {
-      if (!supabaseUrl || !supabaseAnonKey) {
-        return { ok: false, message: 'Supabase is not configured for this build.' };
-      }
-
+    const invokeWithDetails = async () => {
       try {
-        const response = await fetch(`${supabaseUrl}/functions/v1/process-match-approval`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            apikey: supabaseAnonKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ matchId }),
+        const { error: invokeError } = await client.functions.invoke('process-match-approval', {
+          body: { matchId },
         });
 
-        if (response.ok) {
+        if (!invokeError) {
           return { ok: true, message: '' };
         }
 
-        let detailedMessage = `Request failed (status ${response.status})`;
-        try {
-          const payload = await response.json();
-          if (payload?.error) detailedMessage = payload.error;
-          else if (payload?.message) detailedMessage = payload.message;
-        } catch {
+        let detailedMessage = invokeError.message || 'Failed to process match approval';
+        const invokeErrorContext = (invokeError as any)?.context;
+
+        if (invokeErrorContext && typeof invokeErrorContext === 'object') {
           try {
-            const text = await response.text();
-            if (text) detailedMessage = text;
+            const payload = await invokeErrorContext.json();
+            if (payload?.error) detailedMessage = payload.error;
+            else if (payload?.message) detailedMessage = payload.message;
           } catch {
-            // keep fallback
+            try {
+              const text = await invokeErrorContext.text();
+              if (text) detailedMessage = text;
+            } catch {
+              // keep fallback
+            }
           }
         }
 
         if (__DEV__) {
           console.error('[usePendingMatches] process-match-approval invoke error', {
-            status: response.status,
+            message: invokeError.message,
+            name: (invokeError as any)?.name,
             detailedMessage,
           });
         }
@@ -311,7 +306,8 @@ export function usePendingMatches() {
 
     const issuerMismatchMessage = detectIssuerMismatch(liveSessionResult.token);
     if (issuerMismatchMessage) {
-      setError(issuerMismatchMessage);
+      await client.auth.signOut({ scope: 'local' });
+      setError('Session project mismatch detected. Please sign in again.');
       return false;
     }
 
@@ -322,9 +318,10 @@ export function usePendingMatches() {
         liveUserId: liveSessionResult.token ? expectedUserId : null,
         tokenLength: liveSessionResult.token?.length || 0,
       });
+      console.log('[usePendingMatches] access token (copy for testing):', liveSessionResult.token);
     }
 
-    let result = await invokeWithDetails(liveSessionResult.token);
+    let result = await invokeWithDetails();
 
     if (!result.ok && jwtErrorRegex.test(result.message)) {
       const { data: refreshedData, error: refreshError } = await client.auth.refreshSession();
@@ -361,9 +358,10 @@ export function usePendingMatches() {
           refreshedUserId: refreshedSession.user.id,
           tokenLength: refreshedSession.access_token.length,
         });
+        console.log('[usePendingMatches] refreshed access token (copy for testing):', refreshedSession.access_token);
       }
 
-      result = await invokeWithDetails(refreshedSession.access_token);
+      result = await invokeWithDetails();
     }
 
     if (!result.ok) {
