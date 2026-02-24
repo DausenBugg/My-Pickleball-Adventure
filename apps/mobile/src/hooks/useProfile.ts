@@ -170,8 +170,7 @@ export function useProfile() {
           if (oldPath) {
             await supabase.storage.from('avatars').remove([oldPath]);
           }
-        } catch (cleanupError) {
-          console.log('Could not delete old avatar:', cleanupError);
+        } catch {
           // Continue anyway
         }
       }

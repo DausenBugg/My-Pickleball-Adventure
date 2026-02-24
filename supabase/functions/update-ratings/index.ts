@@ -20,7 +20,6 @@ serve(async (req) => {
   }
 
   try {
-    console.log('[update-ratings] Request received');
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -37,23 +36,26 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    
-    // Verify the JWT token
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-    
-    if (authError || !user) {
-      console.error('[update-ratings] Invalid token:', authError?.message);
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const isServiceCall = token === serviceRoleKey;
+
+    let userId: string | null = null;
+
+    if (!isServiceCall) {
+      const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+
+      if (authError || !user) {
+        console.error('[update-ratings] Invalid token:', authError?.message);
+        return new Response(
+          JSON.stringify({ error: 'Invalid or expired token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      userId = user.id;
     }
 
-    console.log('[update-ratings] Authenticated user:', user.id);
-
     const { matchId } = await req.json();
-
-    console.log('[update-ratings] Processing match:', matchId);
 
     // Validate UUID format
     if (!matchId || !isValidUUID(matchId)) {
@@ -96,16 +98,16 @@ serve(async (req) => {
       throw new Error('No participants found');
     }
 
-    console.log('[update-ratings] Participants:', participants.length);
-
     // Authorization: Only match participants can trigger rating updates
-    const isParticipant = participants.some((p: any) => p.user_id === user.id);
-    if (!isParticipant) {
-      console.error('[update-ratings] User not a participant:', user.id);
-      return new Response(
-        JSON.stringify({ error: 'Only match participants can trigger rating updates' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!isServiceCall) {
+      const isParticipant = participants.some((p: any) => p.user_id === userId);
+      if (!isParticipant) {
+        console.error('[update-ratings] User not a participant:', userId);
+        return new Response(
+          JSON.stringify({ error: 'Only match participants can trigger rating updates' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     const participantIds = participants.map((p: any) => p.user_id);
@@ -117,8 +119,6 @@ serve(async (req) => {
     if (ratingsError) {
       throw new Error(`Failed to load ratings: ${ratingsError.message}`);
     }
-
-    console.log('[update-ratings] Ratings rows:', ratingsData?.length || 0);
 
     const ratingsByUser = new Map(
       (ratingsData || []).map((rating) => [rating.user_id, rating])
@@ -234,7 +234,6 @@ serve(async (req) => {
 
     // Win/loss counts are handled by process-match-approval for all match modes
 
-    console.log('[update-ratings] Completed updates:', ratingUpdates.length);
     return new Response(
       JSON.stringify({
         message: 'Ratings updated successfully',

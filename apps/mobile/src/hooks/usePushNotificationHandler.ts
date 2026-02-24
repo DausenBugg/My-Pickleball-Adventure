@@ -15,9 +15,7 @@ export function usePushNotificationHandler() {
 
     // Handle notifications received while app is in foreground
     notificationListener.current = Notifications.addNotificationReceivedListener(
-      (notification) => {
-        console.log('Notification received:', notification);
-      }
+      () => {}
     );
 
     // Handle notification taps
@@ -28,7 +26,6 @@ export function usePushNotificationHandler() {
           
           // Validate data exists
           if (!data || typeof data !== 'object') {
-            console.log('No valid data in notification');
             return;
           }
           
@@ -39,8 +36,6 @@ export function usePushNotificationHandler() {
             router.push('/(tabs)/home?openNotifications=1');
           } else if (data.friend_request_id && typeof data.friend_request_id === 'string') {
             router.push('/(tabs)/search');
-          } else {
-            console.log('Unknown notification type or invalid data:', data);
           }
         } catch (error) {
           console.error('Error handling notification tap:', error);

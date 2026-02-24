@@ -37,24 +37,31 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    
-    // Verify the JWT token
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const isServiceCall = token === serviceRoleKey;
+
+    let userIdFromToken: string | null = null;
+
+    if (!isServiceCall) {
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid or expired token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      userIdFromToken = user.id;
     }
 
     // Parse request body - userId is optional, defaults to authenticated user
-    let userId: string;
+    let userId: string | null = userIdFromToken;
     try {
       const body = await req.json();
-      userId = body.userId || user.id;
+      userId = body.userId || userId;
     } catch {
-      userId = user.id;
+      // keep fallback from authenticated token
     }
 
     // Validate UUID format
@@ -67,8 +74,7 @@ serve(async (req) => {
 
     // Authorization: Users can only check their own achievements
     // (Service-to-service calls from other edge functions use service role)
-    const isServiceCall = authHeader.includes(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? 'NONE');
-    if (!isServiceCall && userId !== user.id) {
+    if (!isServiceCall && userId !== userIdFromToken) {
       return new Response(
         JSON.stringify({ error: 'Not authorized to check achievements for this user' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

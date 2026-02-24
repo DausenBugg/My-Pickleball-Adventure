@@ -29,7 +29,6 @@ export async function registerForPushNotificationsAsync() {
 
     // Safety check for Device module
     if (!Device || typeof Device.isDevice === 'undefined') {
-      if (__DEV__) console.log('Device module not available');
       return undefined;
     }
 
@@ -52,19 +51,10 @@ export async function registerForPushNotificationsAsync() {
           projectId: projectId ?? undefined,
         });
         token = tokenData?.data;
-        if (__DEV__) {
-          if (token) {
-            console.log('Push token:', token);
-          } else {
-            console.log('Token data was empty');
-          }
-        }
       } catch (tokenError) {
         if (__DEV__) console.error('Error getting expo push token:', tokenError);
         return null;
       }
-    } else {
-      if (__DEV__) console.log('Must use physical device for Push Notifications');
     }
   } catch (error) {
     if (__DEV__) console.error('Error in registerForPushNotificationsAsync:', error);
@@ -95,8 +85,6 @@ export async function savePushToken(userId: string, token: string) {
 
     if (error) {
       if (__DEV__) console.error('Error saving push token:', error);
-    } else {
-      if (__DEV__) console.log('Push token saved successfully');
     }
   } catch (err) {
     if (__DEV__) console.error('Error saving push token:', err);

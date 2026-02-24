@@ -96,10 +96,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('[process-match-approval] Authenticated user:', userId);
-
     const { matchId } = await req.json();
-    console.log('[process-match-approval] Processing match:', matchId);
 
     // Validate UUID format
     if (!matchId || !isValidUUID(matchId)) {
@@ -121,17 +118,8 @@ serve(async (req) => {
       throw new Error('Match not found');
     }
 
-    console.log('[process-match-approval] Match found:', {
-      id: match.id,
-      status: match.status,
-      match_type: match.match_type,
-      match_mode: match.match_mode,
-      winner_team: match.winner_team,
-    });
-
     // Only process pending matches
     if (match.status !== 'pending') {
-      console.log('[process-match-approval] Match not pending, skipping:', match.status);
       return new Response(
         JSON.stringify({ message: 'Match is not pending', status: match.status }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -148,8 +136,6 @@ serve(async (req) => {
       console.error('[process-match-approval] Participants fetch error:', participantsError);
       throw new Error('No participants found');
     }
-
-    console.log('[process-match-approval] Participants:', participants.length);
 
     // Authorization: Only match participants can trigger approval processing
     const isParticipant = participants.some((p: any) => p.user_id === userId);
@@ -174,19 +160,12 @@ serve(async (req) => {
     const approvedCount = approvals?.filter((a: any) => a.approved).length || 0;
     const rejectedCount = approvals?.filter((a: any) => !a.approved).length || 0;
     
-    console.log('[process-match-approval] Approval status:', {
-      approved: approvedCount,
-      rejected: rejectedCount,
-      required: match.match_type === 'singles' ? 2 : 3,
-    });
-
     // Check if match meets approval threshold
     const requiredApprovals = match.match_type === 'singles' ? 2 : 3;
     const isApproved = approvedCount >= requiredApprovals;
     const isRejected = rejectedCount > 0; // Any rejection kills the match
 
     if (!isApproved && !isRejected) {
-      console.log('[process-match-approval] Not enough votes yet');
       return new Response(
         JSON.stringify({ message: 'Not enough approvals yet' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -194,7 +173,6 @@ serve(async (req) => {
     }
 
     if (isRejected) {
-      console.log('[process-match-approval] Match rejected');
       // Update match status to rejected
       const { error: rejectError } = await supabaseClient
         .from('matches')
@@ -212,7 +190,6 @@ serve(async (req) => {
     }
 
     // Match is approved - award XP
-    console.log('[process-match-approval] Match approved, awarding XP');
     const xpEvents = [];
     
     for (const participant of participants) {
@@ -239,11 +216,6 @@ serve(async (req) => {
           amount: xp,
           reason: `${resolvedResult === 'win' ? 'Win' : 'Loss'} in ${match.match_mode} ${match.match_type}`,
         });
-        console.log('[process-match-approval] XP event queued:', {
-          user_id: participant.user_id,
-          amount: xp,
-          result: resolvedResult,
-        });
       }
     }
 
@@ -252,8 +224,6 @@ serve(async (req) => {
       const { error: xpInsertError } = await supabaseClient.from('xp_events').insert(xpEvents);
       if (xpInsertError) {
         console.error('[process-match-approval] Error inserting XP events:', xpInsertError);
-      } else {
-        console.log('[process-match-approval] XP events inserted successfully');
       }
     }
 
@@ -280,14 +250,6 @@ serve(async (req) => {
           newLevel++;
         }
 
-        console.log('[process-match-approval] Updating profile:', {
-          user_id: event.user_id,
-          oldXP: profile.total_xp,
-          newXP: newTotalXP,
-          oldLevel: profile.level || 1,
-          newLevel,
-        });
-
         const { error: updateError } = await supabaseClient
           .from('profiles')
           .update({ total_xp: newTotalXP, level: newLevel })
@@ -295,8 +257,6 @@ serve(async (req) => {
 
         if (updateError) {
           console.error('[process-match-approval] Error updating profile XP:', event.user_id, updateError);
-        } else {
-          console.log('[process-match-approval] Profile XP updated successfully');
         }
       }
     }
@@ -321,25 +281,24 @@ serve(async (req) => {
 
     if (statusError) {
       console.error('[process-match-approval] Error updating match status:', statusError);
-    } else {
-      console.log('[process-match-approval] Match status updated to approved');
     }
 
     // If this is a ranked match, update ratings
     let updateRatingsResult: { status: number; body: string } | null = null;
+    const incomingAuth = req.headers.get('Authorization');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const internalAuthHeader = serviceRoleKey
+      ? `Bearer ${serviceRoleKey}`
+      : incomingAuth || '';
     if (match.match_mode === 'ranked') {
-      console.log('[process-match-approval] Invoking update-ratings for ranked match');
       try {
-        const incomingAuth = req.headers.get('Authorization');
-        const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-        const authHeader = incomingAuth || (anonKey ? `Bearer ${anonKey}` : '');
-        console.log('[process-match-approval] update-ratings auth source:', incomingAuth ? 'incoming' : anonKey ? 'anon' : 'none');
         const updateResponse = await fetch(
           `${Deno.env.get('SUPABASE_URL')}/functions/v1/update-ratings`,
           {
             method: 'POST',
             headers: {
-              ...(authHeader ? { Authorization: authHeader } : {}),
+              ...(internalAuthHeader ? { Authorization: internalAuthHeader } : {}),
               ...(anonKey ? { apikey: anonKey } : {}),
               'Content-Type': 'application/json',
             },
@@ -349,28 +308,27 @@ serve(async (req) => {
 
         const updateBody = await updateResponse.text();
         updateRatingsResult = { status: updateResponse.status, body: updateBody };
-        console.log('[process-match-approval] update-ratings response:', updateResponse.status, updateBody);
       } catch (ratingError) {
         console.error('[process-match-approval] Error invoking update-ratings:', ratingError);
       }
     }
 
     // Check achievements for all participants
-    console.log('[process-match-approval] Invoking check-achievements for all participants');
     const achievementChecks = participants.map((p: any) =>
       supabaseClient.functions.invoke('check-achievements', {
+        headers: {
+          ...(internalAuthHeader ? { Authorization: internalAuthHeader } : {}),
+          ...(anonKey ? { apikey: anonKey } : {}),
+        },
         body: { userId: p.user_id },
       })
     );
     
     try {
       await Promise.all(achievementChecks);
-      console.log('[process-match-approval] All achievement checks completed');
     } catch (achievementError) {
       console.error('[process-match-approval] Error checking achievements:', achievementError);
     }
-
-    console.log('[process-match-approval] Match processing completed successfully');
     return new Response(
       JSON.stringify({
         message: 'Match approved and XP awarded',

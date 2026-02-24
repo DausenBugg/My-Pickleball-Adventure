@@ -36,6 +36,10 @@ We have four Edge Functions:
 
 **Called when**: A ranked match is approved (called automatically by process-match-approval).
 
+**Auth model**:
+- Accepts authenticated user JWT calls
+- Accepts trusted internal service-role calls from other edge functions
+
 **What it does**:
 - Calculates team ratings (average for doubles)
 - Applies Elo algorithm with K-factor bands:
@@ -52,6 +56,10 @@ We have four Edge Functions:
 **Purpose**: Checks if a player has unlocked any new achievements.
 
 **Called when**: Automatically after match approval.
+
+**Auth model**:
+- Accepts authenticated user JWT calls
+- Accepts trusted internal service-role calls from other edge functions
 
 **What it does**:
 - Checks player stats (games_played, wins, level) against achievement requirements
@@ -84,6 +92,17 @@ npx supabase functions deploy send-push-notifications
 ```powershell
 supabase functions deploy process-match-approval
 ```
+
+## Function Auth Configuration
+
+For this project, edge functions perform explicit auth checks in code.
+
+- `process-match-approval`: `verify_jwt = false`
+- `update-ratings`: `verify_jwt = false`
+
+This allows robust internal service-to-service calls while still enforcing authorization inside each function.
+
+After changing any `config.toml` auth setting, redeploy that function.
 
 ## Testing
 

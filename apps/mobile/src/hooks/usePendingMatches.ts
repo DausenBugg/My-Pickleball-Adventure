@@ -286,14 +286,6 @@ export function usePendingMatches() {
         const expectedIssuerPrefix = `${supabaseUrl}/auth/v1`;
         const isMatch = issuer.startsWith(expectedIssuerPrefix);
 
-        if (__DEV__) {
-          console.log('[usePendingMatches] JWT issuer check', {
-            expectedIssuerPrefix,
-            issuer,
-            isMatch,
-          });
-        }
-
         if (!isMatch) {
           return 'App auth token is from a different Supabase project than EXPO_PUBLIC_SUPABASE_URL.';
         }
@@ -309,16 +301,6 @@ export function usePendingMatches() {
       await client.auth.signOut({ scope: 'local' });
       setError('Session project mismatch detected. Please sign in again.');
       return false;
-    }
-
-    if (__DEV__) {
-      console.log('[usePendingMatches] invoking process-match-approval', {
-        matchId,
-        expectedUserId,
-        liveUserId: liveSessionResult.token ? expectedUserId : null,
-        tokenLength: liveSessionResult.token?.length || 0,
-      });
-      console.log('[usePendingMatches] access token (copy for testing):', liveSessionResult.token);
     }
 
     let result = await invokeWithDetails();
@@ -349,16 +331,6 @@ export function usePendingMatches() {
       if (!refreshedTokenValidation.ok) {
         setError(refreshedTokenValidation.message);
         return false;
-      }
-
-      if (__DEV__) {
-        console.log('[usePendingMatches] retrying process-match-approval after refresh', {
-          matchId,
-          expectedUserId,
-          refreshedUserId: refreshedSession.user.id,
-          tokenLength: refreshedSession.access_token.length,
-        });
-        console.log('[usePendingMatches] refreshed access token (copy for testing):', refreshedSession.access_token);
       }
 
       result = await invokeWithDetails();
