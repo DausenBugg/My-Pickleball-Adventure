@@ -24,6 +24,8 @@ EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
+If `apps/watch/.env` is missing, the app falls back to values from `apps/mobile/.env`.
+
 2. Install dependencies:
 
 ```bash

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { supabase } from '../lib/supabase';
+import { recordTelemetry } from '../lib/telemetry';
 import { useAuth } from '../state/auth';
 
 export type MatchParticipant = {
@@ -25,6 +26,7 @@ export function useSubmitMatch() {
     if (!session?.user?.id || !supabase) {
       const message = 'Not authenticated';
       setError(message);
+      recordTelemetry('submit_match_not_authenticated');
       return { data: null, error: message };
     }
 
@@ -46,6 +48,7 @@ export function useSubmitMatch() {
         const message = matchError?.message || 'Failed to create match';
         setError(message);
         setLoading(false);
+        recordTelemetry('submit_match_create_failed', { message });
         return { data: null, error: message };
       }
 
@@ -62,6 +65,7 @@ export function useSubmitMatch() {
         const message = participantsError.message;
         setError(message);
         setLoading(false);
+        recordTelemetry('submit_match_participants_insert_failed', { message });
         return { data: null, error: message };
       }
 
@@ -88,10 +92,13 @@ export function useSubmitMatch() {
 
       setLoading(false);
       return { data: { id: matchId }, error: null };
-    } catch {
+    } catch (err: any) {
       const message = 'An unexpected error occurred';
       setError(message);
       setLoading(false);
+      recordTelemetry('submit_match_exception', {
+        message: err?.message ?? 'unknown',
+      });
       return { data: null, error: message };
     }
   };

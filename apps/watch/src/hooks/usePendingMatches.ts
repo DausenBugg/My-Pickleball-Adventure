@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { supabase } from '../lib/supabase';
+import { recordTelemetry } from '../lib/telemetry';
 import { useAuth } from '../state/auth';
 
 export type PendingMatch = {
@@ -114,7 +115,9 @@ export function usePendingMatches() {
 
       setMatches(enrichedMatches);
     } catch (err: any) {
-      setError(err.message || 'Failed to load pending matches');
+      const message = err.message || 'Failed to load pending matches';
+      setError(message);
+      recordTelemetry('pending_matches_fetch_failed', { message });
     } finally {
       setLoading(false);
     }
@@ -125,14 +128,22 @@ export function usePendingMatches() {
   }, [session?.user?.id]);
 
   const processMatchApproval = async (matchId: string) => {
-    if (!supabase) return false;
+    if (!supabase) {
+      recordTelemetry('pending_matches_process_missing_supabase', { matchId });
+      return false;
+    }
+
     const { error: invokeError } = await supabase.functions.invoke('process-match-approval', {
       body: { matchId },
     });
+
     if (invokeError) {
-      setError(invokeError.message || 'Failed to process approval');
+      const message = invokeError.message || 'Failed to process approval';
+      setError(message);
+      recordTelemetry('pending_matches_process_failed', { matchId, message });
       return false;
     }
+
     return true;
   };
 
@@ -156,7 +167,11 @@ export function usePendingMatches() {
       const processed = await processMatchApproval(matchId);
       await fetchMatches();
       return processed;
-    } catch {
+    } catch (err: any) {
+      recordTelemetry('pending_matches_approve_failed', {
+        matchId,
+        message: err?.message ?? 'unknown',
+      });
       return false;
     }
   };
@@ -181,7 +196,11 @@ export function usePendingMatches() {
       const processed = await processMatchApproval(matchId);
       await fetchMatches();
       return processed;
-    } catch {
+    } catch (err: any) {
+      recordTelemetry('pending_matches_reject_failed', {
+        matchId,
+        message: err?.message ?? 'unknown',
+      });
       return false;
     }
   };

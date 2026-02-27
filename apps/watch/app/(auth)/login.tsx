@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
+import { recordTelemetry } from '../../src/lib/telemetry';
 import { useAuth } from '../../src/state/auth';
 
 export default function LoginScreen() {
@@ -29,24 +30,41 @@ export default function LoginScreen() {
   const handleSignIn = async () => {
     if (!canSubmit) {
       setError('Enter a valid email and password.');
+      recordTelemetry('auth_login_validation_failed', {
+        hasEmail: Boolean(email),
+        passwordLength: password.length,
+      });
       return;
     }
+
     if (!isSupabaseConfigured || !supabase) {
       setError('Supabase is not configured.');
+      recordTelemetry('auth_login_missing_supabase_config');
       return;
     }
 
     setSubmitting(true);
     setError('');
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    setSubmitting(false);
-    if (signInError) {
-      setError(signInError.message);
+      if (signInError) {
+        setError(signInError.message);
+        recordTelemetry('auth_login_failed', {
+          message: signInError.message,
+        });
+      }
+    } catch (err: any) {
+      setError('Unable to sign in right now.');
+      recordTelemetry('auth_login_exception', {
+        message: err?.message ?? 'unknown',
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
