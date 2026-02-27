@@ -91,8 +91,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   heroImage: {
-    width: 96,
-    height: 96,
+    width: 400,
+    height: 400,
     marginBottom: spacing.sm,
   },
   heroTitle: {
@@ -116,13 +116,13 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radii.lg,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.91)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   featureImage: {
-    width: 28,
-    height: 28,
+    width: 60,
+    height: 60,
   },
   featureLabel: {
     fontSize: typography.sizes.sm,
