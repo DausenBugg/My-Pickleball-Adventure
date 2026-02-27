@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "My Pickleball Watch",
+    "slug": "my-pickleball-watch",
+    "scheme": "my-pickleball-watch",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "platforms": ["android"],
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.dbugg.mypickleballwatch"
+    },
+    "extra": {
+      "router": {}
+    },
+    "plugins": ["expo-router"]
+  }
+}

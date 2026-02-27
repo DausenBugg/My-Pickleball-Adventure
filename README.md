@@ -17,6 +17,7 @@ Gamify your pickleball progress. Every match played levels up your pickleball le
 
 ```
 apps/mobile/          # React Native mobile app (iOS/Android)
+apps/watch/           # React Native watch app (Wear OS)
 docs/                 # System design docs (ranking, leveling, data model)
 supabase/             # Backend migrations and functions (pending)
 ```
@@ -45,6 +46,32 @@ supabase/             # Backend migrations and functions (pending)
    ```
 
 5. Open in Expo Go or run `npm run android` / `npm run ios`
+
+### Watch App (Wear OS)
+
+1. Navigate to the watch app:
+   ```bash
+   cd apps/watch
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up environment:
+   - Create `apps/watch/.env`
+   - Add the same Supabase credentials used by mobile
+
+4. Start the dev server:
+   ```bash
+   npm run start
+   ```
+
+5. Run Android target:
+   ```bash
+   npm run android
+   ```
 
 ### Supabase Setup (Required)
 
