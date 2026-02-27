@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,8 +12,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Player, usePlayerSearch } from '../../src/hooks/usePlayerSearch';
+import { useRecentPlayers } from '../../src/hooks/useRecentPlayers';
 import { MatchParticipant, useSubmitMatch } from '../../src/hooks/useSubmitMatch';
 import { useAuth } from '../../src/state/auth';
+import { watchColors } from '../../src/theme/colors';
 
 type MatchType = 'singles' | 'doubles';
 type MatchMode = 'casual' | 'ranked';
@@ -25,6 +27,7 @@ type SearchFieldProps = {
   selectedPlayer: Player | null;
   onSelectPlayer: (player: Player) => void;
   onClearPlayer: () => void;
+  recentPlayers: Player[];
 };
 
 function SearchField({
@@ -34,8 +37,23 @@ function SearchField({
   selectedPlayer,
   onSelectPlayer,
   onClearPlayer,
+  recentPlayers,
 }: SearchFieldProps) {
+  const [isFocused, setIsFocused] = useState(false);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { players, loading } = usePlayerSearch(value);
+  const trimmedQuery = value.trim();
+  const showRecent = isFocused && trimmedQuery.length === 0;
+  const showSearchResults = trimmedQuery.length > 0;
+  const visiblePlayers = showRecent ? recentPlayers : players;
+
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (selectedPlayer) {
     return (
@@ -59,21 +77,44 @@ function SearchField({
       <TextInput
         style={styles.input}
         placeholder="Search name/email"
-        placeholderTextColor="#8EA1C7"
+        placeholderTextColor={watchColors.muted}
         value={value}
         onChangeText={onChangeText}
         autoCapitalize="none"
+        onFocus={() => {
+          if (blurTimeoutRef.current) {
+            clearTimeout(blurTimeoutRef.current);
+          }
+          setIsFocused(true);
+        }}
+        onBlur={() => {
+          blurTimeoutRef.current = setTimeout(() => {
+            setIsFocused(false);
+          }, 120);
+        }}
       />
-      {loading && value.trim().length > 1 ? (
+      {loading && showSearchResults ? (
         <View style={styles.searchStateRow}>
-          <ActivityIndicator size="small" color="#FFFFFF" />
+          <ActivityIndicator size="small" color={watchColors.primary} />
           <Text style={styles.searchStateText}>Searching...</Text>
         </View>
       ) : null}
-      {!loading && value.trim().length > 1 && players.length > 0 ? (
+      {!loading && visiblePlayers.length > 0 && (showRecent || showSearchResults) ? (
         <View style={styles.resultsWrap}>
-          {players.map((player) => (
-            <Pressable key={player.id} style={styles.resultItem} onPress={() => onSelectPlayer(player)}>
+          {visiblePlayers.map((player) => (
+            <Pressable
+              key={player.id}
+              style={styles.resultItem}
+              onPressIn={() => {
+                if (blurTimeoutRef.current) {
+                  clearTimeout(blurTimeoutRef.current);
+                }
+              }}
+              onPress={() => {
+                onSelectPlayer(player);
+                setIsFocused(false);
+              }}
+            >
               <Text style={styles.resultTitle} numberOfLines={1}>
                 {player.full_name || player.email}
               </Text>
@@ -84,8 +125,11 @@ function SearchField({
           ))}
         </View>
       ) : null}
-      {!loading && value.trim().length > 1 && players.length === 0 ? (
+      {!loading && showSearchResults && players.length === 0 ? (
         <Text style={styles.searchStateText}>No players found.</Text>
+      ) : null}
+      {!loading && showRecent && recentPlayers.length === 0 ? (
+        <Text style={styles.searchStateText}>No recent players yet.</Text>
       ) : null}
     </View>
   );
@@ -94,6 +138,7 @@ function SearchField({
 export default function LogMatchScreen() {
   const { session } = useAuth();
   const { submitMatch, loading: submitting, error: submitError } = useSubmitMatch();
+  const { players: recentPlayers } = useRecentPlayers();
 
   const [matchType, setMatchType] = useState<MatchType>('singles');
   const [matchMode, setMatchMode] = useState<MatchMode>('casual');
@@ -121,7 +166,9 @@ export default function LogMatchScreen() {
     const winnerScore = Math.max(parsedUserScore, parsedOpponentScore);
     const loserScore = Math.min(parsedUserScore, parsedOpponentScore);
     if (winnerScore < 11) return { valid: false, message: 'Winner needs 11+.' };
-    if (winnerScore - loserScore < 2) return { valid: false, message: 'Win by 2.' };
+    if (winnerScore - loserScore !== 2) {
+      return { valid: false, message: 'Winner must finish exactly 2 points ahead.' };
+    }
     if (!opponent) return { valid: false, message: 'Select opponent.' };
     if (matchType === 'doubles' && (!ally || !opponent2)) {
       return { valid: false, message: 'Select all players.' };
@@ -217,7 +264,7 @@ export default function LogMatchScreen() {
             <Text style={styles.segmentText}>Casual</Text>
           </Pressable>
           <Pressable
-            style={[styles.segmentBtn, matchMode === 'ranked' ? styles.segmentBtnActive : null]}
+            style={[styles.segmentBtn, matchMode === 'ranked' ? styles.segmentBtnActiveSecondary : null]}
             onPress={() => setMatchMode('ranked')}
           >
             <Text style={styles.segmentText}>Ranked</Text>
@@ -258,6 +305,7 @@ export default function LogMatchScreen() {
             setOpponent(null);
             setOpponentSearch('');
           }}
+          recentPlayers={recentPlayers}
         />
 
         {matchType === 'doubles' ? (
@@ -275,6 +323,7 @@ export default function LogMatchScreen() {
                 setAlly(null);
                 setAllySearch('');
               }}
+              recentPlayers={recentPlayers}
             />
 
             <SearchField
@@ -290,6 +339,7 @@ export default function LogMatchScreen() {
                 setOpponent2(null);
                 setOpponent2Search('');
               }}
+              recentPlayers={recentPlayers}
             />
           </>
         ) : null}
@@ -313,7 +363,7 @@ export default function LogMatchScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B1220',
+    backgroundColor: watchColors.background,
   },
   container: {
     paddingHorizontal: 12,
@@ -321,14 +371,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   pageTitle: {
-    color: '#FFFFFF',
+    color: watchColors.text,
     fontSize: 20,
     fontWeight: '700',
     textAlign: 'center',
     marginTop: 2,
   },
   pageSubtitle: {
-    color: '#9DB0D5',
+    color: watchColors.muted,
     fontSize: 12,
     textAlign: 'center',
   },
@@ -339,16 +389,19 @@ const styles = StyleSheet.create({
   segmentBtn: {
     flex: 1,
     borderRadius: 12,
-    backgroundColor: '#1A253C',
+    backgroundColor: watchColors.primaryGhost,
     minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   segmentBtnActive: {
-    backgroundColor: '#355FD3',
+    backgroundColor: watchColors.primary,
+  },
+  segmentBtnActiveSecondary: {
+    backgroundColor: watchColors.secondary,
   },
   segmentText: {
-    color: '#FFFFFF',
+    color: watchColors.textOnPrimary,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -364,17 +417,17 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   fieldLabel: {
-    color: '#C8D5EE',
+    color: watchColors.muted,
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#25324A',
-    backgroundColor: '#121B2E',
+    borderColor: watchColors.border,
+    backgroundColor: watchColors.surface,
     borderRadius: 12,
-    color: '#FFFFFF',
+    color: watchColors.text,
     fontSize: 14,
     paddingHorizontal: 10,
     paddingVertical: 9,
@@ -385,27 +438,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderRadius: 12,
-    backgroundColor: '#16243D',
+    backgroundColor: watchColors.primaryGhost,
     borderWidth: 1,
-    borderColor: '#2F4B86',
+    borderColor: watchColors.primary,
     paddingHorizontal: 10,
     minHeight: 40,
   },
   selectedPlayerText: {
-    color: '#FFFFFF',
+    color: watchColors.text,
     fontSize: 13,
     fontWeight: '600',
     flex: 1,
     paddingRight: 8,
   },
   tinyBtn: {
-    backgroundColor: '#2B3B5D',
+    backgroundColor: watchColors.primary,
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 5,
   },
   tinyBtnText: {
-    color: '#FFFFFF',
+    color: watchColors.textOnPrimary,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -415,47 +468,47 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   searchStateText: {
-    color: '#95A7CA',
+    color: watchColors.muted,
     fontSize: 11,
   },
   resultsWrap: {
     borderWidth: 1,
-    borderColor: '#23314B',
+    borderColor: watchColors.border,
     borderRadius: 12,
     overflow: 'hidden',
   },
   resultItem: {
-    backgroundColor: '#121B2E',
+    backgroundColor: watchColors.surface,
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#23314B',
+    borderBottomColor: watchColors.border,
   },
   resultTitle: {
-    color: '#FFFFFF',
+    color: watchColors.text,
     fontSize: 13,
     fontWeight: '600',
   },
   resultMeta: {
-    color: '#97AAD0',
+    color: watchColors.muted,
     fontSize: 11,
     marginTop: 1,
   },
   validationText: {
-    color: '#AFC1E3',
+    color: watchColors.muted,
     fontSize: 12,
     textAlign: 'center',
   },
   primaryBtn: {
     minHeight: 44,
     borderRadius: 14,
-    backgroundColor: '#3E6AE1',
+    backgroundColor: watchColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
   primaryBtnText: {
-    color: '#FFFFFF',
+    color: watchColors.textOnPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -463,7 +516,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   errorText: {
-    color: '#FF9AA2',
+    color: watchColors.secondary,
     fontSize: 11,
     textAlign: 'center',
   },

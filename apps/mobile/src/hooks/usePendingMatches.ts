@@ -76,6 +76,7 @@ export function usePendingMatches() {
         )
         .in('id', matchIds)
         .eq('status', 'pending')
+        .neq('submitter_id', session.user.id)
         .order('created_at', { ascending: false });
 
       if (matchesError) throw matchesError;

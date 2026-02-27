@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
 import { recordTelemetry } from '../../src/lib/telemetry';
 import { useAuth } from '../../src/state/auth';
+import { watchColors } from '../../src/theme/colors';
 
 export default function LoginScreen() {
   const { session, loading } = useAuth();
@@ -111,7 +112,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B1220',
+    backgroundColor: watchColors.background,
   },
   container: {
     flex: 1,
@@ -120,29 +121,29 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   title: {
-    color: '#FFFFFF',
+    color: watchColors.text,
     fontSize: 22,
     fontWeight: '700',
     textAlign: 'center',
   },
   subtitle: {
-    color: '#AFC2E4',
+    color: watchColors.muted,
     fontSize: 13,
     textAlign: 'center',
     marginBottom: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#25324A',
-    backgroundColor: '#141E32',
-    color: '#FFFFFF',
+    borderColor: watchColors.border,
+    backgroundColor: watchColors.surface,
+    color: watchColors.text,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
   },
   button: {
-    backgroundColor: '#3E6AE1',
+    backgroundColor: watchColors.primary,
     borderRadius: 14,
     paddingVertical: 12,
     alignItems: 'center',
@@ -154,12 +155,12 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: watchColors.textOnPrimary,
     fontWeight: '700',
     fontSize: 14,
   },
   error: {
-    color: '#FF9AA2',
+    color: watchColors.secondary,
     fontSize: 12,
     textAlign: 'center',
   },

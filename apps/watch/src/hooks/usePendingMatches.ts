@@ -6,6 +6,7 @@ import { useAuth } from '../state/auth';
 
 export type PendingMatch = {
   id: string;
+  submitter_id: string;
   match_type: 'singles' | 'doubles';
   match_mode: 'casual' | 'ranked';
   team_a_score: number;
@@ -57,6 +58,7 @@ export function usePendingMatches() {
         .select(
           `
           id,
+          submitter_id,
           match_type,
           match_mode,
           team_a_score,
@@ -67,6 +69,7 @@ export function usePendingMatches() {
         )
         .in('id', matchIds)
         .eq('status', 'pending')
+        .neq('submitter_id', session.user.id)
         .order('created_at', { ascending: false });
 
       if (matchesError) throw matchesError;
@@ -100,6 +103,7 @@ export function usePendingMatches() {
 
       const enrichedMatches: PendingMatch[] = matchesData.map((match: any) => ({
         id: match.id,
+        submitter_id: match.submitter_id,
         match_type: match.match_type,
         match_mode: match.match_mode,
         team_a_score: match.team_a_score,

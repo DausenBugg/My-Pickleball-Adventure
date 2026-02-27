@@ -13,7 +13,7 @@ export type Player = {
   rating: number;
 };
 
-type ProfileWithRating = {
+export type ProfileWithRating = {
   id: string;
   full_name: string | null;
   email: string;
@@ -23,9 +23,9 @@ type ProfileWithRating = {
   ratings?: { rating?: number }[] | { rating?: number } | null;
 };
 
-const PLAYER_SEARCH_SELECT = 'id, full_name, email, level, wins, losses, ratings(rating)';
+export const PLAYER_SEARCH_SELECT = 'id, full_name, email, level, wins, losses, ratings(rating)';
 
-function mapProfileToPlayer(profile: ProfileWithRating): Player {
+export function mapProfileToPlayer(profile: ProfileWithRating): Player {
   const ratingValue = Array.isArray(profile.ratings)
     ? profile.ratings[0]?.rating
     : profile.ratings?.rating;
@@ -50,7 +50,7 @@ export function usePlayerSearch(query: string) {
   useEffect(() => {
     const client = supabase;
 
-    if (!session?.user?.id || !client || query.trim().length < 2) {
+    if (!session?.user?.id || !client || query.trim().length === 0) {
       setPlayers([]);
       setLoading(false);
       return;

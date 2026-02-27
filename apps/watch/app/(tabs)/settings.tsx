@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/state/auth';
+import { watchColors } from '../../src/theme/colors';
 
 export default function SettingsScreen() {
   const { session } = useAuth();
@@ -31,7 +32,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B1220',
+    backgroundColor: watchColors.background,
   },
   container: {
     flex: 1,
@@ -41,12 +42,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   pageTitle: {
-    color: '#FFFFFF',
+    color: watchColors.text,
     fontSize: 20,
     fontWeight: '700',
   },
   email: {
-    color: '#AFC2E4',
+    color: watchColors.muted,
     fontSize: 12,
     maxWidth: '100%',
   },
@@ -56,11 +57,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#B54A60',
+    backgroundColor: watchColors.secondary,
     marginTop: 6,
   },
   signOutText: {
-    color: '#FFFFFF',
+    color: watchColors.textOnPrimary,
     fontSize: 14,
     fontWeight: '700',
   },

@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { usePendingMatches } from '../../src/hooks/usePendingMatches';
+import { watchColors } from '../../src/theme/colors';
 
 export default function ApprovalsScreen() {
   const { matches, loading, error, approveMatch, rejectMatch, refresh } = usePendingMatches();
@@ -30,7 +31,7 @@ export default function ApprovalsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor="#FFFFFF" />}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={watchColors.primary} />}
       >
         <Text style={styles.pageTitle}>Approvals</Text>
         <Text style={styles.pageSubtitle}>Pending matches need your vote.</Text>
@@ -97,7 +98,7 @@ export default function ApprovalsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B1220',
+    backgroundColor: watchColors.background,
   },
   container: {
     paddingHorizontal: 12,
@@ -105,14 +106,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   pageTitle: {
-    color: '#FFFFFF',
+    color: watchColors.text,
     fontSize: 20,
     fontWeight: '700',
     textAlign: 'center',
     marginTop: 2,
   },
   pageSubtitle: {
-    color: '#9DB0D5',
+    color: watchColors.muted,
     fontSize: 12,
     textAlign: 'center',
   },
@@ -123,24 +124,24 @@ const styles = StyleSheet.create({
     minHeight: 80,
   },
   mutedText: {
-    color: '#9DB0D5',
+    color: watchColors.muted,
     fontSize: 12,
   },
   card: {
     borderWidth: 1,
-    borderColor: '#24324A',
+    borderColor: watchColors.borderLight,
     borderRadius: 14,
-    backgroundColor: '#121B2E',
+    backgroundColor: watchColors.cardBackground,
     padding: 10,
     gap: 5,
   },
   cardTitle: {
-    color: '#FFFFFF',
+    color: watchColors.text,
     fontSize: 13,
     fontWeight: '700',
   },
   cardMeta: {
-    color: '#A9BCE1',
+    color: watchColors.muted,
     fontSize: 11,
   },
   actionRow: {
@@ -156,10 +157,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   approveBtn: {
-    backgroundColor: '#2D9B5E',
+    backgroundColor: watchColors.success,
   },
   rejectBtn: {
-    backgroundColor: '#B54A60',
+    backgroundColor: watchColors.secondary,
   },
   actionText: {
     color: '#FFFFFF',
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   errorText: {
-    color: '#FF9AA2',
+    color: watchColors.secondary,
     fontSize: 11,
     textAlign: 'center',
   },
