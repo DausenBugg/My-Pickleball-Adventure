@@ -104,7 +104,7 @@ export function useFriends() {
     });
 
     if (insertError) {
-      console.error('Failed to send friend request:', insertError);
+      if (__DEV__) console.error('Failed to send friend request:', insertError);
       return false;
     }
 
@@ -126,7 +126,7 @@ export function useFriends() {
         data: { requester_id: session.user.id },
       });
 
-    if (notificationError) {
+    if (notificationError && __DEV__) {
       console.error('Failed to create friend request notification:', notificationError);
     }
 
@@ -145,7 +145,7 @@ export function useFriends() {
       .eq('addressee_id', session.user.id);
 
     if (updateError) {
-      console.error('Failed to accept friend request:', updateError);
+      if (__DEV__) console.error('Failed to accept friend request:', updateError);
       return false;
     }
 
@@ -167,7 +167,7 @@ export function useFriends() {
       .eq('addressee_id', session.user.id);
 
     if (deleteError) {
-      console.error('Failed to reject friend request:', deleteError);
+      if (__DEV__) console.error('Failed to reject friend request:', deleteError);
       return false;
     }
 

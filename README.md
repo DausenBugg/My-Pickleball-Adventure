@@ -4,22 +4,31 @@ Gamify your pickleball progress. Every match played levels up your pickleball le
 
 ## Project Status
 
-**Mobile app:** ✅ Auth flow, navigation, and UI screens complete
-**Backend:** ✅ Database schema + migrations created (ready to run)
-**Docs:** ✅ Design system, ranking, and leveling rules documented
+**Mobile app:** ✅ Feature-complete, ready for Play Store
+**Watch app:** ✅ Core features complete (Wear OS)
+**Backend:** ✅ Database schema + migrations + edge functions live
+**CI/CD:** ✅ GitHub Actions for TypeScript checks + EAS Build/Submit
+**Docs:** ✅ Design system, ranking, leveling, deployment documented
 
 ## Stack
 
-- **Mobile:** Expo React Native + TypeScript + Expo Router
+- **Mobile:** Expo SDK 54 + React Native + TypeScript + Expo Router
+- **Watch:** Expo SDK 54 + React Native (Wear OS)
 - **Backend:** Supabase (Postgres, Auth, RLS, Edge Functions)
+- **CI/CD:** GitHub Actions + EAS Build + EAS Submit
+- **Ads:** Google AdMob (banner ads)
+- **Updates:** expo-updates (OTA)
+
+See [docs/stack.md](docs/stack.md) for the full tech stack.
 
 ## Project structure
 
 ```
-apps/mobile/          # React Native mobile app (iOS/Android)
+apps/mobile/          # React Native mobile app (Android)
 apps/watch/           # React Native watch app (Wear OS)
-docs/                 # System design docs (ranking, leveling, data model)
-supabase/             # Backend migrations and functions (pending)
+docs/                 # System design docs (ranking, leveling, data model, deployment)
+supabase/             # Backend migrations and edge functions
+.github/workflows/    # CI (TypeScript checks) + Deploy (EAS Build/Submit)
 ```
 
 ## Quick Start
@@ -33,7 +42,7 @@ supabase/             # Backend migrations and functions (pending)
 
 2. Install dependencies:
    ```bash
-   npm install
+   npm install --legacy-peer-deps
    ```
 
 3. Set up environment:
@@ -45,7 +54,7 @@ supabase/             # Backend migrations and functions (pending)
    npm run start
    ```
 
-5. Open in Expo Go or run `npm run android` / `npm run ios`
+5. Open in Expo Go or run `npm run android`
 
 ### Watch App (Wear OS)
 
@@ -56,7 +65,7 @@ supabase/             # Backend migrations and functions (pending)
 
 2. Install dependencies:
    ```bash
-   npm install
+   npm install --legacy-peer-deps
    ```
 
 3. Set up environment:
@@ -86,6 +95,16 @@ The app requires a Supabase project for authentication and data:
    ```
 4. Restart Metro bundler: `npm run start -c`
 
+## Deployment
+
+- **CI/CD Guide:** [docs/deployment-ci-cd-guide.md](docs/deployment-ci-cd-guide.md) — step-by-step GitHub Actions + Play Store setup
+- **Play Store Guide:** [docs/play-store-guide.md](docs/play-store-guide.md) — store listing, declarations, and submission
+- **Privacy Policy:** [docs/privacy-policy.md](docs/privacy-policy.md) — required for Play Store and AdMob
+
+Push to `main` → GitHub Actions runs TypeScript checks → builds both apps via EAS → submits to Play Store internal track.
+
+For JS-only hotfixes: `eas update --channel production --message "description"`
+
 ## Docs
 
 ### Core Documentation
@@ -95,23 +114,44 @@ The app requires a Supabase project for authentication and data:
 - [Leveling System (XP)](docs/leveling.md)
 - [Roadmap](docs/roadmap.md)
 
-### Implementation Guides
-- [New Features Summary](docs/new-features.md)
+### Deployment & Operations
+- [Deployment & CI/CD Guide](docs/deployment-ci-cd-guide.md)
+- [Play Store Guide](docs/play-store-guide.md)
+- [Privacy Policy](docs/privacy-policy.md)
 - [Edge Functions Deployment](docs/edge-functions.md)
 - [Push Notifications Setup](docs/push-notifications.md)
+
+### Implementation Guides
+- [New Features Summary](docs/new-features.md)
 - [Edge Case Testing](docs/edge-case-testing.md)
+- [Design Assets Guide](docs/design-assets-guide.md)
 
 ## Features Implemented
 
 ### Mobile App
 - ✅ Welcome, login, and registration screens
+- ✅ Email verification flow
+- ✅ Onboarding carousel
 - ✅ Session-aware navigation (AuthGate)
-- ✅ Home KPI dashboard
-- ✅ Add Match form (singles/doubles, validation, search)
-- ✅ Player search with filters
+- ✅ Home KPI dashboard (wins, losses, level, XP, ranking)
+- ✅ Add Match form (singles/doubles, score validation, ranked/casual)
+- ✅ Player search with recent players
+- ✅ Match approval workflow
+- ✅ Match history with filtering (all/wins/losses, date range)
 - ✅ Leaderboard (global/friends toggle)
+- ✅ Achievements with progress tracking
+- ✅ Push notifications (match approvals, friend requests, achievements)
+- ✅ Settings (profile, notifications, sign out)
+- ✅ AdMob banner ads
+- ✅ OTA updates via expo-updates
+
+### Watch App (Wear OS)
+- ✅ Login authentication
+- ✅ Match logging (singles/doubles, ranked/casual)
+- ✅ Player search with recent players
+- ✅ Match approvals
 - ✅ Settings with sign out
-- ✅ Design system tokens (colors, spacing, typography)
+- ✅ Dark mode optimized UI
 
 ### Backend (Supabase)
 - ✅ Database schema (27 migrations)
@@ -120,24 +160,7 @@ The app requires a Supabase project for authentication and data:
 - ✅ Auto-rating creation on profile creation
 - ✅ Achievement seeds (9 achievements)
 - ✅ Edge Functions (match approval, rating updates, achievements, push notifications)
-- 🚧 Real-time subscriptions
-
-### Run database migrations** (Required to use the app):
-   - Open Supabase Dashboard → SQL Editor
-   - Copy/paste each file from `supabase/migrations/` in order
-   - Execute one by one (see [supabase/README.md](supabase/README.md))
-
-2. **Test the app:**
-   - Run `npm run start` in `apps/mobile`
-   - Open in Expo Go or emulator
-   - Register a new user
-   - Verify profile is created in Supabase Dashboard
-
-## What You Need to Do
-
-1. **Create a Supabase project** and add credentials to `.env`
-2. **Build the database schema** in `supabase/migrations/` (see `docs/data-model.md` for guidance)
-3. **Test auth flow** by registering and logging in on the mobile app
+- ✅ Security hardening (rate limiting, anti-abuse)
 
 ## Contributing
 

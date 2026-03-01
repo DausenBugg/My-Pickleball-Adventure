@@ -1,3 +1,10 @@
+# Firebase / Google Services
+google-services.json
+GoogleService-Info.plist
+
+# EAS / Play Store credentials
+play-store-service-account.json
+
 # Dependencies
 node_modules/
 

@@ -38,7 +38,7 @@ export function usePushNotificationHandler() {
             router.push('/(tabs)/search');
           }
         } catch (error) {
-          console.error('Error handling notification tap:', error);
+          if (__DEV__) console.error('Error handling notification tap:', error);
         }
       }
     );

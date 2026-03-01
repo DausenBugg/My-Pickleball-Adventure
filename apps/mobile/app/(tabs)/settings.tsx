@@ -55,12 +55,12 @@ export default function SettingsScreen() {
       } else {
         const { error: deleteError } = await supabase.rpc('unregister_all_push_tokens');
 
-        if (deleteError) {
+        if (deleteError && __DEV__) {
           console.warn('Failed to remove push tokens:', deleteError);
         }
       }
     } catch (err) {
-      console.error('Failed to update notification preference:', err);
+      if (__DEV__) console.error('Failed to update notification preference:', err);
     } finally {
       setNotificationsSaving(false);
     }

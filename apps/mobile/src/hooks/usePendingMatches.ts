@@ -155,7 +155,7 @@ export function usePendingMatches() {
       setMatches(enrichedMatches.filter((m): m is PendingMatch => m !== null));
     } catch (err: any) {
       setError(err.message || 'Failed to load pending matches');
-      console.error('Error fetching pending matches:', err);
+      if (__DEV__) console.error('Error fetching pending matches:', err);
     } finally {
       setLoading(false);
     }
@@ -398,7 +398,7 @@ export function usePendingMatches() {
       await fetchMatches();
       return processed;
     } catch (err) {
-      console.error('Failed to approve match:', err);
+      if (__DEV__) console.error('Failed to approve match:', err);
       return false;
     }
   };
@@ -449,7 +449,7 @@ export function usePendingMatches() {
       await fetchMatches();
       return processed;
     } catch (err) {
-      console.error('Failed to reject match:', err);
+      if (__DEV__) console.error('Failed to reject match:', err);
       return false;
     }
   };

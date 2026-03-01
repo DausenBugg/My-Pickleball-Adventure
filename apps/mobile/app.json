@@ -42,6 +42,12 @@
       },
       "router": {}
     },
+    "updates": {
+      "url": "https://u.expo.dev/0e4cabb7-6d47-44af-bcc5-0f7c18dee1b6"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "plugins": [
       "expo-router",
       "expo-dev-client",

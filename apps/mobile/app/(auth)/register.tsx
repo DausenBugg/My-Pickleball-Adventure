@@ -86,8 +86,6 @@ export default function RegisterScreen() {
         },
       });
 
-      console.log('Signup response:', { data, error: signUpError });
-
       if (signUpError) {
         setError(signUpError.message);
         setLoading(false);
@@ -108,7 +106,7 @@ export default function RegisterScreen() {
         setSubmitted(false);
       }
     } catch (err) {
-      console.error('Signup error:', err);
+      if (__DEV__) console.error('Signup error:', err);
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);

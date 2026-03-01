@@ -22,7 +22,7 @@ Step-by-step instructions to publish **My Pickleball App** on the Google Play St
 5. Place it at `apps/mobile/google-services.json` (the `app.json` `googleServicesFile` field points here).
 6. In Firebase Console → Project Settings → **Cloud Messaging** tab, ensure FCM v1 API is enabled.
 
-> **Note:** The `google-services.json` file is git-ignored for security. Each developer/CI environment needs its own copy.
+> **Note:** The `google-services.json` file is git-ignored for security. Each developer/CI environment needs its own copy. In CI, the file is decoded from the `GOOGLE_SERVICES_JSON_BASE64` GitHub Secret.
 
 ---
 
@@ -237,12 +237,13 @@ On first run, EAS will guide you through creating a Google Play **Service Accoun
 
 ## 12. Post-Launch Checklist
 
-- [ ] **Privacy Policy** — Host a privacy policy URL (required by Play Store and AdMob). Free options: GitHub Pages, Notion public page, or Google Sites.
+- [x] **Privacy Policy** — Hosted at `docs/privacy-policy.md` via GitHub Pages. Add the URL to your Play Store listing.
 - [ ] **AdMob app-ads.txt** — Add the app-ads.txt snippet from your AdMob account to your developer website (if you have one).
 - [ ] **Monitor Android Vitals** — Play Console → **Quality** → **Android vitals**. Keep ANR rate < 0.47% and crash rate < 1.09%.
 - [ ] **Respond to reviews** — Play Console → **Ratings and reviews**.
-- [ ] **Set up OTA updates** — Consider adding `expo-updates` for over-the-air JS updates without full store releases.
+- [x] **Set up OTA updates** — `expo-updates` is configured. Push JS-only hotfixes with `eas update --channel production --message "description"`.
 - [ ] **Version bumps** — For future releases, update `version` in `app.json`. The `versionCode` auto-increments via EAS (`autoIncrement: true` in `eas.json`).
+- [x] **CI/CD** — GitHub Actions automatically builds and submits to Play Store on push to `main`. See [deployment-ci-cd-guide.md](deployment-ci-cd-guide.md).
 
 ---
 

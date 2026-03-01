@@ -43,7 +43,7 @@ export function useNotifications() {
       setUnreadCount(data?.filter((n) => !n.read).length || 0);
     } catch (err: any) {
       setError(err.message || 'Failed to load notifications');
-      console.error('Error fetching notifications:', err);
+      if (__DEV__) console.error('Error fetching notifications:', err);
     } finally {
       setLoading(false);
     }
@@ -67,7 +67,7 @@ export function useNotifications() {
       setUnreadCount((prev) => Math.max(0, prev - 1));
       return true;
     } catch (err) {
-      console.error('Failed to mark notification as read:', err);
+      if (__DEV__) console.error('Failed to mark notification as read:', err);
       return false;
     }
   };
@@ -88,7 +88,7 @@ export function useNotifications() {
       setUnreadCount(0);
       return true;
     } catch (err) {
-      console.error('Failed to mark all as read:', err);
+      if (__DEV__) console.error('Failed to mark all as read:', err);
       return false;
     }
   };

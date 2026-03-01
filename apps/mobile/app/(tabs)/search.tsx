@@ -90,7 +90,7 @@ export default function SearchScreen() {
   const handleAddFriend = async (userId: string) => {
     const success = await sendFriendRequest(userId);
     if (success) {
-      console.log('Friend request sent');
+      // request sent — UI updated via local state
     }
   };
 

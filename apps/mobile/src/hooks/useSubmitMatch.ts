@@ -91,7 +91,7 @@ export function useSubmitMatch() {
           .from('notifications')
           .insert(notifications);
 
-        if (notificationError) {
+        if (notificationError && __DEV__) {
           console.error('Failed to create match notifications:', notificationError);
         }
       }
@@ -105,7 +105,7 @@ export function useSubmitMatch() {
           approved: true,
         });
 
-      if (approvalError) {
+      if (approvalError && __DEV__) {
         // Non-critical error - match is created, just approval failed
         console.warn('Failed to add submitter approval:', approvalError);
       }
@@ -113,7 +113,7 @@ export function useSubmitMatch() {
       setLoading(false);
       return { data: { id: matchId }, error: null };
     } catch (err) {
-      console.error('Submit match error:', err);
+      if (__DEV__) console.error('Submit match error:', err);
       const message = 'An unexpected error occurred';
       setError(message);
       setLoading(false);
