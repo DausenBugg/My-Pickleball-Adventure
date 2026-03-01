@@ -33,6 +33,9 @@
       "predictiveBackGestureEnabled": false,
       "useNextNotificationsApi": true
     },
+    "web": {
+      "favicon": "./assets/branding/app-icon.png"
+    },
     "extra": {
       "eas": {
         "projectId": "0e4cabb7-6d47-44af-bcc5-0f7c18dee1b6"
