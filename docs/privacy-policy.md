@@ -112,6 +112,6 @@ We may update this privacy policy from time to time. Changes will be reflected b
 
 If you have any questions about this privacy policy or wish to exercise your data rights, please contact us:
 
-**Email:** dbugg.dev@gmail.com
+**Email:** mypickleballapp@gmail.com
 
 ---

@@ -145,23 +145,17 @@ GitHub Actions secrets are plain text, so binary/multiline files need to be base
 
 #### On macOS / Linux:
 ```bash
-# google-services.json
-base64 -w 0 apps/mobile/google-services.json > google-services-base64.txt
-
-# play-store-service-account.json
 base64 -w 0 play-store-service-account.json > service-account-base64.txt
 ```
 
 #### On Windows (PowerShell):
 ```powershell
-# google-services.json
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("apps\mobile\google-services.json")) | Set-Content google-services-base64.txt
-
-# play-store-service-account.json
 [Convert]::ToBase64String([IO.File]::ReadAllBytes("play-store-service-account.json")) | Set-Content service-account-base64.txt
 ```
 
-You'll paste the contents of these `.txt` files into GitHub Secrets next.
+You'll paste the contents of this `.txt` file into a GitHub Secret next.
+
+> **Note:** `google-services.json` is tracked in git (it's client-side Firebase config, safe to commit). No need to base64-encode it.
 
 ### 3f. Add GitHub Repository Secrets
 
@@ -173,7 +167,7 @@ You'll paste the contents of these `.txt` files into GitHub Secrets next.
 | Secret Name | Value | Where to Get It |
 |-------------|-------|-----------------|
 | `EXPO_TOKEN` | Your EAS access token (from step 3a) | Copied from expo.dev |
-| `GOOGLE_SERVICES_JSON_BASE64` | Contents of `google-services-base64.txt` | From step 3e |
+
 | `PLAY_STORE_SERVICE_ACCOUNT_BASE64` | Contents of `service-account-base64.txt` | From step 3e |
 | `SUPABASE_URL` | `https://fkvoktpgrkgwedvgnibt.supabase.co` | Supabase Dashboard → Settings → API |
 | `SUPABASE_ANON_KEY` | Your Supabase anon key | Same location |
@@ -185,7 +179,7 @@ You'll paste the contents of these `.txt` files into GitHub Secrets next.
 4. Click **Add secret**.
 5. Repeat for each secret.
 
-> **Tip:** After adding all 5 secrets, your Secrets page should show exactly these 5 entries. You can update a secret at any time by clicking the pencil icon next to it.
+> **Tip:** After adding all 4 secrets, your Secrets page should show exactly these 4 entries. You can update a secret at any time by clicking the pencil icon next to it.
 
 ### 3g. Enable GitHub Pages (Privacy Policy)
 
@@ -362,10 +356,9 @@ The CI/CD pipeline submits to the **internal testing** track. To go to productio
 | # | Secret Name | Status |
 |---|-------------|--------|
 | 1 | `EXPO_TOKEN` | ☐ Added |
-| 2 | `GOOGLE_SERVICES_JSON_BASE64` | ☐ Added |
-| 3 | `PLAY_STORE_SERVICE_ACCOUNT_BASE64` | ☐ Added |
-| 4 | `SUPABASE_URL` | ☐ Added |
-| 5 | `SUPABASE_ANON_KEY` | ☐ Added |
+| 2 | `PLAY_STORE_SERVICE_ACCOUNT_BASE64` | ☐ Added |
+| 3 | `SUPABASE_URL` | ☐ Added |
+| 4 | `SUPABASE_ANON_KEY` | ☐ Added |
 
 ## Quick Reference: Play Console Checklist
 

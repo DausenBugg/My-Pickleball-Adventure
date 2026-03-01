@@ -77,9 +77,6 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       # Decode secret files from base64 GitHub Secrets
-      - name: Write google-services.json
-        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}" | base64 --decode > google-services.json
-
       - name: Write play-store-service-account.json
         run: echo "${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_BASE64 }}" | base64 --decode > play-store-service-account.json
 
