@@ -5,15 +5,24 @@
     "scheme": "my-pickleball-watch",
     "version": "1.0.0",
     "orientation": "portrait",
-    "platforms": ["android"],
+    "platforms": [
+      "android"
+    ],
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "android": {
       "package": "com.dbugg.mypickleballwatch"
     },
     "extra": {
-      "router": {}
+      "router": {},
+      "watchSupabaseUrl": "https://fkvoktpgrkgwedvgnibt.supabase.co",
+      "watchSupabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrdm9rdHBncmtnd2VkdmduaWJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4NDY5OTcsImV4cCI6MjA4NjQyMjk5N30.NFIaJDs2GKQMVVJ7WeeUpOkOcCBf84BjQIJUbrJrvLo",
+      "eas": {
+        "projectId": "065ca052-8323-4d50-aed7-9abf12323be8"
+      }
     },
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router"
+    ]
   }
 }
