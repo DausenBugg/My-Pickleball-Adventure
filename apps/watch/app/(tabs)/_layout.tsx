@@ -3,7 +3,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../../src/state/auth';
 import { watchColors } from '../../src/theme/colors';
-import { watchSizing } from '../../src/theme/sizing';
 
 export default function TabsLayout() {
   const { session, loading } = useAuth();
@@ -18,42 +17,40 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: watchColors.tabBarActive,
         tabBarInactiveTintColor: watchColors.tabBarInactive,
+        tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: watchColors.tabBarBackground,
-          borderTopColor: watchColors.primaryDark,
-          height: watchSizing.tabBarHeight,
+          backgroundColor: watchColors.background,
+          borderTopColor: watchColors.background,
+          height: 36,
+          marginHorizontal: 40,
+          marginBottom: 5,
+          borderRadius: 8,
         },
-        tabBarLabelStyle: {
-          fontSize: watchSizing.tabLabel,
-          fontWeight: '600',
-        },
+        tabBarIconStyle: { marginTop: 0 },
         sceneStyle: { backgroundColor: watchColors.background },
       }}
     >
       <Tabs.Screen
         name="log-match"
         options={{
-          title: 'Log',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="add-circle-outline" size={18} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="approvals"
         options={{
-          title: 'Review',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="checkmark-done-circle-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="checkmark-done-circle-outline" size={18} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Prefs',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="settings-outline" size={18} color={color} />
           ),
         }}
       />

@@ -75,7 +75,7 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.contentWrap}>
-          <Text style={styles.title}>Pickleball Watch</Text>
+          <Text style={styles.title}>MPA</Text>
           <Text style={styles.subtitle}>Sign in to log matches quickly.</Text>
 
           <TextInput
