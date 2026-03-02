@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../../src/state/auth';
 import { watchColors } from '../../src/theme/colors';
+import { watchSizing } from '../../src/theme/sizing';
 
 export default function TabsLayout() {
   const { session, loading } = useAuth();
@@ -20,10 +21,10 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: watchColors.tabBarBackground,
           borderTopColor: watchColors.primaryDark,
-          height: 48,
+          height: watchSizing.tabBarHeight,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: watchSizing.tabLabel,
           fontWeight: '600',
         },
         sceneStyle: { backgroundColor: watchColors.background },
@@ -41,7 +42,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="approvals"
         options={{
-          title: 'Approvals',
+          title: 'Review',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="checkmark-done-circle-outline" size={size} color={color} />
           ),
@@ -50,7 +51,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: 'Prefs',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" size={size} color={color} />
           ),

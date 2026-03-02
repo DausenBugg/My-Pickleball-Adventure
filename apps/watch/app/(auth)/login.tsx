@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,6 +15,7 @@ import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
 import { recordTelemetry } from '../../src/lib/telemetry';
 import { useAuth } from '../../src/state/auth';
 import { watchColors } from '../../src/theme/colors';
+import { watchSizing } from '../../src/theme/sizing';
 
 export default function LoginScreen() {
   const { session, loading } = useAuth();
@@ -71,40 +73,42 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Pickleball Watch</Text>
-        <Text style={styles.subtitle}>Sign in to log matches quickly.</Text>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.contentWrap}>
+          <Text style={styles.title}>Pickleball Watch</Text>
+          <Text style={styles.subtitle}>Sign in to log matches quickly.</Text>
 
-        <TextInput
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Email"
-          placeholderTextColor="#8FA1C0"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Email"
+            placeholderTextColor={watchColors.muted}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
 
-        <TextInput
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Password"
-          placeholderTextColor="#8FA1C0"
-          secureTextEntry
-          autoCapitalize="none"
-        />
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Password"
+            placeholderTextColor={watchColors.muted}
+            secureTextEntry
+            autoCapitalize="none"
+          />
 
-        <Pressable
-          style={[styles.button, !canSubmit || submitting ? styles.buttonDisabled : null]}
-          onPress={handleSignIn}
-          disabled={!canSubmit || submitting}
-        >
-          {submitting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Sign In</Text>}
-        </Pressable>
+          <Pressable
+            style={[styles.button, !canSubmit || submitting ? styles.buttonDisabled : null]}
+            onPress={handleSignIn}
+            disabled={!canSubmit || submitting}
+          >
+            {submitting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Sign In</Text>}
+          </Pressable>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-      </View>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -115,40 +119,43 @@ const styles = StyleSheet.create({
     backgroundColor: watchColors.background,
   },
   container: {
-    flex: 1,
-    paddingHorizontal: 14,
+    flexGrow: 1,
     justifyContent: 'center',
-    gap: 10,
+    paddingHorizontal: watchSizing.pageHorizontal,
+    paddingVertical: watchSizing.pageGap,
+  },
+  contentWrap: {
+    gap: watchSizing.pageGap,
   },
   title: {
     color: watchColors.text,
-    fontSize: 22,
+    fontSize: watchSizing.title,
     fontWeight: '700',
     textAlign: 'center',
   },
   subtitle: {
     color: watchColors.muted,
-    fontSize: 13,
+    fontSize: watchSizing.subtitle,
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 2,
   },
   input: {
     borderWidth: 1,
     borderColor: watchColors.border,
     backgroundColor: watchColors.surface,
     color: watchColors.text,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
+    borderRadius: watchSizing.controlRadius,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: watchSizing.body,
+    minHeight: watchSizing.controlHeight,
   },
   button: {
     backgroundColor: watchColors.primary,
-    borderRadius: 14,
-    paddingVertical: 12,
+    borderRadius: watchSizing.cardRadius,
     alignItems: 'center',
-    marginTop: 4,
-    minHeight: 44,
+    marginTop: 2,
+    minHeight: watchSizing.buttonHeight,
     justifyContent: 'center',
   },
   buttonDisabled: {
@@ -157,11 +164,11 @@ const styles = StyleSheet.create({
   buttonText: {
     color: watchColors.textOnPrimary,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: watchSizing.bodyStrong,
   },
   error: {
     color: watchColors.secondary,
-    fontSize: 12,
+    fontSize: watchSizing.subtitle,
     textAlign: 'center',
   },
 });

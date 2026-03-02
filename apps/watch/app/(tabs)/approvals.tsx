@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { usePendingMatches } from '../../src/hooks/usePendingMatches';
 import { watchColors } from '../../src/theme/colors';
+import { watchSizing } from '../../src/theme/sizing';
 
 export default function ApprovalsScreen() {
   const { matches, loading, error, approveMatch, rejectMatch, refresh } = usePendingMatches();
@@ -101,20 +102,20 @@ const styles = StyleSheet.create({
     backgroundColor: watchColors.background,
   },
   container: {
-    paddingHorizontal: 12,
-    paddingBottom: 20,
-    gap: 10,
+    paddingHorizontal: watchSizing.pageHorizontal,
+    paddingBottom: watchSizing.pageBottom,
+    gap: watchSizing.pageGap,
   },
   pageTitle: {
     color: watchColors.text,
-    fontSize: 20,
+    fontSize: watchSizing.title,
     fontWeight: '700',
     textAlign: 'center',
     marginTop: 2,
   },
   pageSubtitle: {
     color: watchColors.muted,
-    fontSize: 12,
+    fontSize: watchSizing.subtitle,
     textAlign: 'center',
   },
   centerState: {
@@ -125,34 +126,34 @@ const styles = StyleSheet.create({
   },
   mutedText: {
     color: watchColors.muted,
-    fontSize: 12,
+    fontSize: watchSizing.subtitle,
   },
   card: {
     borderWidth: 1,
     borderColor: watchColors.borderLight,
-    borderRadius: 14,
+    borderRadius: watchSizing.cardRadius,
     backgroundColor: watchColors.cardBackground,
-    padding: 10,
-    gap: 5,
+    padding: 8,
+    gap: 4,
   },
   cardTitle: {
     color: watchColors.text,
-    fontSize: 13,
+    fontSize: watchSizing.body,
     fontWeight: '700',
   },
   cardMeta: {
     color: watchColors.muted,
-    fontSize: 11,
+    fontSize: watchSizing.label,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
+    gap: 6,
+    marginTop: 3,
   },
   actionBtn: {
     flex: 1,
-    minHeight: 40,
-    borderRadius: 12,
+    minHeight: watchSizing.buttonHeight,
+    borderRadius: watchSizing.controlRadius,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -164,7 +165,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: watchSizing.subtitle,
     fontWeight: '700',
   },
   actionDisabled: {
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: watchColors.secondary,
-    fontSize: 11,
+    fontSize: watchSizing.label,
     textAlign: 'center',
   },
 });

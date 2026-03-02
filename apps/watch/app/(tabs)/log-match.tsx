@@ -16,6 +16,7 @@ import { useRecentPlayers } from '../../src/hooks/useRecentPlayers';
 import { MatchParticipant, useSubmitMatch } from '../../src/hooks/useSubmitMatch';
 import { useAuth } from '../../src/state/auth';
 import { watchColors } from '../../src/theme/colors';
+import { watchSizing } from '../../src/theme/sizing';
 
 type MatchType = 'singles' | 'doubles';
 type MatchMode = 'casual' | 'ranked';
@@ -366,31 +367,31 @@ const styles = StyleSheet.create({
     backgroundColor: watchColors.background,
   },
   container: {
-    paddingHorizontal: 12,
-    paddingBottom: 20,
-    gap: 10,
+    paddingHorizontal: watchSizing.pageHorizontal,
+    paddingBottom: watchSizing.pageBottom,
+    gap: watchSizing.pageGap,
   },
   pageTitle: {
     color: watchColors.text,
-    fontSize: 20,
+    fontSize: watchSizing.title,
     fontWeight: '700',
     textAlign: 'center',
     marginTop: 2,
   },
   pageSubtitle: {
     color: watchColors.muted,
-    fontSize: 12,
+    fontSize: watchSizing.subtitle,
     textAlign: 'center',
   },
   segmentWrap: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   segmentBtn: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: watchSizing.controlRadius,
     backgroundColor: watchColors.primaryGhost,
-    minHeight: 40,
+    minHeight: watchSizing.controlHeight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -402,51 +403,51 @@ const styles = StyleSheet.create({
   },
   segmentText: {
     color: watchColors.textOnPrimary,
-    fontSize: 12,
+    fontSize: watchSizing.subtitle,
     fontWeight: '600',
   },
   scoreRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   scoreCol: {
     flex: 1,
     gap: 4,
   },
   fieldWrap: {
-    gap: 5,
+    gap: 4,
   },
   fieldLabel: {
     color: watchColors.muted,
-    fontSize: 11,
+    fontSize: watchSizing.label,
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 0.4,
   },
   input: {
     borderWidth: 1,
     borderColor: watchColors.border,
     backgroundColor: watchColors.surface,
-    borderRadius: 12,
+    borderRadius: watchSizing.controlRadius,
     color: watchColors.text,
-    fontSize: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-    minHeight: 40,
+    fontSize: watchSizing.bodyStrong,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    minHeight: watchSizing.controlHeight,
   },
   selectedPlayerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: 12,
+    borderRadius: watchSizing.controlRadius,
     backgroundColor: watchColors.primaryGhost,
     borderWidth: 1,
     borderColor: watchColors.primary,
-    paddingHorizontal: 10,
-    minHeight: 40,
+    paddingHorizontal: 9,
+    minHeight: watchSizing.controlHeight,
   },
   selectedPlayerText: {
     color: watchColors.text,
-    fontSize: 13,
+    fontSize: watchSizing.body,
     fontWeight: '600',
     flex: 1,
     paddingRight: 8,
@@ -454,12 +455,12 @@ const styles = StyleSheet.create({
   tinyBtn: {
     backgroundColor: watchColors.primary,
     borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
   },
   tinyBtnText: {
     color: watchColors.textOnPrimary,
-    fontSize: 11,
+    fontSize: watchSizing.label,
     fontWeight: '700',
   },
   searchStateRow: {
@@ -469,47 +470,47 @@ const styles = StyleSheet.create({
   },
   searchStateText: {
     color: watchColors.muted,
-    fontSize: 11,
+    fontSize: watchSizing.label,
   },
   resultsWrap: {
     borderWidth: 1,
     borderColor: watchColors.border,
-    borderRadius: 12,
+    borderRadius: watchSizing.controlRadius,
     overflow: 'hidden',
   },
   resultItem: {
     backgroundColor: watchColors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: watchColors.border,
   },
   resultTitle: {
     color: watchColors.text,
-    fontSize: 13,
+    fontSize: watchSizing.body,
     fontWeight: '600',
   },
   resultMeta: {
     color: watchColors.muted,
-    fontSize: 11,
+    fontSize: watchSizing.label,
     marginTop: 1,
   },
   validationText: {
     color: watchColors.muted,
-    fontSize: 12,
+    fontSize: watchSizing.subtitle,
     textAlign: 'center',
   },
   primaryBtn: {
-    minHeight: 44,
-    borderRadius: 14,
+    minHeight: watchSizing.buttonHeight,
+    borderRadius: watchSizing.cardRadius,
     backgroundColor: watchColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: 1,
   },
   primaryBtnText: {
     color: watchColors.textOnPrimary,
-    fontSize: 14,
+    fontSize: watchSizing.bodyStrong,
     fontWeight: '700',
   },
   buttonDisabled: {
@@ -517,7 +518,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: watchColors.secondary,
-    fontSize: 11,
+    fontSize: watchSizing.label,
     textAlign: 'center',
   },
 });

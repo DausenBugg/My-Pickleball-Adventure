@@ -1,9 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../src/state/auth';
 import { watchColors } from '../../src/theme/colors';
+import { watchSizing } from '../../src/theme/sizing';
 
 export default function SettingsScreen() {
   const { session } = useAuth();
@@ -15,16 +16,18 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.pageTitle}>Settings</Text>
-        <Text style={styles.email} numberOfLines={1}>
-          {session?.user?.email || 'Not signed in'}
-        </Text>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.contentWrap}>
+          <Text style={styles.pageTitle}>Settings</Text>
+          <Text style={styles.email} numberOfLines={1}>
+            {session?.user?.email || 'Not signed in'}
+          </Text>
 
-        <Pressable style={styles.signOutBtn} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </Pressable>
-      </View>
+          <Pressable style={styles.signOutBtn} onPress={handleSignOut}>
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -35,34 +38,37 @@ const styles = StyleSheet.create({
     backgroundColor: watchColors.background,
   },
   container: {
-    flex: 1,
-    paddingHorizontal: 12,
+    flexGrow: 1,
+    paddingHorizontal: watchSizing.pageHorizontal,
+    paddingVertical: watchSizing.pageGap,
     justifyContent: 'center',
+  },
+  contentWrap: {
     alignItems: 'center',
-    gap: 10,
+    gap: watchSizing.pageGap,
   },
   pageTitle: {
     color: watchColors.text,
-    fontSize: 20,
+    fontSize: watchSizing.title,
     fontWeight: '700',
   },
   email: {
     color: watchColors.muted,
-    fontSize: 12,
+    fontSize: watchSizing.subtitle,
     maxWidth: '100%',
   },
   signOutBtn: {
     width: '100%',
-    minHeight: 44,
-    borderRadius: 14,
+    minHeight: watchSizing.buttonHeight,
+    borderRadius: watchSizing.cardRadius,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: watchColors.secondary,
-    marginTop: 6,
+    marginTop: 2,
   },
   signOutText: {
     color: watchColors.textOnPrimary,
-    fontSize: 14,
+    fontSize: watchSizing.bodyStrong,
     fontWeight: '700',
   },
 });
