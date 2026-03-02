@@ -22,7 +22,8 @@
       }
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "./withWearOS"
     ],
     "updates": {
       "url": "https://u.expo.dev/065ca052-8323-4d50-aed7-9abf12323be8"
