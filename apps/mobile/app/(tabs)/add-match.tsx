@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useErrorToast } from '../../src/components/ErrorToast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -130,6 +130,7 @@ export default function AddMatchScreen() {
   const { submitMatch, loading: submitting, error: submitError } = useSubmitMatch();
   const { players: recentPlayers } = useRecentPlayers();
   const { colors } = useTheme();
+  const { showError, showSuccess, showWarning } = useErrorToast();
 
   const [matchType, setMatchType] = useState<MatchType>('singles');
   const [matchMode, setMatchMode] = useState<MatchMode>('casual');
@@ -193,11 +194,11 @@ export default function AddMatchScreen() {
 
   const handleSubmit = async () => {
     if (!validation.valid) {
-      Alert.alert('Unable to submit', validation.message);
+      showWarning('Unable to submit', validation.message);
       return;
     }
     if (!session?.user?.id || !opponent) {
-      Alert.alert('Unable to submit', 'Missing required player or session data.');
+      showError('Unable to submit', 'Missing required player or session data.');
       return;
     }
 
@@ -227,27 +228,17 @@ export default function AddMatchScreen() {
     });
 
     if (result?.data) {
-      Alert.alert(
-        'Match submitted!',
-        'Your match has been submitted and is awaiting approval from other players.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setUserScore('');
-              setOpponentScore('');
-              setOpponent(null);
-              setAlly(null);
-              setOpponent2(null);
-              setOpponentSearch('');
-              setAllySearch('');
-              setOpponent2Search('');
-            },
-          },
-        ]
-      );
+      showSuccess('Match submitted!', 'Your match has been submitted and is awaiting approval from other players.');
+      setUserScore('');
+      setOpponentScore('');
+      setOpponent(null);
+      setAlly(null);
+      setOpponent2(null);
+      setOpponentSearch('');
+      setAllySearch('');
+      setOpponent2Search('');
     } else {
-      Alert.alert('Error', result?.error || submitError || 'Match submission failed. Please try again.');
+      showError('Error', result?.error || submitError || 'Match submission failed. Please try again.');
     }
   };
 

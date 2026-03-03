@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -27,6 +27,7 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const { colors } = useTheme();
+  const router = useRouter();
 
   const { players, loading: searchLoading } = usePlayerSearch(query);
   const {
@@ -203,7 +204,8 @@ export default function SearchScreen() {
                   key={player.id}
                   entering={FadeInDown.delay(200 + idx * 60).duration(400)}
                 >
-                  <View
+                  <AnimatedPressable
+                    onPress={() => router.push(`/profile/${player.id}`)}
                     style={[
                       styles.card,
                       { backgroundColor: colors.cardBackground, borderColor: colors.borderLight },
@@ -258,7 +260,7 @@ export default function SearchScreen() {
                             : 'Add friend'}
                       </Text>
                     </AnimatedPressable>
-                  </View>
+                  </AnimatedPressable>
                 </Animated.View>
               );
             })

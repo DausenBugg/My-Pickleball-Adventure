@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useErrorToast } from '../../src/components/ErrorToast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,6 +23,7 @@ export default function SettingsScreen() {
   const { colors, mode, setMode } = useTheme();
   const { profile, loading: profileLoading, uploadAvatar } = useProfile();
   const { rating } = useRating();
+  const { showError } = useErrorToast();
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -68,7 +70,7 @@ export default function SettingsScreen() {
 
   const handleSignOut = async () => {
     if (!isSupabaseConfigured || !supabase) {
-      Alert.alert('Error', 'Supabase is not configured.');
+      showError('Error', 'Supabase is not configured.');
       return;
     }
 
@@ -77,7 +79,7 @@ export default function SettingsScreen() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Error', error.message);
+      showError('Error', error.message);
     }
   };
 
@@ -100,7 +102,7 @@ export default function SettingsScreen() {
     setUploadingAvatar(false);
 
     if (result.error && result.error !== 'Cancelled') {
-      Alert.alert('Upload Error', result.error);
+      showError('Upload Error', result.error);
     }
   };
 

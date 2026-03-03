@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   ActivityIndicator,
   Animated,
   Dimensions,
@@ -14,10 +13,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import AdBanner from '../../src/components/AdBanner';
 import { AD_UNIT_IDS } from '../../src/lib/adUnitIds';
 import { Ionicons } from '@expo/vector-icons';
 import ReAnimated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
 import { PendingMatch, usePendingMatches } from '../../src/hooks/usePendingMatches';
 import { useMatches } from '../../src/hooks/useMatches';
@@ -35,11 +36,13 @@ import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
 import CircularProgress from '../../src/components/CircularProgress';
 import AnimatedPressable from '../../src/components/AnimatedPressable';
 import ConfettiBurst from '../../src/components/ConfettiBurst';
+import { useErrorToast } from '../../src/components/ErrorToast';
 import { LeagueLabel } from '../../src/components/LeagueBadge';
 
 export default function HomeScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { showError } = useErrorToast();
   const { openNotifications: openNotificationsParam } = useLocalSearchParams<{ openNotifications?: string }>();
   const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useProfile();
   const { rating, loading: ratingLoading, refresh: refreshRating } = useRating();
@@ -62,20 +65,46 @@ export default function HomeScreen() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [dismissedNotifications, setDismissedNotifications] = useState<Set<string>>(new Set());
-  const prevLevelRef = useRef<number | null>(null);
+  const [processingNotificationId, setProcessingNotificationId] = useState<string | null>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const screenWidth = Dimensions.get('window').width;
   const panelWidth = Math.min(360, screenWidth * 0.9);
 
   const loading = profileLoading || ratingLoading;
 
-  // Refresh profile when tab gains focus (e.g. after avatar change in settings)
+  // Refresh profile when tab gains focus and detect level-ups that happened while away
   useFocusEffect(
     useCallback(() => {
-      refreshProfile();
-      refreshRating();
+      const checkLevelUp = async () => {
+        await refreshProfile();
+        await refreshRating();
+      };
+      checkLevelUp();
     }, [])
   );
+
+  // Detect level-up via AsyncStorage (survives app restarts and tab switches)
+  useEffect(() => {
+    if (!profile) return;
+
+    const detectLevelUp = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('@lastKnownLevel');
+        const lastKnownLevel = stored ? parseInt(stored, 10) : null;
+
+        if (lastKnownLevel !== null && profile.level > lastKnownLevel) {
+          setShowConfetti(true);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        }
+
+        await AsyncStorage.setItem('@lastKnownLevel', String(profile.level));
+      } catch {
+        // AsyncStorage errors are non-critical
+      }
+    };
+
+    detectLevelUp();
+  }, [profile?.level]);
 
   const xpToNext = useMemo(() => {
     if (!profile) return 0;
@@ -89,7 +118,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!pendingMatchesError) return;
-    Alert.alert('Match request', pendingMatchesError);
+    showError('Match request', pendingMatchesError);
   }, [pendingMatchesError]);
 
   const xpForCurrentLevel = useMemo(() => {
@@ -113,15 +142,6 @@ export default function HomeScreen() {
   }, [xpForCurrentLevel, xpForNextLevel]);
 
   const winsToNext = useMemo(() => Math.ceil(xpToNext / 120), [xpToNext]);
-
-  // Detect level-up and trigger confetti
-  useEffect(() => {
-    if (!profile) return;
-    if (prevLevelRef.current !== null && profile.level > prevLevelRef.current) {
-      setShowConfetti(true);
-    }
-    prevLevelRef.current = profile.level;
-  }, [profile?.level]);
 
   const pendingMatchById = useMemo(() => {
     return new Map(pendingMatches.map((match) => [match.id, match]));
@@ -187,34 +207,53 @@ export default function HomeScreen() {
   };
 
   const handleApproveMatchNotification = async (matchId: string, notificationId?: string) => {
-    const success = await approveMatch(matchId);
-    if (success) {
-      if (notificationId) {
-        setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+    if (processingNotificationId) return;
+    setProcessingNotificationId(notificationId || matchId);
+    try {
+      const success = await approveMatch(matchId);
+      if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        if (notificationId) {
+          setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+        }
+        if (notificationId) await markAsRead(notificationId);
+        closeNotifications();
+        // Wait for panel close animation before refreshing so user sees XP ring update
+        setTimeout(() => {
+          refreshPendingMatches();
+          refreshNotifications();
+          refreshProfile();
+          refreshRating();
+          refreshRecentMatches();
+        }, 280);
       }
-      if (notificationId) await markAsRead(notificationId);
-      closeNotifications();
-      refreshPendingMatches();
-      refreshNotifications();
-      refreshProfile();
-      refreshRating();
-      refreshRecentMatches();
+    } finally {
+      setProcessingNotificationId(null);
     }
   };
 
   const handleRejectMatchNotification = async (matchId: string, notificationId?: string) => {
-    const success = await rejectMatch(matchId);
-    if (success) {
-      if (notificationId) {
-        setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+    if (processingNotificationId) return;
+    setProcessingNotificationId(notificationId || matchId);
+    try {
+      const success = await rejectMatch(matchId);
+      if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+        if (notificationId) {
+          setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+        }
+        if (notificationId) await markAsRead(notificationId);
+        closeNotifications();
+        setTimeout(() => {
+          refreshPendingMatches();
+          refreshNotifications();
+          refreshProfile();
+          refreshRating();
+          refreshRecentMatches();
+        }, 280);
       }
-      if (notificationId) await markAsRead(notificationId);
-      closeNotifications();
-      refreshPendingMatches();
-      refreshNotifications();
-      refreshProfile();
-      refreshRating();
-      refreshRecentMatches();
+    } finally {
+      setProcessingNotificationId(null);
     }
   };
 
@@ -572,16 +611,26 @@ export default function HomeScreen() {
                     )}
                     <View style={styles.panelActions}>
                       <AnimatedPressable
-                        style={[styles.panelButton, { borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface }]}
+                        style={[styles.panelButton, { borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface }, processingNotificationId !== null && { opacity: 0.5 }]}
                         onPress={() => matchId && handleRejectMatchNotification(matchId, notification.id)}
+                        disabled={processingNotificationId !== null}
                       >
-                        <Text style={[styles.panelButtonText, { color: colors.muted }]}>Decline</Text>
+                        {processingNotificationId === notification.id ? (
+                          <ActivityIndicator size="small" color={colors.muted} />
+                        ) : (
+                          <Text style={[styles.panelButtonText, { color: colors.muted }]}>Decline</Text>
+                        )}
                       </AnimatedPressable>
                       <AnimatedPressable
-                        style={[styles.panelButton, { backgroundColor: colors.primary }]}
+                        style={[styles.panelButton, { backgroundColor: colors.primary }, processingNotificationId !== null && { opacity: 0.5 }]}
                         onPress={() => matchId && handleApproveMatchNotification(matchId, notification.id)}
+                        disabled={processingNotificationId !== null}
                       >
-                        <Text style={[styles.panelButtonText, { color: colors.textOnPrimary }]}>Approve</Text>
+                        {processingNotificationId === notification.id ? (
+                          <ActivityIndicator size="small" color={colors.textOnPrimary} />
+                        ) : (
+                          <Text style={[styles.panelButtonText, { color: colors.textOnPrimary }]}>Approve</Text>
+                        )}
                       </AnimatedPressable>
                     </View>
                   </View>
@@ -592,14 +641,16 @@ export default function HomeScreen() {
                     <Text style={[styles.panelDetailText, { color: colors.muted }]}>{requesterName} sent you a friend request.</Text>
                     <View style={styles.panelActions}>
                       <AnimatedPressable
-                        style={[styles.panelButton, { borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface }]}
+                        style={[styles.panelButton, { borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface }, processingNotificationId !== null && { opacity: 0.5 }]}
                         onPress={() => requesterId && handleRejectFriendNotification(requesterId, notification.id)}
+                        disabled={processingNotificationId !== null}
                       >
                         <Text style={[styles.panelButtonText, { color: colors.muted }]}>Decline</Text>
                       </AnimatedPressable>
                       <AnimatedPressable
-                        style={[styles.panelButton, { backgroundColor: colors.primary }]}
+                        style={[styles.panelButton, { backgroundColor: colors.primary }, processingNotificationId !== null && { opacity: 0.5 }]}
                         onPress={() => requesterId && handleAcceptFriendNotification(requesterId, notification.id)}
+                        disabled={processingNotificationId !== null}
                       >
                         <Text style={[styles.panelButtonText, { color: colors.textOnPrimary }]}>Accept</Text>
                       </AnimatedPressable>
@@ -610,6 +661,18 @@ export default function HomeScreen() {
                 {notification.type === 'achievement' && notification.data?.details && (
                   <View style={styles.panelDetails}>
                     <Text style={[styles.panelDetailText, { color: colors.muted }]}>{notification.data.details}</Text>
+                  </View>
+                )}
+
+                {notification.type === 'system' && parsedData.level && (
+                  <View style={[styles.panelDetails, styles.levelUpCard]}>
+                    <View style={styles.levelUpRow}>
+                      <Ionicons name="star" size={22} color={colors.warning} />
+                      <Text style={[styles.levelUpText, { color: colors.ink }]}>
+                        Level {String(parsedData.level)}
+                      </Text>
+                      <Ionicons name="star" size={22} color={colors.warning} />
+                    </View>
                   </View>
                 )}
 
@@ -981,5 +1044,18 @@ const styles = StyleSheet.create({
   panelMarkReadText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
+  },
+  levelUpCard: {
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  levelUpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  levelUpText: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
   },
 });
