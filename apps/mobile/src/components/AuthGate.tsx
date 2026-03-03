@@ -26,7 +26,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     if (loading || !onboardingChecked) return;
 
     const inAuth = segments[0] === '(auth)';
-    const onVerifyPage = segments[1] === 'verify-email';
+    const onVerifyPage = segments.includes('verify-email');
 
     // Not logged in
     if (!session && !inAuth) {

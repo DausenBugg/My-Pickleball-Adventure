@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,11 +8,15 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useErrorToast } from '../../src/components/ErrorToast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import AdBanner from '../../src/components/AdBanner';
+import { AD_UNIT_IDS } from '../../src/lib/adUnitIds';
 
 import { Player, usePlayerSearch } from '../../src/hooks/usePlayerSearch';
+import { useRecentPlayers } from '../../src/hooks/useRecentPlayers';
 import { MatchParticipant, useSubmitMatch } from '../../src/hooks/useSubmitMatch';
 import { useAuth } from '../../src/state/auth';
 import { useTheme } from '../../src/theme';
@@ -31,6 +34,7 @@ type SearchFieldProps = {
   selectedPlayer: Player | null;
   onSelectPlayer: (player: Player) => void;
   onClearPlayer: () => void;
+  recentPlayers: Player[];
   colors: ReturnType<typeof useTheme>['colors'];
 };
 
@@ -42,9 +46,15 @@ function SearchField({
   selectedPlayer,
   onSelectPlayer,
   onClearPlayer,
+  recentPlayers,
   colors,
 }: SearchFieldProps) {
+  const [isFocused, setIsFocused] = useState(false);
   const { players, loading } = usePlayerSearch(value);
+  const trimmedQuery = value.trim();
+  const showRecent = isFocused && trimmedQuery.length === 0;
+  const showSearchResults = trimmedQuery.length > 0;
+  const visiblePlayers = showRecent ? recentPlayers : players;
 
   if (selectedPlayer) {
     return (
@@ -78,16 +88,18 @@ function SearchField({
         value={value}
         onChangeText={onChangeText}
         autoCapitalize="words"
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
       />
-      {loading && value.trim().length > 1 ? (
+      {loading && showSearchResults ? (
         <View style={styles.searchLoading}>
           <ActivityIndicator size="small" color={colors.primary} />
           <Text style={[styles.searchLoadingText, { color: colors.muted }]}>Searching...</Text>
         </View>
       ) : null}
-      {!loading && value.trim().length > 1 && players.length > 0 ? (
+      {!loading && visiblePlayers.length > 0 && (showRecent || showSearchResults) ? (
         <View style={[styles.suggestions, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
-          {players.map((player) => (
+          {visiblePlayers.map((player) => (
             <Pressable key={player.id} onPress={() => onSelectPlayer(player)}>
               <View style={[styles.suggestionItem, { borderBottomColor: colors.borderLight }]}>
                 <View>
@@ -103,8 +115,11 @@ function SearchField({
           ))}
         </View>
       ) : null}
-      {!loading && value.trim().length > 1 && players.length === 0 ? (
+      {!loading && showSearchResults && players.length === 0 ? (
         <Text style={[styles.noMatch, { color: colors.muted }]}>No matching players</Text>
+      ) : null}
+      {!loading && showRecent && recentPlayers.length === 0 ? (
+        <Text style={[styles.noMatch, { color: colors.muted }]}>No recent players yet</Text>
       ) : null}
     </View>
   );
@@ -113,7 +128,9 @@ function SearchField({
 export default function AddMatchScreen() {
   const { session } = useAuth();
   const { submitMatch, loading: submitting, error: submitError } = useSubmitMatch();
+  const { players: recentPlayers } = useRecentPlayers();
   const { colors } = useTheme();
+  const { showError, showSuccess, showWarning } = useErrorToast();
 
   const [matchType, setMatchType] = useState<MatchType>('singles');
   const [matchMode, setMatchMode] = useState<MatchMode>('casual');
@@ -149,8 +166,8 @@ export default function AddMatchScreen() {
     if (winnerScore < 11) {
       return { valid: false, message: 'Winner must have at least 11 points.' };
     }
-    if (winnerScore - loserScore < 2) {
-      return { valid: false, message: 'Winner must lead by 2 points.' };
+    if (winnerScore - loserScore !== 2) {
+      return { valid: false, message: 'Winner must finish exactly 2 points ahead.' };
     }
     if (!opponent) {
       return { valid: false, message: 'Select an opponent to continue.' };
@@ -177,11 +194,11 @@ export default function AddMatchScreen() {
 
   const handleSubmit = async () => {
     if (!validation.valid) {
-      Alert.alert('Unable to submit', validation.message);
+      showWarning('Unable to submit', validation.message);
       return;
     }
     if (!session?.user?.id || !opponent) {
-      Alert.alert('Unable to submit', 'Missing required player or session data.');
+      showError('Unable to submit', 'Missing required player or session data.');
       return;
     }
 
@@ -211,27 +228,17 @@ export default function AddMatchScreen() {
     });
 
     if (result?.data) {
-      Alert.alert(
-        'Match submitted!',
-        'Your match has been submitted and is awaiting approval from other players.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setUserScore('');
-              setOpponentScore('');
-              setOpponent(null);
-              setAlly(null);
-              setOpponent2(null);
-              setOpponentSearch('');
-              setAllySearch('');
-              setOpponent2Search('');
-            },
-          },
-        ]
-      );
+      showSuccess('Match submitted!', 'Your match has been submitted and is awaiting approval from other players.');
+      setUserScore('');
+      setOpponentScore('');
+      setOpponent(null);
+      setAlly(null);
+      setOpponent2(null);
+      setOpponentSearch('');
+      setAllySearch('');
+      setOpponent2Search('');
     } else {
-      Alert.alert('Error', result?.error || submitError || 'Match submission failed. Please try again.');
+      showError('Error', result?.error || submitError || 'Match submission failed. Please try again.');
     }
   };
 
@@ -244,6 +251,9 @@ export default function AddMatchScreen() {
             Log a match and submit it for approval.
           </Text>
         </Animated.View>
+
+        {/* Ad banner */}
+        <AdBanner adUnitId={AD_UNIT_IDS.ADD_MATCH_BANNER} />
 
         {/* Match type */}
         <Animated.View entering={FadeInDown.delay(80).duration(400)} style={styles.section}>
@@ -310,7 +320,7 @@ export default function AddMatchScreen() {
             <AnimatedPressable
               style={[
                 styles.segmentButton,
-                matchMode === 'ranked' ? { backgroundColor: colors.primary } : {},
+                matchMode === 'ranked' ? { backgroundColor: colors.secondary } : {},
               ]}
               onPress={() => setMatchMode('ranked')}
             >
@@ -377,6 +387,7 @@ export default function AddMatchScreen() {
               setOpponentSearch('');
             }}
             onClearPlayer={() => setOpponent(null)}
+            recentPlayers={recentPlayers}
             colors={colors}
           />
 
@@ -393,6 +404,7 @@ export default function AddMatchScreen() {
                   setAllySearch('');
                 }}
                 onClearPlayer={() => setAlly(null)}
+                recentPlayers={recentPlayers}
                 colors={colors}
               />
               <SearchField
@@ -406,6 +418,7 @@ export default function AddMatchScreen() {
                   setOpponent2Search('');
                 }}
                 onClearPlayer={() => setOpponent2(null)}
+                recentPlayers={recentPlayers}
                 colors={colors}
               />
             </>

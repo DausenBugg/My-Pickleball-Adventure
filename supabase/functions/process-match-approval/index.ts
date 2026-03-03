@@ -8,6 +8,65 @@ function isValidUUID(str: string): boolean {
   return typeof str === 'string' && UUID_REGEX.test(str);
 }
 
+function parseIssuerFromAuthHeader(authHeader: string | null): string | null {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+
+  try {
+    const token = authHeader.slice(7).trim();
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+
+    const payloadPart = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const paddedPayload = payloadPart + '='.repeat((4 - (payloadPart.length % 4)) % 4);
+    const payloadJson = atob(paddedPayload);
+    const payload = JSON.parse(payloadJson);
+    return typeof payload?.iss === 'string' ? payload.iss : null;
+  } catch {
+    return null;
+  }
+}
+
+function getAuthDebug(authHeader: string | null) {
+  const hasBearerPrefix = !!authHeader && authHeader.startsWith('Bearer ');
+  const token = hasBearerPrefix ? authHeader!.slice(7).trim() : '';
+
+  return {
+    hasAuthHeader: !!authHeader,
+    hasBearerPrefix,
+    tokenLength: token.length,
+    tokenIssuer: parseIssuerFromAuthHeader(authHeader),
+  };
+}
+
+async function getUserIdFromAuthHeader(authHeader: string | null): Promise<string | null> {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  if (!supabaseUrl || !supabaseAnonKey) return null;
+
+  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: authHeader,
+      },
+    },
+  });
+
+  const { data, error } = await authClient.auth.getUser();
+  if (error) {
+    console.error('[process-match-approval] auth.getUser failed:', {
+      message: error.message,
+      status: (error as any)?.status,
+      name: (error as any)?.name,
+    });
+    return null;
+  }
+
+  const userId = data.user?.id;
+  return userId && isValidUUID(userId) ? userId : null;
+}
+
 // No CORS wildcard for mobile-only app
 const corsHeaders = {
   'Access-Control-Allow-Origin': '',
@@ -26,33 +85,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Verify JWT and get authenticated user
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('[process-match-approval] Missing Authorization header');
+    const authDebug = getAuthDebug(authHeader);
+    const userId = await getUserIdFromAuthHeader(authHeader);
+    if (!userId) {
+      console.error('[process-match-approval] Missing/invalid Authorization header', authDebug);
       return new Response(
-        JSON.stringify({ error: 'Missing or invalid Authorization header' }),
+        JSON.stringify({ error: 'Invalid or expired session token. Please sign in again.' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verify the JWT token
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-    
-    if (authError || !user) {
-      console.error('[process-match-approval] Invalid token:', authError?.message);
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('[process-match-approval] Authenticated user:', user.id);
 
     const { matchId } = await req.json();
-    console.log('[process-match-approval] Processing match:', matchId);
 
     // Validate UUID format
     if (!matchId || !isValidUUID(matchId)) {
@@ -74,17 +118,8 @@ serve(async (req) => {
       throw new Error('Match not found');
     }
 
-    console.log('[process-match-approval] Match found:', {
-      id: match.id,
-      status: match.status,
-      match_type: match.match_type,
-      match_mode: match.match_mode,
-      winner_team: match.winner_team,
-    });
-
     // Only process pending matches
     if (match.status !== 'pending') {
-      console.log('[process-match-approval] Match not pending, skipping:', match.status);
       return new Response(
         JSON.stringify({ message: 'Match is not pending', status: match.status }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -102,12 +137,10 @@ serve(async (req) => {
       throw new Error('No participants found');
     }
 
-    console.log('[process-match-approval] Participants:', participants.length);
-
     // Authorization: Only match participants can trigger approval processing
-    const isParticipant = participants.some((p: any) => p.user_id === user.id);
+    const isParticipant = participants.some((p: any) => p.user_id === userId);
     if (!isParticipant) {
-      console.error('[process-match-approval] User not a participant:', user.id);
+      console.error('[process-match-approval] User not a participant:', userId);
       return new Response(
         JSON.stringify({ error: 'Only match participants can process approvals' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -127,19 +160,12 @@ serve(async (req) => {
     const approvedCount = approvals?.filter((a: any) => a.approved).length || 0;
     const rejectedCount = approvals?.filter((a: any) => !a.approved).length || 0;
     
-    console.log('[process-match-approval] Approval status:', {
-      approved: approvedCount,
-      rejected: rejectedCount,
-      required: match.match_type === 'singles' ? 2 : 3,
-    });
-
     // Check if match meets approval threshold
     const requiredApprovals = match.match_type === 'singles' ? 2 : 3;
     const isApproved = approvedCount >= requiredApprovals;
     const isRejected = rejectedCount > 0; // Any rejection kills the match
 
     if (!isApproved && !isRejected) {
-      console.log('[process-match-approval] Not enough votes yet');
       return new Response(
         JSON.stringify({ message: 'Not enough approvals yet' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -147,7 +173,6 @@ serve(async (req) => {
     }
 
     if (isRejected) {
-      console.log('[process-match-approval] Match rejected');
       // Update match status to rejected
       const { error: rejectError } = await supabaseClient
         .from('matches')
@@ -165,7 +190,6 @@ serve(async (req) => {
     }
 
     // Match is approved - award XP
-    console.log('[process-match-approval] Match approved, awarding XP');
     const xpEvents = [];
     
     for (const participant of participants) {
@@ -192,11 +216,6 @@ serve(async (req) => {
           amount: xp,
           reason: `${resolvedResult === 'win' ? 'Win' : 'Loss'} in ${match.match_mode} ${match.match_type}`,
         });
-        console.log('[process-match-approval] XP event queued:', {
-          user_id: participant.user_id,
-          amount: xp,
-          result: resolvedResult,
-        });
       }
     }
 
@@ -205,8 +224,6 @@ serve(async (req) => {
       const { error: xpInsertError } = await supabaseClient.from('xp_events').insert(xpEvents);
       if (xpInsertError) {
         console.error('[process-match-approval] Error inserting XP events:', xpInsertError);
-      } else {
-        console.log('[process-match-approval] XP events inserted successfully');
       }
     }
 
@@ -214,7 +231,7 @@ serve(async (req) => {
     for (const event of xpEvents) {
       const { data: profile, error: profileError } = await supabaseClient
         .from('profiles')
-        .select('total_xp')
+        .select('total_xp, level')
         .eq('id', event.user_id)
         .single();
 
@@ -225,6 +242,7 @@ serve(async (req) => {
 
       if (profile) {
         const currentTotalXP = profile.total_xp ?? 0;
+        const oldLevel = profile.level ?? 1;
         const newTotalXP = currentTotalXP + event.amount;
         
         // Calculate new level based on XP formula: XP(N) = 100 * N^1.6
@@ -233,14 +251,6 @@ serve(async (req) => {
           newLevel++;
         }
 
-        console.log('[process-match-approval] Updating profile:', {
-          user_id: event.user_id,
-          oldXP: profile.total_xp,
-          newXP: newTotalXP,
-          oldLevel: profile.level || 1,
-          newLevel,
-        });
-
         const { error: updateError } = await supabaseClient
           .from('profiles')
           .update({ total_xp: newTotalXP, level: newLevel })
@@ -248,8 +258,52 @@ serve(async (req) => {
 
         if (updateError) {
           console.error('[process-match-approval] Error updating profile XP:', event.user_id, updateError);
-        } else {
-          console.log('[process-match-approval] Profile XP updated successfully');
+        }
+
+        // If user leveled up, create a level-up notification and send push
+        if (newLevel > oldLevel) {
+          const { error: notifError } = await supabaseClient
+            .from('notifications')
+            .insert({
+              user_id: event.user_id,
+              type: 'system',
+              title: 'Level Up!',
+              message: `Congratulations! You reached Level ${newLevel}!`,
+              data: { level: newLevel, old_level: oldLevel },
+            });
+
+          if (notifError) {
+            console.error('[process-match-approval] Error creating level-up notification:', event.user_id, notifError);
+          }
+
+          // Send push notification for level-up
+          try {
+            const anonKeyForPush = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+            const serviceKeyForPush = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+            const pushAuthHeader = serviceKeyForPush
+              ? `Bearer ${serviceKeyForPush}`
+              : (req.headers.get('Authorization') || '');
+
+            await fetch(
+              `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push-notifications`,
+              {
+                method: 'POST',
+                headers: {
+                  ...(pushAuthHeader ? { Authorization: pushAuthHeader } : {}),
+                  ...(anonKeyForPush ? { apikey: anonKeyForPush } : {}),
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  userIds: [event.user_id],
+                  title: 'Level Up! 🎉',
+                  body: `You reached Level ${newLevel}!`,
+                  data: { level: newLevel },
+                }),
+              }
+            );
+          } catch (pushError) {
+            console.error('[process-match-approval] Error sending level-up push:', pushError);
+          }
         }
       }
     }
@@ -274,25 +328,24 @@ serve(async (req) => {
 
     if (statusError) {
       console.error('[process-match-approval] Error updating match status:', statusError);
-    } else {
-      console.log('[process-match-approval] Match status updated to approved');
     }
 
     // If this is a ranked match, update ratings
     let updateRatingsResult: { status: number; body: string } | null = null;
+    const incomingAuth = req.headers.get('Authorization');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const internalAuthHeader = serviceRoleKey
+      ? `Bearer ${serviceRoleKey}`
+      : incomingAuth || '';
     if (match.match_mode === 'ranked') {
-      console.log('[process-match-approval] Invoking update-ratings for ranked match');
       try {
-        const incomingAuth = req.headers.get('Authorization');
-        const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-        const authHeader = incomingAuth || (anonKey ? `Bearer ${anonKey}` : '');
-        console.log('[process-match-approval] update-ratings auth source:', incomingAuth ? 'incoming' : anonKey ? 'anon' : 'none');
         const updateResponse = await fetch(
           `${Deno.env.get('SUPABASE_URL')}/functions/v1/update-ratings`,
           {
             method: 'POST',
             headers: {
-              ...(authHeader ? { Authorization: authHeader } : {}),
+              ...(internalAuthHeader ? { Authorization: internalAuthHeader } : {}),
               ...(anonKey ? { apikey: anonKey } : {}),
               'Content-Type': 'application/json',
             },
@@ -302,28 +355,27 @@ serve(async (req) => {
 
         const updateBody = await updateResponse.text();
         updateRatingsResult = { status: updateResponse.status, body: updateBody };
-        console.log('[process-match-approval] update-ratings response:', updateResponse.status, updateBody);
       } catch (ratingError) {
         console.error('[process-match-approval] Error invoking update-ratings:', ratingError);
       }
     }
 
     // Check achievements for all participants
-    console.log('[process-match-approval] Invoking check-achievements for all participants');
     const achievementChecks = participants.map((p: any) =>
       supabaseClient.functions.invoke('check-achievements', {
+        headers: {
+          ...(internalAuthHeader ? { Authorization: internalAuthHeader } : {}),
+          ...(anonKey ? { apikey: anonKey } : {}),
+        },
         body: { userId: p.user_id },
       })
     );
     
     try {
       await Promise.all(achievementChecks);
-      console.log('[process-match-approval] All achievement checks completed');
     } catch (achievementError) {
       console.error('[process-match-approval] Error checking achievements:', achievementError);
     }
-
-    console.log('[process-match-approval] Match processing completed successfully');
     return new Response(
       JSON.stringify({
         message: 'Match approved and XP awarded',

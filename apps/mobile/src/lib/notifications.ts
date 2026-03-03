@@ -18,10 +18,6 @@ export async function registerForPushNotificationsAsync() {
   let token: string | null = null;
 
   try {
-    if (Constants.appOwnership === 'expo') {
-      return null;
-    }
-
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',
@@ -33,7 +29,6 @@ export async function registerForPushNotificationsAsync() {
 
     // Safety check for Device module
     if (!Device || typeof Device.isDevice === 'undefined') {
-      console.log('Device module not available');
       return undefined;
     }
 
@@ -51,64 +46,48 @@ export async function registerForPushNotificationsAsync() {
       }
       
       try {
-        const tokenData = await Notifications.getExpoPushTokenAsync();
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+        const tokenData = await Notifications.getExpoPushTokenAsync({
+          projectId: projectId ?? undefined,
+        });
         token = tokenData?.data;
-        if (token) {
-          console.log('Push token:', token);
-        } else {
-          console.log('Token data was empty');
-        }
       } catch (tokenError) {
-        console.error('Error getting expo push token:', tokenError);
+        if (__DEV__) console.error('Error getting expo push token:', tokenError);
         return null;
       }
-    } else {
-      console.log('Must use physical device for Push Notifications');
     }
   } catch (error) {
-    console.error('Error in registerForPushNotificationsAsync:', error);
+    if (__DEV__) console.error('Error in registerForPushNotificationsAsync:', error);
     return null;
   }
 
   return token;
 }
 
-export async function savePushToken(userId: string, token: string) {
+export async function savePushToken(token: string) {
   if (!supabase) {
-    console.error('Supabase not configured');
+    if (__DEV__) console.error('Supabase not configured');
     return;
   }
 
-  if (!token || !userId) {
-    console.error('Invalid token or userId');
+  if (!token) {
+    if (__DEV__) console.error('Invalid token');
     return;
   }
 
   try {
     const deviceName = `${Platform.OS} ${Device?.modelName || Device?.deviceName || 'device'}`;
-    
-    // Upsert the token
-    const { error } = await supabase
-      .from('push_tokens')
-      .upsert(
-        {
-          user_id: userId,
-          token,
-          device_name: deviceName,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'token',
-        }
-      );
+
+    const { error } = await supabase.rpc('register_push_token', {
+      p_token: token,
+      p_device_name: deviceName,
+    });
 
     if (error) {
-      console.error('Error saving push token:', error);
-    } else {
-      console.log('Push token saved successfully');
+      if (__DEV__) console.error('Error saving push token:', error);
     }
   } catch (err) {
-    console.error('Error saving push token:', err);
+    if (__DEV__) console.error('Error saving push token:', err);
   }
 }
 
@@ -116,15 +95,14 @@ export async function removePushToken(token: string) {
   if (!supabase) return;
 
   try {
-    const { error } = await supabase
-      .from('push_tokens')
-      .delete()
-      .eq('token', token);
+    const { error } = await supabase.rpc('unregister_push_token', {
+      p_token: token,
+    });
 
     if (error) {
-      console.error('Error removing push token:', error);
+      if (__DEV__) console.error('Error removing push token:', error);
     }
   } catch (err) {
-    console.error('Error removing push token:', err);
+    if (__DEV__) console.error('Error removing push token:', err);
   }
 }

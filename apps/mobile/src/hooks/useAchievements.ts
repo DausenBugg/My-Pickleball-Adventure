@@ -128,7 +128,7 @@ export function useAchievements() {
       setAchievements(enrichedAchievements);
     } catch (err: any) {
       setError(err.message || 'Failed to load achievements');
-      console.error('Error fetching achievements:', err);
+      if (__DEV__) console.error('Error fetching achievements:', err);
     } finally {
       setLoading(false);
     }

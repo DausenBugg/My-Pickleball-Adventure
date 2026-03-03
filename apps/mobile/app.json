@@ -5,23 +5,28 @@
     "scheme": "my-pickleball-adventure",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/branding/app-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/branding/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.dbugg.mypickleballadventure",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
+      "package": "com.dbugg.mypickleballadventure",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/branding/adaptive-foreground.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -29,17 +34,38 @@
       "useNextNotificationsApi": true
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/branding/app-icon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0e4cabb7-6d47-44af-bcc5-0f7c18dee1b6"
+      },
+      "router": {}
+    },
+    "updates": {
+      "url": "https://u.expo.dev/0e4cabb7-6d47-44af-bcc5-0f7c18dee1b6"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
+      "expo-image-picker",
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
+          "icon": "./assets/branding/notification-icon.png",
           "color": "#FF6B6B"
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-7596986183502466~7745740291"
+        }
       ]
-    ]
+    ],
+    "owner": "dbugg"
   }
 }
