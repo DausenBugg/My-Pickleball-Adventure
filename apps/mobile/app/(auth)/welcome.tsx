@@ -1,9 +1,10 @@
 import { Link } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import AnimatedPressable from '../../src/components/AnimatedPressable';
+import { appAssets } from '../../src/theme/appAssets';
 import { useTheme } from '../../src/theme';
 import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
 
@@ -18,24 +19,24 @@ export default function WelcomeScreen() {
           entering={FadeInDown.duration(500)}
           style={[styles.hero, { backgroundColor: colors.primary }]}
         >
-          <Text style={styles.heroEmoji}>🏓</Text>
+          <Image source={appAssets.welcomeHero} style={styles.heroImage} resizeMode="contain" />
           <Text style={styles.heroTitle}>My Pickleball{'\n'}App</Text>
           <View style={styles.featureCards}>
             <View style={styles.featureCard}>
               <View style={styles.featureIcon}>
-                <Text style={styles.featureEmoji}>📊</Text>
+                <Image source={appAssets.welcomeTrack} style={styles.featureImage} resizeMode="contain" />
               </View>
               <Text style={styles.featureLabel}>Track matches</Text>
             </View>
             <View style={styles.featureCard}>
               <View style={styles.featureIcon}>
-                <Text style={styles.featureEmoji}>⬆️</Text>
+                <Image source={appAssets.welcomeLevelUp} style={styles.featureImage} resizeMode="contain" />
               </View>
               <Text style={styles.featureLabel}>Level up</Text>
             </View>
             <View style={styles.featureCard}>
               <View style={styles.featureIcon}>
-                <Text style={styles.featureEmoji}>🏆</Text>
+                <Image source={appAssets.welcomeLeaderboard} style={styles.featureImage} resizeMode="contain" />
               </View>
               <Text style={styles.featureLabel}>Climb the leaderboards</Text>
             </View>
@@ -89,8 +90,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
   },
-  heroEmoji: {
-    fontSize: 72,
+  heroImage: {
+    width: 400,
+    height: 400,
     marginBottom: spacing.sm,
   },
   heroTitle: {
@@ -114,12 +116,13 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radii.lg,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.91)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  featureEmoji: {
-    fontSize: 26,
+  featureImage: {
+    width: 60,
+    height: 60,
   },
   featureLabel: {
     fontSize: typography.sizes.sm,

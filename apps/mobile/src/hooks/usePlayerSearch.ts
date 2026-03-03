@@ -13,6 +13,34 @@ export type Player = {
   rating: number;
 };
 
+export type ProfileWithRating = {
+  id: string;
+  full_name: string | null;
+  email: string;
+  level: number;
+  wins: number;
+  losses: number;
+  ratings?: { rating?: number }[] | { rating?: number } | null;
+};
+
+export const PLAYER_SEARCH_SELECT = 'id, full_name, email, level, wins, losses, ratings(rating)';
+
+export function mapProfileToPlayer(profile: ProfileWithRating): Player {
+  const ratingValue = Array.isArray(profile.ratings)
+    ? profile.ratings[0]?.rating
+    : profile.ratings?.rating;
+
+  return {
+    id: profile.id,
+    full_name: profile.full_name,
+    email: profile.email,
+    level: profile.level,
+    wins: profile.wins,
+    losses: profile.losses,
+    rating: ratingValue ?? 1200,
+  };
+}
+
 export function usePlayerSearch(query: string) {
   const { session } = useAuth();
   const [players, setPlayers] = useState<Player[]>([]);
@@ -20,7 +48,7 @@ export function usePlayerSearch(query: string) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!session?.user?.id || !supabase || query.trim().length < 2) {
+    if (!session?.user?.id || !supabase || query.trim().length === 0) {
       setPlayers([]);
       setLoading(false);
       return;
@@ -36,7 +64,7 @@ export function usePlayerSearch(query: string) {
 
       const { data, error: searchError } = await supabase
         .from('profiles')
-        .select('id, full_name, email, level, wins, losses, ratings(rating)')
+        .select(PLAYER_SEARCH_SELECT)
         .neq('id', session.user.id) // Exclude current user
         .or(`full_name.ilike.${searchTerm},email.ilike.${searchTerm}`)
         .order('full_name')
@@ -46,15 +74,7 @@ export function usePlayerSearch(query: string) {
         setError(searchError.message);
         setPlayers([]);
       } else {
-        const mapped = (data || []).map((p: any) => ({
-          id: p.id,
-          full_name: p.full_name,
-          email: p.email,
-          level: p.level,
-          wins: p.wins,
-          losses: p.losses,
-          rating: p.ratings?.[0]?.rating ?? p.ratings?.rating ?? 1200,
-        }));
+        const mapped = (data || []).map((profile) => mapProfileToPlayer(profile as ProfileWithRating));
         setPlayers(mapped);
       }
 

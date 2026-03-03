@@ -5,6 +5,7 @@ const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const EXPO_PUSH_TOKEN_REGEX = /^ExponentPushToken\[[^\]]+\]$/;
 
 function isValidUUID(str: string): boolean {
   return typeof str === 'string' && UUID_REGEX.test(str);
@@ -131,7 +132,6 @@ serve(async (req) => {
     }
 
     if (!tokens || tokens.length === 0) {
-      console.log('No push tokens found for users');
       return new Response(
         JSON.stringify({ success: true, sent: 0, message: 'No push tokens found' }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -152,8 +152,7 @@ serve(async (req) => {
       const userPushTokens = userTokens.get(notification.user_id) || [];
       userPushTokens.forEach((token) => {
         // Validate token format (Expo push tokens start with ExponentPushToken)
-        if (!token || typeof token !== 'string' || token.trim().length === 0) {
-          console.warn('Invalid push token format:', token);
+        if (!token || typeof token !== 'string' || !EXPO_PUSH_TOKEN_REGEX.test(token)) {
           return;
         }
         

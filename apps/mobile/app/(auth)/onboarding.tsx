@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import {
   Dimensions,
+  Image,
   NativeScrollEvent,
   NativeSyntheticEvent,
   ScrollView,
@@ -14,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import AnimatedPressable from '../../src/components/AnimatedPressable';
+import { appAssets } from '../../src/theme/appAssets';
 import { useTheme } from '../../src/theme';
 import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
 
@@ -21,28 +23,28 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const SLIDES = [
   {
-    emoji: '🏓',
+    image: appAssets.onboardingTrackMatches,
     title: 'Track Your Matches',
     subtitle:
       'Log singles & doubles matches with friends, track scores, and build your match history.',
     bg: (primary: string) => primary,
   },
   {
-    emoji: '⚡',
+    image: appAssets.onboardingGainXp,
     title: 'Level Up & Earn XP',
     subtitle:
       'Every match earns XP. Watch your circular progress fill up as you climb to the next level.',
     bg: (primary: string, secondary: string) => secondary,
   },
   {
-    emoji: '🏆',
+    image: appAssets.onboardingClimbLeaderboard,
     title: 'Climb the Leaderboard',
     subtitle:
       'Compete in ranked matches to raise your rating. See how you stack up against friends and players worldwide.',
     bg: (primary: string) => primary,
   },
   {
-    emoji: '🎯',
+    image: appAssets.onboardingUnlockAchievements,
     title: 'Unlock Achievements',
     subtitle:
       'Complete challenges, earn badges, and show off your pickleball milestones. Ready to start your adventure?',
@@ -92,7 +94,7 @@ export default function OnboardingScreen() {
           return (
             <View key={index} style={[styles.slide, { width: SCREEN_WIDTH }]}>
               <View style={[styles.illustrationArea, { backgroundColor: bgColor }]}>
-                <Text style={styles.emoji}>{slide.emoji}</Text>
+                <Image source={slide.image} style={styles.slideImage} resizeMode="contain" />
               </View>
               <View style={styles.textArea}>
                 <Text style={[styles.slideTitle, { color: colors.ink }]}>
@@ -159,8 +161,9 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: radii.xl + 8,
     borderBottomRightRadius: radii.xl + 8,
   },
-  emoji: {
-    fontSize: 96,
+  slideImage: {
+    width: 140,
+    height: 140,
   },
   textArea: {
     paddingHorizontal: spacing.xl,

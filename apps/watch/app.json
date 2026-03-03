@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "My Pickleball Watch",
+    "slug": "my-pickleball-watch",
+    "scheme": "my-pickleball-watch",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "platforms": [
+      "android"
+    ],
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.dbugg.mypickleballwatch"
+    },
+    "extra": {
+      "router": {},
+      "watchSupabaseUrl": "REPLACED_AT_BUILD_TIME",
+      "watchSupabaseAnonKey": "REPLACED_AT_BUILD_TIME",
+      "eas": {
+        "projectId": "065ca052-8323-4d50-aed7-9abf12323be8"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "./withWearOS"
+    ],
+    "updates": {
+      "url": "https://u.expo.dev/065ca052-8323-4d50-aed7-9abf12323be8"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
+  }
+}

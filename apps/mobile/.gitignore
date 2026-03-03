@@ -31,11 +31,18 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
 *.tsbuildinfo
 
+# EAS / Play Store credentials
+play-store-service-account.json
+
 # generated native folders
 /ios
 /android
+
+# Android local config
+android/local.properties

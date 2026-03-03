@@ -8,12 +8,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import AdBanner from '../../src/components/AdBanner';
+import { AD_UNIT_IDS } from '../../src/lib/adUnitIds';
 import { useFriends } from '../../src/hooks/useFriends';
-import { Player, usePlayerSearch } from '../../src/hooks/usePlayerSearch';
+import { Player, PLAYER_SEARCH_SELECT, ProfileWithRating, mapProfileToPlayer, usePlayerSearch } from '../../src/hooks/usePlayerSearch';
 import { supabase } from '../../src/lib/supabase';
 import { useTheme } from '../../src/theme';
 import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
@@ -25,6 +27,7 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const { colors } = useTheme();
+  const router = useRouter();
 
   const { players, loading: searchLoading } = usePlayerSearch(query);
   const {
@@ -57,19 +60,11 @@ export default function SearchScreen() {
       setFriendProfilesLoading(true);
       const { data } = await supabase
         .from('profiles')
-        .select('id, full_name, email, level, wins, losses, ratings(rating)')
+        .select(PLAYER_SEARCH_SELECT)
         .in('id', friends)
         .order('full_name');
 
-      const mapped: Player[] = (data || []).map((p: any) => ({
-        id: p.id,
-        full_name: p.full_name,
-        email: p.email,
-        level: p.level,
-        wins: p.wins,
-        losses: p.losses,
-        rating: p.ratings?.[0]?.rating ?? p.ratings?.rating ?? 1200,
-      }));
+      const mapped: Player[] = (data || []).map((profile) => mapProfileToPlayer(profile as ProfileWithRating));
       setFriendProfiles(mapped);
       setFriendProfilesLoading(false);
     };
@@ -96,7 +91,7 @@ export default function SearchScreen() {
   const handleAddFriend = async (userId: string) => {
     const success = await sendFriendRequest(userId);
     if (success) {
-      console.log('Friend request sent');
+      // request sent — UI updated via local state
     }
   };
 
@@ -115,6 +110,9 @@ export default function SearchScreen() {
             Find friends and view their progress.
           </Text>
         </Animated.View>
+
+        {/* Ad banner */}
+        <AdBanner adUnitId={AD_UNIT_IDS.SEARCH_BANNER} />
 
         {/* Search bar */}
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>
@@ -206,7 +204,8 @@ export default function SearchScreen() {
                   key={player.id}
                   entering={FadeInDown.delay(200 + idx * 60).duration(400)}
                 >
-                  <View
+                  <AnimatedPressable
+                    onPress={() => router.push(`/profile/${player.id}`)}
                     style={[
                       styles.card,
                       { backgroundColor: colors.cardBackground, borderColor: colors.borderLight },
@@ -261,7 +260,7 @@ export default function SearchScreen() {
                             : 'Add friend'}
                       </Text>
                     </AnimatedPressable>
-                  </View>
+                  </AnimatedPressable>
                 </Animated.View>
               );
             })

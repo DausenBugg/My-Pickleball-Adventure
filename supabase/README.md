@@ -19,7 +19,7 @@ Since you already have a Supabase project:
 
 ## Migrations
 
-Migrations are ordered by timestamp (22 total):
+Migrations are ordered by timestamp (27 total):
 
 **Core Schema (20260211):**
 1. `20260211000001_create_profiles.sql` - User profiles and auth trigger
@@ -40,7 +40,15 @@ Migrations are ordered by timestamp (22 total):
 14. `20260212000003_fix_match_participants_policy.sql` - RLS policy fix
 15. `20260212000004_add_achievement_requirements.sql` - Achievement requirements
 16. `20260212000005_allow_match_notifications.sql` - Match notifications
-17-22. Additional RLS and notification policy refinements
+17-23. Additional RLS and notification policy refinements
+
+**Security & Anti-abuse (20260217):**
+24. `20260217000001_security_hardening.sql` - Security hardening and rate limits
+25. `20260217000002_anti_abuse.sql` - Anti-abuse protections and RPC checks
+
+**Push Token RPC Hardening (20260221-20260224):**
+26. `20260221000001_push_token_rpc.sql` - Register/unregister push token RPCs
+27. `20260224000001_unregister_all_push_tokens_rpc.sql` - Revoke all user device tokens RPC
 
 ## Row Level Security (RLS)
 

@@ -1,0 +1,136 @@
+# ---------------------------------------------------------------
+# Deploy — build & submit both apps to Google Play (internal track)
+# Triggered on push to main (after CI passes)
+# ---------------------------------------------------------------
+name: Deploy to Play Store
+
+on:
+  push:
+    branches: [main]
+
+# Prevent concurrent deploys
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 20
+
+jobs:
+  # ── Gate: run TypeScript checks first ──────────────────────────
+  typecheck:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install mobile deps
+        working-directory: apps/mobile
+        run: npm ci --legacy-peer-deps
+
+      - name: Typecheck mobile
+        working-directory: apps/mobile
+        run: npx tsc --noEmit
+
+      - name: Install watch deps
+        working-directory: apps/watch
+        run: npm ci --legacy-peer-deps
+
+      - name: Typecheck watch
+        working-directory: apps/watch
+        run: npx tsc --noEmit
+
+  # ── Build & submit mobile app ─────────────────────────────────
+  deploy-mobile:
+    name: Build & Submit Mobile
+    needs: typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # Decode secret files from base64 GitHub Secrets
+      - name: Write play-store-service-account.json
+        run: echo "${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_BASE64 }}" | base64 --decode > play-store-service-account.json
+
+      - name: Write .env
+        run: |
+          echo "EXPO_PUBLIC_SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+
+      - name: Build Android app bundle
+        run: eas build --platform android --profile production --non-interactive
+
+      - name: Submit to Play Store (internal track)
+        run: eas submit --platform android --profile production --non-interactive
+
+  # ── Build & submit watch app ──────────────────────────────────
+  deploy-watch:
+    name: Build & Submit Watch
+    needs: typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        working-directory: apps/watch
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/watch/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # Decode secret files from base64 GitHub Secrets
+      - name: Write play-store-service-account.json
+        run: echo "${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_BASE64 }}" | base64 --decode > play-store-service-account.json
+
+      - name: Write .env
+        run: |
+          echo "EXPO_PUBLIC_SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+
+      - name: Build Android app bundle
+        run: eas build --platform android --profile production --non-interactive
+
+      - name: Submit to Play Store (internal track)
+        run: eas submit --platform android --profile production --non-interactive

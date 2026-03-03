@@ -1,0 +1,45 @@
+# ---------------------------------------------------------------
+# CI — runs TypeScript checks on every push and pull request
+# ---------------------------------------------------------------
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  typecheck:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ---- Mobile app ----
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm ci --legacy-peer-deps
+
+      - name: TypeScript check (mobile)
+        working-directory: apps/mobile
+        run: npx tsc --noEmit
+
+      # ---- Watch app ----
+      - name: Install watch dependencies
+        working-directory: apps/watch
+        run: npm ci --legacy-peer-deps
+
+      - name: TypeScript check (watch)
+        working-directory: apps/watch
+        run: npx tsc --noEmit

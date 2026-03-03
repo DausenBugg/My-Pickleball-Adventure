@@ -27,7 +27,6 @@ apps/mobile/
 │   │   ├── leaderboard.tsx  # Rankings (global/friends)
 │   │   └── settings.tsx     # Account settings
 │   ├── achievements.tsx     # Achievements display
-│   ├── approvals.tsx        # Match approvals screen
 │   ├── match-history.tsx    # Match history view
 │   ├── _layout.tsx          # Root layout (AuthProvider + AuthGate)
 │   └── index.tsx            # Redirect to auth or tabs
@@ -55,14 +54,12 @@ apps/mobile/
 │   │   └── supabase.ts      # Supabase client setup
 │   ├── state/               # Global state management
 │   │   └── auth.tsx         # Auth context + session provider
-│   ├── tests/               # Test utilities
-│   │   └── edge-cases.test.ts
 │   ├── theme/               # Design tokens
 │   │   ├── index.ts
 │   │   ├── tokens.ts
 │   │   └── ThemeContext.tsx
 │   └── types/               # TypeScript definitions
-├── .env.example             # Environment variable template
+├── .env                     # Local environment variables (gitignored)
 ├── app.json                 # Expo app configuration
 ├── babel.config.js          # Babel config (Reanimated plugin)
 ├── package.json             # Dependencies
@@ -77,7 +74,7 @@ apps/mobile/
    ```
 
 2. **Set up environment variables:**
-   - Copy `.env.example` to `.env`
+   - Create `.env` in this folder
    - Add your Supabase credentials:
      ```
      EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co

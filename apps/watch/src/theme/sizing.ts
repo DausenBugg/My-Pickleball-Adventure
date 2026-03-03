@@ -1,0 +1,16 @@
+export const watchSizing = {
+  tabBarHeight: 44,
+  tabLabel: 10,
+  pageHorizontal: 10,
+  pageBottom: 16,
+  pageGap: 8,
+  title: 18,
+  subtitle: 11,
+  label: 10,
+  body: 12,
+  bodyStrong: 13,
+  controlHeight: 38,
+  buttonHeight: 40,
+  cardRadius: 12,
+  controlRadius: 10,
+};

@@ -8,9 +8,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import AdBanner from '../../src/components/AdBanner';
+import { AD_UNIT_IDS } from '../../src/lib/adUnitIds';
 import { useLeaderboard } from '../../src/hooks/useLeaderboard';
 import { useTheme } from '../../src/theme';
 import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
@@ -25,6 +28,7 @@ export default function LeaderboardScreen() {
   const [boardType, setBoardType] = useState<BoardType>('global');
   const { entries, loading } = useLeaderboard(boardType);
   const { colors } = useTheme();
+  const router = useRouter();
 
   const podium = useMemo(() => entries.slice(0, 3), [entries]);
   const rest = useMemo(() => entries.slice(3), [entries]);
@@ -54,6 +58,9 @@ export default function LeaderboardScreen() {
           <Text style={[styles.title, { color: colors.ink }]}>Leaderboard</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>Top players by ranking points.</Text>
         </Animated.View>
+
+        {/* Ad banner */}
+        <AdBanner adUnitId={AD_UNIT_IDS.LEADERBOARD_BANNER} />
 
         {/* Segment control */}
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>
@@ -117,6 +124,7 @@ export default function LeaderboardScreen() {
                 {podium.map((player, index) => (
                   <AnimatedPressable
                     key={player.id}
+                    onPress={() => router.push(`/profile/${player.user_id}`)}
                     style={[
                       styles.podiumCard,
                       {
@@ -157,6 +165,7 @@ export default function LeaderboardScreen() {
                     entering={FadeInDown.delay(300 + index * 50).duration(400)}
                   >
                     <AnimatedPressable
+                      onPress={() => router.push(`/profile/${player.user_id}`)}
                       style={[
                         styles.listItem,
                         { backgroundColor: colors.cardBackground, borderColor: colors.borderLight },

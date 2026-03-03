@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "835978706836",
+    "project_id": "my-pickleball-app-f22e3",
+    "storage_bucket": "my-pickleball-app-f22e3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:835978706836:android:95db3f33776d42d2931981",
+        "android_client_info": {
+          "package_name": "com.dbugg.mypickleballadventure"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAeY1BvhzQ-GgoMwlN8klt_ileMFTIDD-g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

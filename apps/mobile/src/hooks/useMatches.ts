@@ -123,7 +123,7 @@ export function useMatches(filters: MatchFilters = {}) {
         )
         .in('match_id', filteredMatchIds);
 
-      if (partsError) {
+      if (partsError && __DEV__) {
         console.error('Error fetching participants:', partsError);
       }
 
@@ -143,7 +143,7 @@ export function useMatches(filters: MatchFilters = {}) {
 
         // Validate that we have at least one player per team
         if (team1.length === 0 || team2.length === 0) {
-          console.warn('Match missing team data:', match.id);
+          if (__DEV__) console.warn('Match missing team data:', match.id);
           return null;
         }
 
@@ -194,7 +194,7 @@ export function useMatches(filters: MatchFilters = {}) {
           
           // User should be in exactly one team
           if (!userInTeam1 && !userInTeam2) {
-            console.warn('User not in any team for match:', match.id);
+            if (__DEV__) console.warn('User not in any team for match:', match.id);
             return false;
           }
 

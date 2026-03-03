@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useErrorToast } from '../../src/components/ErrorToast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +14,8 @@ import { useTheme, type ThemeMode } from '../../src/theme/ThemeContext';
 import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
 import { useAuth } from '../../src/state/auth';
 import AnimatedPressable from '../../src/components/AnimatedPressable';
+import AdBanner from '../../src/components/AdBanner';
+import { AD_UNIT_IDS } from '../../src/lib/adUnitIds';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -20,6 +23,7 @@ export default function SettingsScreen() {
   const { colors, mode, setMode } = useTheme();
   const { profile, loading: profileLoading, uploadAvatar } = useProfile();
   const { rating } = useRating();
+  const { showError } = useErrorToast();
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -48,20 +52,17 @@ export default function SettingsScreen() {
       if (value) {
         const token = await registerForPushNotificationsAsync();
         if (token && typeof token === 'string') {
-          await savePushToken(session.user.id, token);
+          await savePushToken(token);
         }
       } else {
-        const { error: deleteError } = await supabase
-          .from('push_tokens')
-          .delete()
-          .eq('user_id', session.user.id);
+        const { error: deleteError } = await supabase.rpc('unregister_all_push_tokens');
 
-        if (deleteError) {
+        if (deleteError && __DEV__) {
           console.warn('Failed to remove push tokens:', deleteError);
         }
       }
     } catch (err) {
-      console.error('Failed to update notification preference:', err);
+      if (__DEV__) console.error('Failed to update notification preference:', err);
     } finally {
       setNotificationsSaving(false);
     }
@@ -69,7 +70,7 @@ export default function SettingsScreen() {
 
   const handleSignOut = async () => {
     if (!isSupabaseConfigured || !supabase) {
-      Alert.alert('Error', 'Supabase is not configured.');
+      showError('Error', 'Supabase is not configured.');
       return;
     }
 
@@ -78,7 +79,7 @@ export default function SettingsScreen() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Error', error.message);
+      showError('Error', error.message);
     }
   };
 
@@ -101,7 +102,7 @@ export default function SettingsScreen() {
     setUploadingAvatar(false);
 
     if (result.error && result.error !== 'Cancelled') {
-      Alert.alert('Upload Error', result.error);
+      showError('Upload Error', result.error);
     }
   };
 
@@ -178,6 +179,9 @@ export default function SettingsScreen() {
             </View>
           </Animated.View>
         ) : null}
+
+        {/* Ad banner */}
+        <AdBanner adUnitId={AD_UNIT_IDS.SETTINGS_BANNER} />
 
         <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.ink }]}>Account</Text>
