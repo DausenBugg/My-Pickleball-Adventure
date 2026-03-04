@@ -68,15 +68,10 @@ serve(async (req) => {
     }
 
     // Parse request body - userId is optional, defaults to authenticated user
-    // Also accept optional context fields for streak/loss-recovery achievements
     let userId: string | null = userIdFromToken;
-    let isWin: boolean | null = null;
-    let previousLossStreak: number = 0;
     try {
       const body = await req.json();
       userId = body.userId || userId;
-      if (typeof body.is_win === 'boolean') isWin = body.is_win;
-      if (typeof body.previous_loss_streak === 'number') previousLossStreak = body.previous_loss_streak;
     } catch {
       // keep fallback from authenticated token
     }
@@ -170,14 +165,6 @@ serve(async (req) => {
           break;
         case 'friends':
           shouldUnlock = (friendCount || 0) >= achievement.requirement_value;
-          break;
-        case 'bounce_back':
-          // Win immediately after at least 1 loss
-          shouldUnlock = isWin === true && previousLossStreak >= 1;
-          break;
-        case 'resilient':
-          // Win after N consecutive losses
-          shouldUnlock = isWin === true && previousLossStreak >= achievement.requirement_value;
           break;
       }
 

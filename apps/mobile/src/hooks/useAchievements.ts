@@ -130,11 +130,6 @@ export function useAchievements() {
                   100
                 );
                 break;
-              case 'bounce_back':
-              case 'resilient':
-                // These are situational — no meaningful partial progress
-                progress = 0;
-                break;
             }
           }
 

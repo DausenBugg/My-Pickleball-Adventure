@@ -191,8 +191,8 @@ serve(async (req) => {
 
     // Match is approved - award XP
     const xpEvents = [];
-    // Track each participant's result and previous loss streak for achievement context
-    const participantResults: { user_id: string; is_win: boolean; previous_loss_streak: number }[] = [];
+    // Track each participant's result for achievement context
+    const participantResults: { user_id: string; is_win: boolean }[] = [];
     
     for (const participant of participants) {
       let xp = 0;
@@ -223,7 +223,6 @@ serve(async (req) => {
       participantResults.push({
         user_id: participant.user_id,
         is_win: resolvedResult === 'win',
-        previous_loss_streak: 0, // will be filled below
       });
     }
 
@@ -239,7 +238,7 @@ serve(async (req) => {
     for (const event of xpEvents) {
       const { data: profile, error: profileError } = await supabaseClient
         .from('profiles')
-        .select('total_xp, level, current_win_streak, best_win_streak, current_loss_streak')
+        .select('total_xp, level, current_win_streak, best_win_streak')
         .eq('id', event.user_id)
         .single();
 
@@ -264,21 +263,12 @@ serve(async (req) => {
         const isWin = pResult?.is_win ?? false;
         let newWinStreak = profile.current_win_streak ?? 0;
         let newBestWinStreak = profile.best_win_streak ?? 0;
-        let newLossStreak = profile.current_loss_streak ?? 0;
-        const previousLossStreak = newLossStreak; // capture before reset
 
         if (isWin) {
           newWinStreak += 1;
           newBestWinStreak = Math.max(newBestWinStreak, newWinStreak);
-          newLossStreak = 0;
         } else {
-          newLossStreak += 1;
           newWinStreak = 0;
-        }
-
-        // Store previous_loss_streak in participantResults for check-achievements
-        if (pResult) {
-          pResult.previous_loss_streak = previousLossStreak;
         }
 
         const { error: updateError } = await supabaseClient
@@ -288,7 +278,6 @@ serve(async (req) => {
             level: newLevel,
             current_win_streak: newWinStreak,
             best_win_streak: newBestWinStreak,
-            current_loss_streak: newLossStreak,
           })
           .eq('id', event.user_id);
 
@@ -396,21 +385,16 @@ serve(async (req) => {
       }
     }
 
-    // Check achievements for all participants (pass win/loss context for streak & bounce-back achievements)
-    const achievementChecks = participants.map((p: any) => {
-      const pResult = participantResults.find(pr => pr.user_id === p.user_id);
-      return supabaseClient.functions.invoke('check-achievements', {
+    // Check achievements for all participants
+    const achievementChecks = participants.map((p: any) =>
+      supabaseClient.functions.invoke('check-achievements', {
         headers: {
           ...(internalAuthHeader ? { Authorization: internalAuthHeader } : {}),
           ...(anonKey ? { apikey: anonKey } : {}),
         },
-        body: {
-          userId: p.user_id,
-          is_win: pResult?.is_win ?? false,
-          previous_loss_streak: pResult?.previous_loss_streak ?? 0,
-        },
-      });
-    });
+        body: { userId: p.user_id },
+      })
+    );
     
     try {
       await Promise.all(achievementChecks);

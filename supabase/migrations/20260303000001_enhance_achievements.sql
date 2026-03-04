@@ -5,8 +5,7 @@
 -- 1. Add streak tracking columns to profiles
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS current_win_streak integer NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS best_win_streak integer NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS current_loss_streak integer NOT NULL DEFAULT 0;
+  ADD COLUMN IF NOT EXISTS best_win_streak integer NOT NULL DEFAULT 0;
 
 -- 2. Make xp_events.match_id nullable so achievement XP rewards can be inserted
 ALTER TABLE public.xp_events
@@ -77,10 +76,4 @@ INSERT INTO public.achievements (key, name, description, tier, requirement_type,
   ('friend_5', 'Making Friends', 'Add 5 friends', 'bronze', 'friends', 5),
   ('friend_25', 'Popular', 'Add 25 friends', 'gold', 'friends', 25),
   ('friend_50', 'Life of the Party', 'Add 50 friends', 'platinum', 'friends', 50)
-ON CONFLICT (key) DO NOTHING;
-
--- Loss recovery achievements
-INSERT INTO public.achievements (key, name, description, tier, requirement_type, requirement_value) VALUES
-  ('bounce_back', 'Bounce Back', 'Win a match right after a loss', 'bronze', 'bounce_back', 1),
-  ('resilient', 'Resilient', 'Win a match after 3 consecutive losses', 'silver', 'resilient', 3)
 ON CONFLICT (key) DO NOTHING;
