@@ -15,6 +15,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import AnimatedPressable from '../../src/components/AnimatedPressable';
 import { LeagueRatingBadge, LeagueLabel } from '../../src/components/LeagueBadge';
 import { useUserProfile } from '../../src/hooks/useUserProfile';
+import { useRank } from '../../src/hooks/useRank';
 import { useFriends } from '../../src/hooks/useFriends';
 import { useAuth } from '../../src/state/auth';
 import { useTheme } from '../../src/theme';
@@ -83,6 +84,7 @@ export default function UserProfileScreen() {
   const { colors } = useTheme();
   const { session } = useAuth();
   const { profile, rating, achievements, matchHistory, loading, error } = useUserProfile(id ?? null);
+  const { rank } = useRank(id ?? null);
   const { friends, pendingSent, sendFriendRequest } = useFriends();
 
   const isOwnProfile = session?.user?.id === id;
@@ -151,7 +153,7 @@ export default function UserProfileScreen() {
 
               {/* Rating badge */}
               <View style={{ marginTop: spacing.sm }}>
-                <LeagueRatingBadge rating={rating?.rating ?? 1200} />
+                <LeagueRatingBadge rating={rating?.rating ?? 1200} rank={rank ?? undefined} />
               </View>
 
               {/* Add friend button — hidden on own profile */}

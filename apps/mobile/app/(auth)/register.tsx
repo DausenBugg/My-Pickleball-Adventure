@@ -1,5 +1,5 @@
 import { Link, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -16,6 +16,10 @@ import { useTheme } from '../../src/theme';
 import { radii, shadows, spacing, typography } from '../../src/theme/tokens';
 import AnimatedPressable from '../../src/components/AnimatedPressable';
 
+const USERNAME_MAX = 20;
+const USERNAME_MIN = 2;
+const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
+
 export default function RegisterScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -27,10 +31,50 @@ export default function RegisterScreen() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null); // null = not checked yet
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { colors } = useTheme();
   const router = useRouter();
 
-  const nameValid = useMemo(() => name.trim().length >= 2, [name]);
+  const trimmedName = name.trim();
+  const nameLengthValid = useMemo(() => trimmedName.length >= USERNAME_MIN && trimmedName.length <= USERNAME_MAX, [trimmedName]);
+  const nameFormatValid = useMemo(() => USERNAME_REGEX.test(trimmedName), [trimmedName]);
+  const nameValid = nameLengthValid && nameFormatValid;
+
+  // Debounced username availability check
+  const checkUsernameAvailability = useCallback(async (username: string) => {
+    if (!username || username.length < USERNAME_MIN || !USERNAME_REGEX.test(username)) {
+      setUsernameAvailable(null);
+      return;
+    }
+    if (!isSupabaseConfigured || !supabase) return;
+
+    setCheckingUsername(true);
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id')
+        .ilike('full_name', username)
+        .maybeSingle();
+      setUsernameAvailable(data === null);
+    } catch {
+      setUsernameAvailable(null);
+    } finally {
+      setCheckingUsername(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setUsernameAvailable(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      checkUsernameAvailability(trimmedName);
+    }, 500);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [trimmedName, checkUsernameAvailability]);
   const emailValid = useMemo(() => email.includes('@') && email.includes('.'), [email]);
   
   // Password complexity: 8+ chars, at least one uppercase, one number
@@ -42,12 +86,19 @@ export default function RegisterScreen() {
   }, [password]);
   
   const confirmValid = useMemo(() => confirmPassword === password && password.length > 0, [confirmPassword, password]);
-  const canSubmit = nameValid && emailValid && passwordValid && confirmValid;
+  const canSubmit = nameValid && emailValid && passwordValid && confirmValid && usernameAvailable === true;
 
   const validationErrors = useMemo(() => {
     if (!submitted) return [];
     const errors: string[] = [];
-    if (!nameValid) errors.push('Name must be at least 2 characters');
+    if (trimmedName.length > 0 && !nameFormatValid) {
+      errors.push('Username can only contain letters, numbers, and underscores');
+    } else if (!nameLengthValid && trimmedName.length > 0) {
+      errors.push(`Username must be ${USERNAME_MIN}–${USERNAME_MAX} characters`);
+    } else if (!nameValid) {
+      errors.push(`Username must be ${USERNAME_MIN}–${USERNAME_MAX} characters`);
+    }
+    if (usernameAvailable === false) errors.push('Username is already taken');
     if (!emailValid) errors.push('Enter a valid email address');
     if (!passwordValid) {
       if (password.length < 8) {
@@ -104,6 +155,7 @@ export default function RegisterScreen() {
         setPassword('');
         setConfirmPassword('');
         setSubmitted(false);
+        setUsernameAvailable(null);
       }
     } catch (err) {
       if (__DEV__) console.error('Signup error:', err);
@@ -131,10 +183,31 @@ export default function RegisterScreen() {
 
         <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.form}>
           <View style={styles.field}>
-            <Text style={[styles.label, { color: colors.muted }]}>Name</Text>
+            <View style={styles.labelRow}>
+              <Text style={[styles.label, { color: colors.muted }]}>Username</Text>
+              <View style={styles.labelRowRight}>
+                {trimmedName.length > 0 && (
+                  <View style={styles.usernameStatus}>
+                    {checkingUsername ? (
+                      <ActivityIndicator size={12} color={colors.muted} />
+                    ) : usernameAvailable === true && nameValid ? (
+                      <Ionicons name="checkmark-circle" size={14} color="#22c55e" />
+                    ) : usernameAvailable === false ? (
+                      <Text style={styles.usernameTaken}>taken</Text>
+                    ) : null}
+                  </View>
+                )}
+                <Text style={[styles.charCounter, { color: colors.muted }]}>
+                  {trimmedName.length}/{USERNAME_MAX}
+                </Text>
+              </View>
+            </View>
             <TextInput
-              placeholder="Jordan Lee"
+              placeholder="John Smith"
               placeholderTextColor={colors.muted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={USERNAME_MAX}
               style={[styles.input, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight, color: colors.ink }]}
               value={name}
               onChangeText={setName}
@@ -275,10 +348,35 @@ const styles = StyleSheet.create({
   field: {
     gap: 8,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  labelRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   label: {
     fontSize: typography.sizes.sm,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.8,
+  },
+  usernameStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  usernameTaken: {
+    fontSize: 11,
+    color: '#ef4444',
+    fontWeight: '600' as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.4,
+  },
+  charCounter: {
+    fontSize: 11,
   },
   input: {
     borderRadius: radii.lg,

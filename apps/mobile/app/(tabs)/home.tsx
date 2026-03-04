@@ -24,6 +24,7 @@ import { PendingMatch, usePendingMatches } from '../../src/hooks/usePendingMatch
 import { useMatches } from '../../src/hooks/useMatches';
 import { useNotifications } from '../../src/hooks/useNotifications';
 import { useFriends } from '../../src/hooks/useFriends';
+import { useRank } from '../../src/hooks/useRank';
 import {
   calculateLevelProgress,
   calculateXPForLevel,
@@ -46,6 +47,7 @@ export default function HomeScreen() {
   const { openNotifications: openNotificationsParam } = useLocalSearchParams<{ openNotifications?: string }>();
   const { profile, loading: profileLoading, error: profileError, refresh: refreshProfile } = useProfile();
   const { rating, loading: ratingLoading, refresh: refreshRating } = useRating();
+  const { rank } = useRank(profile?.id);
   const {
     matches: pendingMatches,
     approveMatch,
@@ -447,7 +449,7 @@ export default function HomeScreen() {
           </View>
           <View style={[styles.statChip, { backgroundColor: colors.cardBackground, borderWidth: 1, borderColor: colors.borderLight }]}>
             <Text style={[styles.statChipValue, { color: colors.ink }]}>{rating?.rating ?? 1200}</Text>
-            <LeagueLabel rating={rating?.rating ?? 1200} size="sm" />
+            <LeagueLabel rating={rating?.rating ?? 1200} rank={rank ?? undefined} size="sm" />
           </View>
         </ReAnimated.View>
 
