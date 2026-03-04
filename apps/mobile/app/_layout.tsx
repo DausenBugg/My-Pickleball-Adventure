@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import AuthGate from '../src/components/AuthGate';
+import ErrorBoundary from '../src/components/ErrorBoundary';
 import { ErrorToastProvider } from '../src/components/ErrorToast';
 import { AuthProvider } from '../src/state/auth';
 import { ThemeProvider, useTheme } from '../src/theme';
@@ -27,14 +28,16 @@ function AppContent() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <ErrorToastProvider>
-        <AuthProvider>
-          <AuthGate>
-            <AppContent />
-          </AuthGate>
-        </AuthProvider>
-      </ErrorToastProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <ErrorToastProvider>
+          <AuthProvider>
+            <AuthGate>
+              <AppContent />
+            </AuthGate>
+          </AuthProvider>
+        </ErrorToastProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }

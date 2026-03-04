@@ -48,6 +48,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     mobileEnv.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
+  if (!watchSupabaseUrl || !watchSupabaseAnonKey) {
+    throw new Error(
+      'Missing required environment variables: EXPO_PUBLIC_SUPABASE_URL and/or EXPO_PUBLIC_SUPABASE_ANON_KEY. ' +
+        'Set them in apps/watch/.env, apps/mobile/.env, or as environment variables.',
+    );
+  }
+
   const resolved = {
     ...baseConfig,
     ...config,

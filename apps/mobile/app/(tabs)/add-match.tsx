@@ -158,6 +158,9 @@ export default function AddMatchScreen() {
     if (parsedUserScore < 0 || parsedOpponentScore < 0) {
       return { valid: false, message: 'Scores must be 0 or higher.' };
     }
+    if (parsedUserScore > 30 || parsedOpponentScore > 30) {
+      return { valid: false, message: 'Scores cannot exceed 30.' };
+    }
     if (parsedUserScore === parsedOpponentScore) {
       return { valid: false, message: 'Scores cannot be tied.' };
     }

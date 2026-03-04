@@ -1,6 +1,11 @@
 # EAS / Play Store credentials
 play-store-service-account.json
 
+# NOTE: google-services.json is intentionally NOT ignored.
+# EAS Build requires it at the path referenced in app.json (android.googleServicesFile).
+# The Firebase API key inside it is restricted by Android app-signing SHA-1,
+# so committing it is the standard Expo/EAS approach and poses minimal risk.
+
 # Dependencies
 node_modules/
 
