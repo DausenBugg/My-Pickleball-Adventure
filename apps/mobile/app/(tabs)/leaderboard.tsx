@@ -26,7 +26,7 @@ const MEDAL_COLORS = ['#ffd700', '#c0c0c0', '#cd7f32']; // gold, silver, bronze
 
 export default function LeaderboardScreen() {
   const [boardType, setBoardType] = useState<BoardType>('global');
-  const { entries, loading } = useLeaderboard(boardType);
+  const { entries, loading, grandmasterUserId } = useLeaderboard(boardType);
   const { colors } = useTheme();
   const router = useRouter();
 
@@ -147,7 +147,7 @@ export default function LeaderboardScreen() {
                     <Text style={[styles.podiumName, { color: colors.ink }]} numberOfLines={2}>
                       {player.full_name || 'Player'}
                     </Text>
-                    <LeagueRatingBadge rating={player.rating} rank={boardType === 'global' ? index + 1 : undefined} />
+                    <LeagueRatingBadge rating={player.rating} rank={boardType === 'global' ? index + 1 : (player.user_id === grandmasterUserId ? 1 : undefined)} />
                     <Text style={[styles.podiumMeta, { color: colors.muted }]}>
                       {player.wins}W · {player.losses}L
                     </Text>
@@ -181,7 +181,7 @@ export default function LeaderboardScreen() {
                           Level {player.level} · {player.wins}W · {player.losses}L
                         </Text>
                       </View>
-                      <LeagueInlineBadge rating={player.rating} rank={boardType === 'global' ? index + 4 : undefined} ratingColor={colors.ink} />
+                      <LeagueInlineBadge rating={player.rating} rank={boardType === 'global' ? index + 4 : (player.user_id === grandmasterUserId ? 1 : undefined)} ratingColor={colors.ink} />
                     </AnimatedPressable>
                   </Animated.View>
                 ))}

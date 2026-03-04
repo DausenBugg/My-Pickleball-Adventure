@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 import { getLeagueForRating } from '../lib/leagues';
+import { useTheme } from '../theme';
 import { radii, typography } from '../theme/tokens';
 
 interface LeagueRatingDisplayProps {
@@ -89,6 +90,7 @@ export function LeagueRatingBadge({
   rank?: number;
 }) {
   const league = getLeagueForRating(rating, rank);
+  const { colors } = useTheme();
   
   return (
     <View style={styles.badgeContainer}>
@@ -98,7 +100,7 @@ export function LeagueRatingBadge({
           { backgroundColor: league.color + '20', borderColor: league.color + '55', borderWidth: 1 },
         ]}
       >
-        <Text style={styles.ratingBadgeText}>{rating}</Text>
+        <Text style={[styles.ratingBadgeText, { color: colors.ink }]}>{rating}</Text>
       </View>
       <Text style={[styles.badgeLabel, { color: league.color }]}>{league.displayName}</Text>
     </View>
@@ -169,7 +171,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   ratingBadgeText: {
-    color: '#ffffff',
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
   },

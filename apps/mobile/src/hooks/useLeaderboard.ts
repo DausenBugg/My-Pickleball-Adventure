@@ -22,6 +22,19 @@ export function useLeaderboard(type: 'global' | 'friends') {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [grandmasterUserId, setGrandmasterUserId] = useState<string | null>(null);
+
+  // Always fetch the global #1 player so Grandmaster shows correctly on all tabs
+  useEffect(() => {
+    if (!session?.user?.id || !supabase) return;
+    supabase
+      .from('ratings')
+      .select('user_id')
+      .order('rating', { ascending: false })
+      .limit(1)
+      .single()
+      .then(({ data }) => setGrandmasterUserId(data?.user_id ?? null));
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (!session?.user?.id || !supabase) {
@@ -94,5 +107,5 @@ export function useLeaderboard(type: 'global' | 'friends') {
     fetchLeaderboard();
   }, [session?.user?.id, type, friends]);
 
-  return { entries, loading, error };
+  return { entries, loading, error, grandmasterUserId };
 }
