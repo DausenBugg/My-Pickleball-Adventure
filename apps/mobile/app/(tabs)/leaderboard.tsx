@@ -147,7 +147,7 @@ export default function LeaderboardScreen() {
                     <Text style={[styles.podiumName, { color: colors.ink }]} numberOfLines={2}>
                       {player.full_name || 'Player'}
                     </Text>
-                    <LeagueRatingBadge rating={player.rating} rank={index + 1} />
+                    <LeagueRatingBadge rating={player.rating} rank={boardType === 'global' ? index + 1 : undefined} />
                     <Text style={[styles.podiumMeta, { color: colors.muted }]}>
                       {player.wins}W · {player.losses}L
                     </Text>
@@ -181,7 +181,7 @@ export default function LeaderboardScreen() {
                           Level {player.level} · {player.wins}W · {player.losses}L
                         </Text>
                       </View>
-                      <LeagueInlineBadge rating={player.rating} rank={index + 4} ratingColor={colors.ink} />
+                      <LeagueInlineBadge rating={player.rating} rank={boardType === 'global' ? index + 4 : undefined} ratingColor={colors.ink} />
                     </AnimatedPressable>
                   </Animated.View>
                 ))}

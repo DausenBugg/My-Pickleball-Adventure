@@ -438,7 +438,14 @@ export default function HomeScreen() {
         </ReAnimated.View>
 
         {/* ── Quick stats row ── */}
-        <ReAnimated.View entering={FadeInDown.delay(200).duration(400)} style={styles.statsRow}>
+        <ReAnimated.View entering={FadeInDown.delay(200).duration(400)}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, dynamicStyles.ink]}>Quick Stats</Text>
+            <AnimatedPressable onPress={() => router.push('/statistics')}>
+              <Text style={[styles.sectionLink, { color: colors.primary }]}>View Stats</Text>
+            </AnimatedPressable>
+          </View>
+          <View style={styles.statsRow}>
           <View style={[styles.statChip, { backgroundColor: colors.primary }]}>
             <Text style={styles.statChipValue}>{profile.wins}</Text>
             <Text style={styles.statChipLabel}>Wins</Text>
@@ -450,6 +457,7 @@ export default function HomeScreen() {
           <View style={[styles.statChip, { backgroundColor: colors.cardBackground, borderWidth: 1, borderColor: colors.borderLight }]}>
             <Text style={[styles.statChipValue, { color: colors.ink }]}>{rating?.rating ?? 1200}</Text>
             <LeagueLabel rating={rating?.rating ?? 1200} rank={rank ?? undefined} size="sm" />
+          </View>
           </View>
         </ReAnimated.View>
 
@@ -483,8 +491,9 @@ export default function HomeScreen() {
                 const summary = formatRecentMatch(match);
                 const isWin = summary.result === 'Win';
                 return (
-                  <View
+                  <AnimatedPressable
                     key={match.id}
+                    onPress={() => router.push(`/match/${match.id}`)}
                     style={[
                       styles.matchCard,
                       {
@@ -509,7 +518,7 @@ export default function HomeScreen() {
                         </Text>
                       </View>
                     </View>
-                  </View>
+                  </AnimatedPressable>
                 );
               })}
             </View>

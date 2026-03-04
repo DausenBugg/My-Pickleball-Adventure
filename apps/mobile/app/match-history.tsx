@@ -200,7 +200,8 @@ export default function MatchHistoryScreen() {
                   key={match.id}
                   entering={FadeInDown.delay(200 + (matches.indexOf(match)) * 50).duration(400)}
                 >
-                <View
+                <AnimatedPressable
+                  onPress={() => router.push(`/match/${match.id}`)}
                   style={[
                     styles.matchCard,
                     { backgroundColor: colors.cardBackground },
@@ -320,7 +321,7 @@ export default function MatchHistoryScreen() {
                       minute: '2-digit',
                     })}
                   </Text>
-                </View>
+                </AnimatedPressable>
                 </Animated.View>
               );
             })}

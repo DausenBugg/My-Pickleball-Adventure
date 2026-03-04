@@ -15,6 +15,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import AnimatedPressable from '../../src/components/AnimatedPressable';
 import { LeagueRatingBadge, LeagueLabel } from '../../src/components/LeagueBadge';
 import { useUserProfile } from '../../src/hooks/useUserProfile';
+import { useHeadToHead } from '../../src/hooks/useHeadToHead';
 import { useRank } from '../../src/hooks/useRank';
 import { useFriends } from '../../src/hooks/useFriends';
 import { useAuth } from '../../src/state/auth';
@@ -83,11 +84,11 @@ export default function UserProfileScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { session } = useAuth();
+  const isOwnProfile = session?.user?.id === id;
   const { profile, rating, achievements, matchHistory, loading, error } = useUserProfile(id ?? null);
   const { rank } = useRank(id ?? null);
   const { friends, pendingSent, sendFriendRequest } = useFriends();
-
-  const isOwnProfile = session?.user?.id === id;
+  const { stats: h2hStats, loading: h2hLoading } = useHeadToHead(isOwnProfile ? null : id ?? null);
 
   const friendStatus = useMemo(() => {
     if (!id) return 'none' as const;
@@ -213,8 +214,58 @@ export default function UserProfileScreen() {
               </View>
             </Animated.View>
 
+            {/* ── Head-to-Head (only on other users' profiles) ── */}
+            {!isOwnProfile && (
+              <Animated.View entering={FadeInDown.delay(200).duration(400)}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="people" size={18} color={colors.primary} />
+                  <Text style={[styles.sectionTitle, { color: colors.ink }]}>
+                    Head-to-Head
+                  </Text>
+                </View>
+
+                {h2hLoading ? (
+                  <View style={[styles.emptyCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  </View>
+                ) : !h2hStats || h2hStats.totalGames === 0 ? (
+                  <View style={[styles.emptyCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
+                    <Ionicons name="people-outline" size={28} color={colors.muted} />
+                    <Text style={[styles.emptyText, { color: colors.muted }]}>No matches played together yet</Text>
+                  </View>
+                ) : (
+                  <View>
+                    <View style={styles.statsRow}>
+                      <View style={[styles.statCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
+                        <Text style={[styles.statValue, { color: colors.success }]}>{h2hStats.myWins}</Text>
+                        <Text style={[styles.statLabel, { color: colors.muted }]}>Your Wins</Text>
+                      </View>
+                      <View style={[styles.statCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
+                        <Text style={[styles.statValue, { color: colors.error }]}>{h2hStats.theirWins}</Text>
+                        <Text style={[styles.statLabel, { color: colors.muted }]}>Their Wins</Text>
+                      </View>
+                      <View style={[styles.statCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}>
+                        <Text style={[styles.statValue, { color: colors.primary }]}>{h2hStats.totalGames}</Text>
+                        <Text style={[styles.statLabel, { color: colors.muted }]}>Total</Text>
+                      </View>
+                    </View>
+                    <View style={styles.h2hMeta}>
+                      <Text style={[styles.h2hMetaText, { color: colors.muted }]}>
+                        Avg Score Diff: {h2hStats.avgScoreDiff > 0 ? '+' : ''}{h2hStats.avgScoreDiff}
+                      </Text>
+                      {h2hStats.myCurrentStreak > 0 && (
+                        <Text style={[styles.h2hMetaText, { color: colors.success }]}>
+                          🔥 {h2hStats.myCurrentStreak} win streak
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+              </Animated.View>
+            )}
+
             {/* ── Achievements ── */}
-            <Animated.View entering={FadeInDown.delay(200).duration(400)}>
+            <Animated.View entering={FadeInDown.delay(!isOwnProfile ? 300 : 200).duration(400)}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="trophy" size={18} color={colors.primary} />
                 <Text style={[styles.sectionTitle, { color: colors.ink }]}>
@@ -245,7 +296,7 @@ export default function UserProfileScreen() {
             </Animated.View>
 
             {/* ── Match history ── */}
-            <Animated.View entering={FadeInDown.delay(300).duration(400)}>
+            <Animated.View entering={FadeInDown.delay(!isOwnProfile ? 400 : 300).duration(400)}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="game-controller" size={18} color={colors.primary} />
                 <Text style={[styles.sectionTitle, { color: colors.ink }]}>
@@ -271,8 +322,9 @@ export default function UserProfileScreen() {
                       .join(' & ');
 
                     return (
-                      <View
+                      <AnimatedPressable
                         key={match.id}
+                        onPress={() => router.push(`/match/${match.id}`)}
                         style={[
                           styles.matchCard,
                           {
@@ -297,7 +349,7 @@ export default function UserProfileScreen() {
                             </Text>
                           </View>
                         </View>
-                      </View>
+                      </AnimatedPressable>
                     );
                   })}
                 </View>
@@ -522,5 +574,17 @@ const styles = StyleSheet.create({
   },
   matchSubtitle: {
     fontSize: typography.sizes.sm,
+  },
+
+  // Head-to-Head
+  h2hMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  h2hMetaText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
   },
 });
