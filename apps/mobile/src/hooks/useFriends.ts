@@ -149,6 +149,20 @@ export function useFriends() {
       return false;
     }
 
+    // Trigger achievement check for both users (friend milestones)
+    try {
+      if (supabase) {
+        await supabase.functions.invoke('check-achievements', {
+          body: { userId: session.user.id },
+        });
+        await supabase.functions.invoke('check-achievements', {
+          body: { userId },
+        });
+      }
+    } catch (achError) {
+      if (__DEV__) console.error('Failed to check friend achievements:', achError);
+    }
+
     // Update local state
     setPendingReceived((prev) => prev.filter((id) => id !== userId));
     setPendingReceivedUsers((prev) => prev.filter((item) => item.id !== userId));

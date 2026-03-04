@@ -7,14 +7,24 @@ export interface Achievement {
   name: string;
   description: string;
   icon: string;
+  tier: 'bronze' | 'silver' | 'gold' | 'platinum';
   requirement_type: string;
   requirement_value: number;
 }
+
+// XP reward by tier (matches backend TIER_XP_REWARDS)
+const TIER_XP_REWARDS: Record<string, number> = {
+  bronze: 50,
+  silver: 100,
+  gold: 200,
+  platinum: 500,
+};
 
 export interface UserAchievement extends Achievement {
   unlocked_at: string;
   is_unlocked: boolean;
   progress?: number;
+  xp_reward: number;
 }
 
 export function useAchievements() {
@@ -59,7 +69,7 @@ export function useAchievements() {
       // Get user's current stats for progress
       const { data: profile } = await supabase
         .from('profiles')
-        .select('wins, losses, level')
+        .select('wins, losses, level, best_win_streak')
         .eq('id', session.user.id)
         .single();
 
@@ -96,6 +106,12 @@ export function useAchievements() {
                   100
                 );
                 break;
+              case 'win_streak':
+                progress = Math.min(
+                  ((profile?.best_win_streak || 0) / ach.requirement_value) * 100,
+                  100
+                );
+                break;
               case 'level':
                 progress = Math.min(
                   ((profile?.level || 1) / ach.requirement_value) * 100,
@@ -114,6 +130,11 @@ export function useAchievements() {
                   100
                 );
                 break;
+              case 'bounce_back':
+              case 'resilient':
+                // These are situational — no meaningful partial progress
+                progress = 0;
+                break;
             }
           }
 
@@ -122,6 +143,7 @@ export function useAchievements() {
             is_unlocked,
             unlocked_at,
             progress: is_unlocked ? 100 : progress,
+            xp_reward: TIER_XP_REWARDS[ach.tier] || 50,
           };
         }) || [];
 

@@ -14,6 +14,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// XP reward by tier for achievement unlocks
+const TIER_XP_REWARDS: Record<string, number> = {
+  bronze: 50,
+  silver: 100,
+  gold: 200,
+  platinum: 500,
+};
+
 serve(async (req) => {
   // Handle preflight (though not needed for mobile)
   if (req.method === 'OPTIONS') {
@@ -60,10 +68,15 @@ serve(async (req) => {
     }
 
     // Parse request body - userId is optional, defaults to authenticated user
+    // Also accept optional context fields for streak/loss-recovery achievements
     let userId: string | null = userIdFromToken;
+    let isWin: boolean | null = null;
+    let previousLossStreak: number = 0;
     try {
       const body = await req.json();
       userId = body.userId || userId;
+      if (typeof body.is_win === 'boolean') isWin = body.is_win;
+      if (typeof body.previous_loss_streak === 'number') previousLossStreak = body.previous_loss_streak;
     } catch {
       // keep fallback from authenticated token
     }
@@ -90,7 +103,7 @@ serve(async (req) => {
     // Get user's current stats
     const { data: profile } = await supabaseClient
       .from('profiles')
-      .select('wins, losses, level')
+      .select('wins, losses, level, total_xp, current_win_streak, best_win_streak, current_loss_streak')
       .eq('id', userId)
       .single();
 
@@ -146,6 +159,9 @@ serve(async (req) => {
         case 'wins':
           shouldUnlock = profile.wins >= achievement.requirement_value;
           break;
+        case 'win_streak':
+          shouldUnlock = (profile.best_win_streak || 0) >= achievement.requirement_value;
+          break;
         case 'level':
           shouldUnlock = profile.level >= achievement.requirement_value;
           break;
@@ -155,6 +171,14 @@ serve(async (req) => {
         case 'friends':
           shouldUnlock = (friendCount || 0) >= achievement.requirement_value;
           break;
+        case 'bounce_back':
+          // Win immediately after at least 1 loss
+          shouldUnlock = isWin === true && previousLossStreak >= 1;
+          break;
+        case 'resilient':
+          // Win after N consecutive losses
+          shouldUnlock = isWin === true && previousLossStreak >= achievement.requirement_value;
+          break;
       }
 
       if (shouldUnlock) {
@@ -163,6 +187,33 @@ serve(async (req) => {
           user_id: userId,
           achievement_id: achievement.id,
         });
+
+        // Award XP based on achievement tier
+        const xpReward = TIER_XP_REWARDS[achievement.tier] || 50;
+        const { error: xpInsertError } = await supabaseClient.from('xp_events').insert({
+          user_id: userId,
+          match_id: null,
+          xp_amount: xpReward,
+          reason: `Achievement: ${achievement.name}`,
+        });
+        if (xpInsertError) {
+          console.error('Error inserting achievement XP event:', xpInsertError);
+        }
+
+        // Update user's total_xp and recalculate level
+        const currentXP = profile.total_xp ?? 0;
+        const newTotalXP = currentXP + xpReward;
+        let newLevel = 1;
+        while (100 * Math.pow(newLevel + 1, 1.6) <= newTotalXP) {
+          newLevel++;
+        }
+        await supabaseClient
+          .from('profiles')
+          .update({ total_xp: newTotalXP, level: newLevel })
+          .eq('id', userId);
+        // Keep profile in sync for subsequent iterations
+        profile.total_xp = newTotalXP;
+        profile.level = newLevel;
 
         // Create notification
         const { data: newNotification } = await supabaseClient

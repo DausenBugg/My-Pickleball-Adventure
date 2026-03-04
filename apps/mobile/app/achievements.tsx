@@ -16,6 +16,14 @@ import { useTheme } from '../src/theme';
 import { radii, shadows, spacing, typography } from '../src/theme/tokens';
 import AnimatedPressable from '../src/components/AnimatedPressable';
 
+// Tier badge colors
+const TIER_COLORS: Record<string, string> = {
+  bronze: '#CD7F32',
+  silver: '#A0A0A0',
+  gold: '#FFD700',
+  platinum: '#7B68EE',
+};
+
 interface AchievementCardProps {
   achievement: UserAchievement;
   index: number;
@@ -24,6 +32,7 @@ interface AchievementCardProps {
 
 function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
   const isComplete = achievement.is_unlocked || (achievement.progress !== undefined && achievement.progress >= 100);
+  const tierColor = TIER_COLORS[achievement.tier] || TIER_COLORS.bronze;
 
   return (
     <Animated.View entering={FadeInDown.delay(100 + index * 60).duration(400)}>
@@ -34,7 +43,7 @@ function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
           isComplete
             ? {
                 borderWidth: 2,
-                borderColor: colors.primary,
+                borderColor: tierColor,
                 backgroundColor: colors.primaryGhost,
                 ...shadows.md,
               }
@@ -44,21 +53,28 @@ function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
         <View style={styles.iconContainer}>
           <Text style={[styles.icon, !isComplete && { opacity: 0.5 }]}>{achievement.icon}</Text>
           {isComplete && (
-            <View style={[styles.unlockedBadge, { backgroundColor: colors.primary, borderColor: colors.cardBackground }]}>
+            <View style={[styles.unlockedBadge, { backgroundColor: tierColor, borderColor: colors.cardBackground }]}>
               <Ionicons name="checkmark" size={10} color="#ffffff" />
             </View>
           )}
         </View>
         <View style={styles.content}>
-          <Text
-            style={[
-              styles.name,
-              { color: colors.ink },
-              !isComplete && { color: colors.muted },
-            ]}
-          >
-            {achievement.name}
-          </Text>
+          <View style={styles.nameRow}>
+            <Text
+              style={[
+                styles.name,
+                { color: colors.ink },
+                !isComplete && { color: colors.muted },
+              ]}
+            >
+              {achievement.name}
+            </Text>
+            <View style={[styles.tierBadge, { backgroundColor: tierColor + '20', borderColor: tierColor }]}>
+              <Text style={[styles.tierText, { color: tierColor }]}>
+                {achievement.tier.charAt(0).toUpperCase() + achievement.tier.slice(1)}
+              </Text>
+            </View>
+          </View>
           <Text
             style={[
               styles.description,
@@ -67,13 +83,21 @@ function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
           >
             {achievement.description}
           </Text>
+          <Text
+            style={[
+              styles.xpReward,
+              { color: isComplete ? tierColor : colors.muted },
+            ]}
+          >
+            {isComplete ? `+${achievement.xp_reward} XP earned` : `+${achievement.xp_reward} XP`}
+          </Text>
           {!isComplete && achievement.progress !== undefined && (
             <View style={styles.progressContainer}>
               <View style={[styles.progressBar, { backgroundColor: colors.borderLight }]}>
                 <View
                   style={[
                     styles.progressFill,
-                    { width: `${achievement.progress}%`, backgroundColor: colors.primary },
+                    { width: `${achievement.progress}%`, backgroundColor: tierColor },
                   ]}
                 />
               </View>
@@ -88,7 +112,7 @@ function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
               {new Date(achievement.unlocked_at).toLocaleDateString()}
             </Text>
           ) : isComplete ? (
-            <Text style={[styles.unlockedDate, { color: colors.primary }]}>
+            <Text style={[styles.unlockedDate, { color: tierColor }]}>
               Completed!
             </Text>
           ) : null}
@@ -269,11 +293,34 @@ const styles = StyleSheet.create({
   name: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    marginBottom: spacing.xs,
+    flexShrink: 1,
   },
   description: {
     fontSize: typography.sizes.sm,
     lineHeight: 20,
+  },
+  xpReward: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    marginTop: 2,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  tierBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+  },
+  tierText: {
+    fontSize: 10,
+    fontWeight: typography.weights.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   progressContainer: {
     flexDirection: 'row',
