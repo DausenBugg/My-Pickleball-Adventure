@@ -98,7 +98,7 @@ serve(async (req) => {
     // Get user's current stats
     const { data: profile } = await supabaseClient
       .from('profiles')
-      .select('wins, losses, level, total_xp, current_win_streak, best_win_streak, current_loss_streak')
+      .select('wins, losses, level, total_xp, current_win_streak, best_win_streak')
       .eq('id', userId)
       .single();
 
@@ -169,11 +169,17 @@ serve(async (req) => {
       }
 
       if (shouldUnlock) {
-        // Unlock achievement
-        await supabaseClient.from('user_achievements').insert({
+        // Unlock achievement (check for duplicate to prevent double XP award)
+        const { error: unlockError } = await supabaseClient.from('user_achievements').insert({
           user_id: userId,
           achievement_id: achievement.id,
         });
+
+        if (unlockError) {
+          // Unique constraint violation means already unlocked — skip XP award
+          console.warn('Achievement already unlocked or insert failed:', unlockError.message);
+          continue;
+        }
 
         // Award XP based on achievement tier
         const xpReward = TIER_XP_REWARDS[achievement.tier] || 50;
@@ -187,20 +193,18 @@ serve(async (req) => {
           console.error('Error inserting achievement XP event:', xpInsertError);
         }
 
-        // Update user's total_xp and recalculate level
-        const currentXP = profile.total_xp ?? 0;
-        const newTotalXP = currentXP + xpReward;
-        let newLevel = 1;
-        while (100 * Math.pow(newLevel + 1, 1.6) <= newTotalXP) {
-          newLevel++;
+        // Atomically increment total_xp and recalculate level via RPC
+        // This prevents race conditions where concurrent updates overwrite each other
+        const { data: xpResult, error: xpRpcError } = await supabaseClient
+          .rpc('add_xp_and_recalculate', { p_user_id: userId, p_xp_amount: xpReward });
+
+        if (xpRpcError) {
+          console.error('Error in add_xp_and_recalculate RPC:', xpRpcError);
+        } else if (xpResult && xpResult.length > 0) {
+          // Keep profile in sync for subsequent iterations
+          profile.total_xp = xpResult[0].new_total_xp;
+          profile.level = xpResult[0].new_level;
         }
-        await supabaseClient
-          .from('profiles')
-          .update({ total_xp: newTotalXP, level: newLevel })
-          .eq('id', userId);
-        // Keep profile in sync for subsequent iterations
-        profile.total_xp = newTotalXP;
-        profile.level = newLevel;
 
         // Create notification
         const { data: newNotification } = await supabaseClient

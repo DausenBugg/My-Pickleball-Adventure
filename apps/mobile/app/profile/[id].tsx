@@ -285,7 +285,7 @@ export default function UserProfileScreen() {
                       key={ach.id}
                       style={[styles.achievementCard, { backgroundColor: colors.cardBackground, borderColor: colors.borderLight }]}
                     >
-                      <Text style={styles.achievementIcon}>{ach.icon}</Text>
+                      <Ionicons name={(ach.icon || 'star') as any} size={28} color={colors.primary} style={{ marginBottom: 4 }} />
                       <Text style={[styles.achievementName, { color: colors.ink }]} numberOfLines={2}>
                         {ach.name}
                       </Text>
@@ -522,6 +522,7 @@ const styles = StyleSheet.create({
   achievementCard: {
     width: 80,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     borderRadius: radii.lg,

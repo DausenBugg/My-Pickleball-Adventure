@@ -95,6 +95,32 @@ export function useNotifications() {
     }
   };
 
+  const deleteNotification = async (notificationId: string) => {
+    if (!session?.user?.id || !supabase) return false;
+
+    try {
+      // Check if notification was unread before removing
+      const wasUnread = notifications.find((n) => n.id === notificationId && !n.read);
+
+      const { error: deleteError } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId)
+        .eq('user_id', session.user.id);
+
+      if (deleteError) throw deleteError;
+
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+      if (wasUnread) {
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+      return true;
+    } catch (err) {
+      if (__DEV__) console.error('Failed to delete notification:', err);
+      return false;
+    }
+  };
+
   // Initial fetch
   useEffect(() => {
     fetchNotifications();
@@ -146,6 +172,23 @@ export function useNotifications() {
           });
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${session.user.id}`,
+        },
+        (payload) => {
+          const deleted = payload.old as { id: string };
+          setNotifications((prev) => {
+            const updated = prev.filter((n) => n.id !== deleted.id);
+            setUnreadCount(updated.filter((n) => !n.read).length);
+            return updated;
+          });
+        }
+      )
       .subscribe();
 
     channelRef.current = channel;
@@ -165,6 +208,7 @@ export function useNotifications() {
     error,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
     refresh: fetchNotifications,
   };
 }

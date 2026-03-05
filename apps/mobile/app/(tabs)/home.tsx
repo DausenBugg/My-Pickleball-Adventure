@@ -61,6 +61,7 @@ export default function HomeScreen() {
     notifications,
     unreadCount,
     markAsRead,
+    deleteNotification,
     refresh: refreshNotifications,
   } = useNotifications();
   const [showFriendPrompt, setShowFriendPrompt] = useState(false);
@@ -218,7 +219,7 @@ export default function HomeScreen() {
         if (notificationId) {
           setDismissedNotifications((prev) => new Set(prev).add(notificationId));
         }
-        if (notificationId) await markAsRead(notificationId);
+        if (notificationId) await deleteNotification(notificationId);
         closeNotifications();
         // Wait for panel close animation before refreshing so user sees XP ring update
         setTimeout(() => {
@@ -244,7 +245,7 @@ export default function HomeScreen() {
         if (notificationId) {
           setDismissedNotifications((prev) => new Set(prev).add(notificationId));
         }
-        if (notificationId) await markAsRead(notificationId);
+        if (notificationId) await deleteNotification(notificationId);
         closeNotifications();
         setTimeout(() => {
           refreshPendingMatches();
@@ -265,7 +266,7 @@ export default function HomeScreen() {
     }
     const success = await acceptFriendRequest(requesterId);
     if (success) {
-      if (notificationId) await markAsRead(notificationId);
+      if (notificationId) await deleteNotification(notificationId);
       refreshNotifications();
       refreshFriends(); // Refresh friends list so search screen shows updated status
     }
@@ -277,7 +278,7 @@ export default function HomeScreen() {
     }
     const success = await rejectFriendRequest(requesterId);
     if (success) {
-      if (notificationId) await markAsRead(notificationId);
+      if (notificationId) await deleteNotification(notificationId);
       refreshNotifications();
       refreshFriends(); // Refresh friends list so search screen shows updated status
     }
@@ -691,9 +692,9 @@ export default function HomeScreen() {
                 {!notification.read && notification.type !== 'match_approval' && notification.type !== 'friend_request' && (
                   <Pressable
                     style={styles.panelMarkRead}
-                    onPress={() => markAsRead(notification.id)}
+                    onPress={() => deleteNotification(notification.id)}
                   >
-                    <Text style={[styles.panelMarkReadText, { color: colors.primary }]}>Mark as read</Text>
+                    <Text style={[styles.panelMarkReadText, { color: colors.primary }]}>Dismiss</Text>
                   </Pressable>
                 )}
               </View>

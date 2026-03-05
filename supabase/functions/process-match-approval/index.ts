@@ -236,9 +236,10 @@ serve(async (req) => {
 
     // Update each user's total XP, level, and streaks
     for (const event of xpEvents) {
+      // Fetch current profile for streak data and old level (for level-up detection)
       const { data: profile, error: profileError } = await supabaseClient
         .from('profiles')
-        .select('total_xp, level, current_win_streak, best_win_streak')
+        .select('level, current_win_streak, best_win_streak')
         .eq('id', event.user_id)
         .single();
 
@@ -248,17 +249,20 @@ serve(async (req) => {
       }
 
       if (profile) {
-        const currentTotalXP = profile.total_xp ?? 0;
         const oldLevel = profile.level ?? 1;
-        const newTotalXP = currentTotalXP + event.xp_amount;
-        
-        // Calculate new level based on XP formula: XP(N) = 100 * N^1.6
-        let newLevel = 1;
-        while (100 * Math.pow(newLevel + 1, 1.6) <= newTotalXP) {
-          newLevel++;
+
+        // Atomically increment total_xp and recalculate level via RPC
+        // This prevents race conditions where concurrent updates overwrite each other
+        const { data: xpResult, error: xpRpcError } = await supabaseClient
+          .rpc('add_xp_and_recalculate', { p_user_id: event.user_id, p_xp_amount: event.xp_amount });
+
+        if (xpRpcError) {
+          console.error('[process-match-approval] Error in add_xp_and_recalculate RPC:', event.user_id, xpRpcError);
         }
 
-        // Update streaks
+        const newLevel = xpResult?.[0]?.new_level ?? oldLevel;
+
+        // Update streaks (separate atomic update — streaks don't affect XP)
         const pResult = participantResults.find(p => p.user_id === event.user_id);
         const isWin = pResult?.is_win ?? false;
         let newWinStreak = profile.current_win_streak ?? 0;
@@ -271,18 +275,16 @@ serve(async (req) => {
           newWinStreak = 0;
         }
 
-        const { error: updateError } = await supabaseClient
+        const { error: streakError } = await supabaseClient
           .from('profiles')
           .update({
-            total_xp: newTotalXP,
-            level: newLevel,
             current_win_streak: newWinStreak,
             best_win_streak: newBestWinStreak,
           })
           .eq('id', event.user_id);
 
-        if (updateError) {
-          console.error('[process-match-approval] Error updating profile XP:', event.user_id, updateError);
+        if (streakError) {
+          console.error('[process-match-approval] Error updating streaks:', event.user_id, streakError);
         }
 
         // If user leveled up, create a level-up notification and send push

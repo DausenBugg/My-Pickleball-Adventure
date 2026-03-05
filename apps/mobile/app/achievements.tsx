@@ -51,7 +51,9 @@ function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
         ]}
       >
         <View style={styles.iconContainer}>
-          <Text style={[styles.icon, !isComplete && { opacity: 0.5 }]}>{achievement.icon}</Text>
+          <View style={[styles.icon, !isComplete && { opacity: 0.5 }]}>
+            <Ionicons name={(achievement.icon || 'star') as any} size={40} color={tierColor} />
+          </View>
           {isComplete && (
             <View style={[styles.unlockedBadge, { backgroundColor: tierColor, borderColor: colors.cardBackground }]}>
               <Ionicons name="checkmark" size={10} color="#ffffff" />
@@ -272,9 +274,14 @@ const styles = StyleSheet.create({
   iconContainer: {
     position: 'relative',
     marginRight: spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   icon: {
-    fontSize: 48,
+    width: 48,
+    height: 48,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   unlockedBadge: {
     position: 'absolute',
