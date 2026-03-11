@@ -19,7 +19,7 @@ This document summarizes the three major features added to My Pickleball App:
 - **Match History**: Avatar display in match history
 
 ### Files Created/Modified:
-- `supabase/migrations/20260212000001_create_storage_bucket.sql` - Storage bucket creation
+- `supabase/migrations/20260308000001_initial_schema.sql` - Storage bucket (included in consolidated migration)
 - `apps/mobile/src/hooks/useProfile.ts` - Added `uploadAvatar()` function
 - `apps/mobile/app/(tabs)/settings.tsx` - Added avatar upload UI
 - `apps/mobile/app/(tabs)/leaderboard.tsx` - Added avatar display
@@ -72,7 +72,7 @@ This document summarizes the three major features added to My Pickleball App:
 - **Permission Management**: Automatic permission request on first launch
 
 ### Files Created/Modified:
-- `supabase/migrations/20260212000002_add_push_tokens.sql` - Push tokens table
+- `supabase/migrations/20260308000001_initial_schema.sql` - Push tokens table (included in consolidated migration)
 - `apps/mobile/src/lib/notifications.ts` - Notification registration and token management
 - `supabase/functions/send-push-notifications/index.ts` - Edge function to send push
 - `apps/mobile/src/hooks/usePushNotificationHandler.ts` - Handle notification interactions
@@ -109,12 +109,11 @@ Tap notification → Navigate to achievements screen
 
 ---
 
-## Database Migrations Required
+## Database Migration
 
-Run these migrations in your Supabase Dashboard (SQL Editor):
+All tables, storage buckets, and functions are included in the consolidated migration:
 
-1. **Storage Bucket**: `20260212000001_create_storage_bucket.sql`
-2. **Push Tokens**: `20260212000002_add_push_tokens.sql`
+- `20260308000001_initial_schema.sql`
 
 ## Edge Functions to Deploy
 
@@ -122,6 +121,7 @@ Deploy these functions using Supabase CLI:
 
 ```powershell
 supabase functions deploy send-push-notifications
+supabase functions deploy claim-achievement-reward
 ```
 
 The `check-achievements` function was also updated, so redeploy it:

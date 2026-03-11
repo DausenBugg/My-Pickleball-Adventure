@@ -16,7 +16,7 @@ This guide explains how to deploy the Edge Functions for My Pickleball App.
 
 ## Edge Functions
 
-We have four Edge Functions:
+We have five Edge Functions:
 
 ### 1. `process-match-approval`
 **Purpose**: Handles match approval/rejection workflow, awards XP, updates levels, triggers achievement checks, and calls update-ratings for ranked matches.
@@ -67,7 +67,26 @@ We have four Edge Functions:
 - Creates notifications for newly unlocked achievements
 - **Automatically calls send-push-notifications to alert users**
 
-### 4. `send-push-notifications`
+### 4. `claim-achievement-reward`
+**Purpose**: Allows a player to claim the XP reward for an unlocked achievement based on its tier.
+
+**Called when**: A player taps "Claim Reward" on an unlocked achievement in the mobile app.
+
+**Auth model**:
+- Manual JWT validation via `getUser()` — all DB operations use service-role client
+
+**What it does**:
+- Validates the achievement belongs to the requesting user
+- Checks the achievement hasn't already been claimed (idempotency guard)
+- Looks up the achievement tier and maps to XP reward:
+  - Bronze: 50 XP
+  - Silver: 100 XP
+  - Gold: 200 XP
+  - Platinum: 500 XP
+- Marks the achievement as claimed (`claimed_at = now()`)
+- Returns the achievement name, tier, and XP reward amount
+
+### 5. `send-push-notifications`
 **Purpose**: Sends push notifications to users via Expo Push Notification service.
 
 **Called when**: Automatically by check-achievements or other functions that create notifications.
@@ -85,6 +104,7 @@ We have four Edge Functions:
 npx supabase functions deploy process-match-approval
 npx supabase functions deploy update-ratings
 npx supabase functions deploy check-achievements
+npx supabase functions deploy claim-achievement-reward
 npx supabase functions deploy send-push-notifications
 ```
 
@@ -99,8 +119,11 @@ For this project, edge functions perform explicit auth checks in code.
 
 - `process-match-approval`: `verify_jwt = false`
 - `update-ratings`: `verify_jwt = false`
+- `check-achievements`: `verify_jwt = false`
+- `claim-achievement-reward`: `verify_jwt = false`
+- `send-push-notifications`: `verify_jwt = false`
 
-This allows robust internal service-to-service calls while still enforcing authorization inside each function.
+All functions perform explicit auth checks in code, allowing robust internal service-to-service calls while still enforcing authorization.
 
 After changing any `config.toml` auth setting, redeploy that function.
 
@@ -125,11 +148,9 @@ Use the mobile app - approve a match and check that:
 
 ## Required Database Functions
 
-Make sure you've run these migrations which create required functions and tables:
+Make sure the consolidated migration has been applied:
 
-- `20260211000009_add_helper_functions.sql` - Creates `increment_wins()` and `increment_losses()`
-- `20260211000010_create_rating_history.sql` - Creates rating_history table and anti-abuse functions
-- `20260211000011_add_self_play_prevention.sql` - Prevents users from playing themselves
+- `20260308000001_initial_schema.sql` - Creates all tables, functions (including `increment_wins()`, `increment_losses()`), triggers, RLS policies, storage bucket, and achievement seed data
 
 ## Environment Variables
 
