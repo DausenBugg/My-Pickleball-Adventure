@@ -1,0 +1,22 @@
+{
+  "name": "my-pickleball-adventure",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/mobile",
+    "apps/watch"
+  ],
+  "scripts": {
+    "test": "cd apps/mobile && npx jest --forceExit",
+    "start:mobile": "cd apps/mobile && expo start",
+    "start:watch": "cd apps/watch && expo start",
+    "android:mobile": "cd apps/mobile && expo run:android",
+    "android:watch": "cd apps/watch && expo run:android"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^12.9.0",
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.6"
+  }
+}
