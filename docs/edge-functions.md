@@ -115,15 +115,18 @@ supabase functions deploy process-match-approval
 
 ## Function Auth Configuration
 
-For this project, edge functions perform explicit auth checks in code.
+All five edge functions disable Supabase's automatic gateway JWT verification via `config.toml` and instead perform **manual JWT verification in code**. This allows robust internal service-to-service calls (using the service role key) while still enforcing user authorization.
 
-- `process-match-approval`: `verify_jwt = false`
-- `update-ratings`: `verify_jwt = false`
-- `check-achievements`: `verify_jwt = false`
-- `claim-achievement-reward`: `verify_jwt = false`
-- `send-push-notifications`: `verify_jwt = false`
+Each function directory contains a `config.toml` with:
+```toml
+verify_jwt = false
+```
 
-All functions perform explicit auth checks in code, allowing robust internal service-to-service calls while still enforcing authorization.
+**How manual JWT verification works in each function:**
+- All functions create a service-role client (`SUPABASE_SERVICE_ROLE_KEY`) for database operations
+- User JWTs are verified via `supabaseAdmin.auth.getUser(token)`
+- Internal calls from other edge functions use the service role key directly, detected by `token === serviceRoleKey`
+- Authorization checks (e.g. "is this user a match participant?") are enforced in code after JWT verification
 
 After changing any `config.toml` auth setting, redeploy that function.
 

@@ -289,7 +289,7 @@ serve(async (req) => {
 
         // If user leveled up, create a level-up notification and send push
         if (newLevel > oldLevel) {
-          const { error: notifError } = await supabaseClient
+          const { data: newNotification, error: notifError } = await supabaseClient
             .from('notifications')
             .insert({
               user_id: event.user_id,
@@ -297,39 +297,40 @@ serve(async (req) => {
               title: 'Level Up!',
               message: `Congratulations! You reached Level ${newLevel}!`,
               data: { level: newLevel, old_level: oldLevel },
-            });
+            })
+            .select('id')
+            .single();
 
           if (notifError) {
             console.error('[process-match-approval] Error creating level-up notification:', event.user_id, notifError);
           }
 
           // Send push notification for level-up
-          try {
-            const anonKeyForPush = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-            const serviceKeyForPush = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-            const pushAuthHeader = serviceKeyForPush
-              ? `Bearer ${serviceKeyForPush}`
-              : (req.headers.get('Authorization') || '');
+          if (newNotification) {
+            try {
+              const anonKeyForPush = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+              const serviceKeyForPush = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+              const pushAuthHeader = serviceKeyForPush
+                ? `Bearer ${serviceKeyForPush}`
+                : (req.headers.get('Authorization') || '');
 
-            await fetch(
-              `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push-notifications`,
-              {
-                method: 'POST',
-                headers: {
-                  ...(pushAuthHeader ? { Authorization: pushAuthHeader } : {}),
-                  ...(anonKeyForPush ? { apikey: anonKeyForPush } : {}),
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  userIds: [event.user_id],
-                  title: 'Level Up! 🎉',
-                  body: `You reached Level ${newLevel}!`,
-                  data: { level: newLevel },
-                }),
-              }
-            );
-          } catch (pushError) {
-            console.error('[process-match-approval] Error sending level-up push:', pushError);
+              await fetch(
+                `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push-notifications`,
+                {
+                  method: 'POST',
+                  headers: {
+                    ...(pushAuthHeader ? { Authorization: pushAuthHeader } : {}),
+                    ...(anonKeyForPush ? { apikey: anonKeyForPush } : {}),
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    notificationIds: [newNotification.id],
+                  }),
+                }
+              );
+            } catch (pushError) {
+              console.error('[process-match-approval] Error sending level-up push:', pushError);
+            }
           }
         }
       }

@@ -101,7 +101,7 @@ serve(async (req) => {
         id,
         user_id,
         title,
-        body,
+        message,
         data,
         profiles!inner (
           id
@@ -160,7 +160,7 @@ serve(async (req) => {
           to: token,
           sound: 'default',
           title: notification.title || 'New Notification',
-          body: notification.body || '',
+          body: notification.message || '',
           data: notification.data || {},
         });
       });
