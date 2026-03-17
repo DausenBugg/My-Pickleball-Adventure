@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import * as ExpoFileSystem from 'expo-file-system';
 
 import { supabase } from '../lib/supabase';
@@ -32,7 +32,7 @@ export function useProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     if (!session?.user?.id || !supabase) {
       setLoading(false);
       return;
@@ -54,11 +54,11 @@ export function useProfile() {
     }
 
     setLoading(false);
-  };
+  }, [session?.user?.id]);
 
   useEffect(() => {
     refresh();
-  }, [session?.user?.id]);
+  }, [refresh]);
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!session?.user?.id || !supabase) return { error: 'Not authenticated' };
@@ -210,7 +210,7 @@ export function useRating() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     if (!session?.user?.id || !supabase) {
       setLoading(false);
       return;
@@ -232,20 +232,22 @@ export function useRating() {
     }
 
     setLoading(false);
-  };
+  }, [session?.user?.id]);
 
   useEffect(() => {
     refresh();
-  }, [session?.user?.id]);
+  }, [refresh]);
 
   return { rating, loading, error, refresh };
 }
 
-// Calculate XP needed for a given level based on the leveling formula
-// XP(N) = 100 * N^1.6, rounded up to the nearest 10.
+// Calculate total XP threshold to be at a given level.
+// Matches backend add_xp_and_recalculate semantics:
+// - Level 1 starts at 0 XP
+// - Level N (N >= 2) threshold is ceil(100 * N^1.6)
 export function calculateXPForLevel(level: number): number {
-  const rawXp = 100 * Math.pow(level, 1.6);
-  return Math.ceil(rawXp / 10) * 10;
+  if (level <= 1) return 0;
+  return Math.ceil(100 * Math.pow(level, 1.6));
 }
 
 // Calculate XP needed to reach next level
@@ -257,8 +259,7 @@ export function calculateXPToNextLevel(currentLevel: number, currentXP: number):
 }
 
 // Calculate progress percentage for current level
-export function calculateLevelProgress
-(currentLevel: number, currentXP: number): number {
+export function calculateLevelProgress(currentLevel: number, currentXP: number): number {
   const xpForCurrentLevel = calculateXPForLevel(currentLevel);
   const xpForNextLevel = calculateXPForLevel(currentLevel + 1);
   const xpInCurrentLevel = Math.max(0, currentXP - xpForCurrentLevel);

@@ -83,7 +83,7 @@ export default function HomeScreen() {
         await refreshRating();
       };
       checkLevelUp();
-    }, [])
+    }, [refreshProfile, refreshRating])
   );
 
   // Detect level-up via AsyncStorage (survives app restarts and tab switches)
@@ -139,10 +139,14 @@ export default function HomeScreen() {
     return Math.max(0, profile.total_xp - xpForCurrentLevel);
   }, [profile, xpForCurrentLevel]);
 
+  const xpInCurrentLevelDisplay = useMemo(() => Math.floor(xpInCurrentLevel), [xpInCurrentLevel]);
+
   const xpNeededForLevel = useMemo(() => {
     if (!profile) return 0;
     return Math.max(1, xpForNextLevel - xpForCurrentLevel);
   }, [xpForCurrentLevel, xpForNextLevel]);
+
+  const xpNeededForLevelDisplay = useMemo(() => Math.floor(xpNeededForLevel), [xpNeededForLevel]);
 
   const winsToNext = useMemo(() => Math.ceil(xpToNext / 120), [xpToNext]);
 
@@ -172,14 +176,22 @@ export default function HomeScreen() {
     const requestId = pendingReceivedUsers[0]?.id || pendingReceived[0];
     if (!requestId) return;
     const success = await acceptFriendRequest(requestId);
-    if (success) setShowFriendPrompt(false);
+    if (success) {
+      setShowFriendPrompt(false);
+      refreshProfile();
+      refreshRating();
+    }
   };
 
   const handleRejectFriend = async () => {
     const requestId = pendingReceivedUsers[0]?.id || pendingReceived[0];
     if (!requestId) return;
     const success = await rejectFriendRequest(requestId);
-    if (success) setShowFriendPrompt(false);
+    if (success) {
+      setShowFriendPrompt(false);
+      refreshProfile();
+      refreshRating();
+    }
   };
 
   const openNotifications = () => {
@@ -269,6 +281,8 @@ export default function HomeScreen() {
       if (notificationId) await deleteNotification(notificationId);
       refreshNotifications();
       refreshFriends(); // Refresh friends list so search screen shows updated status
+      refreshProfile();
+      refreshRating();
     }
   };
 
@@ -281,6 +295,8 @@ export default function HomeScreen() {
       if (notificationId) await deleteNotification(notificationId);
       refreshNotifications();
       refreshFriends(); // Refresh friends list so search screen shows updated status
+      refreshProfile();
+      refreshRating();
     }
   };
 
@@ -423,7 +439,7 @@ export default function HomeScreen() {
                 trackColor="rgba(255,255,255,0.25)"
                 centerLabel={`${profile.level}`}
                 centerSub={`Level`}
-                centerHint={`${xpInCurrentLevel} / ${xpNeededForLevel} XP`}
+                centerHint={`${xpInCurrentLevelDisplay} / ${xpNeededForLevelDisplay} XP`}
                 labelColor="#ffffff"
                 subColor="rgba(255,255,255,0.85)"
               />
@@ -623,7 +639,11 @@ export default function HomeScreen() {
                     )}
                     <View style={styles.panelActions}>
                       <AnimatedPressable
-                        style={[styles.panelButton, { borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface }, processingNotificationId !== null && { opacity: 0.5 }]}
+                        style={[
+                          styles.panelButton,
+                          { borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface },
+                          { opacity: processingNotificationId !== null ? 0.5 : 1 },
+                        ]}
                         onPress={() => matchId && handleRejectMatchNotification(matchId, notification.id)}
                         disabled={processingNotificationId !== null}
                       >
@@ -634,7 +654,11 @@ export default function HomeScreen() {
                         )}
                       </AnimatedPressable>
                       <AnimatedPressable
-                        style={[styles.panelButton, { backgroundColor: colors.primary }, processingNotificationId !== null && { opacity: 0.5 }]}
+                        style={[
+                          styles.panelButton,
+                          { backgroundColor: colors.primary },
+                          { opacity: processingNotificationId !== null ? 0.5 : 1 },
+                        ]}
                         onPress={() => matchId && handleApproveMatchNotification(matchId, notification.id)}
                         disabled={processingNotificationId !== null}
                       >
@@ -653,14 +677,22 @@ export default function HomeScreen() {
                     <Text style={[styles.panelDetailText, { color: colors.muted }]}>{requesterName} sent you a friend request.</Text>
                     <View style={styles.panelActions}>
                       <AnimatedPressable
-                        style={[styles.panelButton, { borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface }, processingNotificationId !== null && { opacity: 0.5 }]}
+                        style={[
+                          styles.panelButton,
+                          { borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface },
+                          { opacity: processingNotificationId !== null ? 0.5 : 1 },
+                        ]}
                         onPress={() => requesterId && handleRejectFriendNotification(requesterId, notification.id)}
                         disabled={processingNotificationId !== null}
                       >
                         <Text style={[styles.panelButtonText, { color: colors.muted }]}>Decline</Text>
                       </AnimatedPressable>
                       <AnimatedPressable
-                        style={[styles.panelButton, { backgroundColor: colors.primary }, processingNotificationId !== null && { opacity: 0.5 }]}
+                        style={[
+                          styles.panelButton,
+                          { backgroundColor: colors.primary },
+                          { opacity: processingNotificationId !== null ? 0.5 : 1 },
+                        ]}
                         onPress={() => requesterId && handleAcceptFriendNotification(requesterId, notification.id)}
                         disabled={processingNotificationId !== null}
                       >

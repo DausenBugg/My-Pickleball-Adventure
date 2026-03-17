@@ -195,7 +195,7 @@ export function useNotifications() {
 
     return () => {
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+        supabase?.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
