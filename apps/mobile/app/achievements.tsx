@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +13,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAchievements, UserAchievement } from '../src/hooks/useAchievements';
+import { useErrorToast } from '../src/components/ErrorToast';
 import { useTheme } from '../src/theme';
 import { radii, shadows, spacing, typography } from '../src/theme/tokens';
 import AnimatedPressable from '../src/components/AnimatedPressable';
@@ -28,11 +30,15 @@ interface AchievementCardProps {
   achievement: UserAchievement;
   index: number;
   colors: ReturnType<typeof useTheme>['colors'];
+  onClaimXp: (achievementId: string) => void;
+  claimingAchievementId: string | null;
 }
 
-function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
-  const isComplete = achievement.is_unlocked || (achievement.progress !== undefined && achievement.progress >= 100);
+function AchievementCard({ achievement, index, colors, onClaimXp, claimingAchievementId }: AchievementCardProps) {
+  const isComplete = achievement.is_unlocked;
   const tierColor = TIER_COLORS[achievement.tier] || TIER_COLORS.bronze;
+  const isClaimable = achievement.is_unlocked && !achievement.claimed_at;
+  const isClaiming = claimingAchievementId === achievement.id;
 
   return (
     <Animated.View entering={FadeInDown.delay(100 + index * 60).duration(400)}>
@@ -91,7 +97,11 @@ function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
               { color: isComplete ? tierColor : colors.muted },
             ]}
           >
-            {isComplete ? `+${achievement.xp_reward} XP earned` : `+${achievement.xp_reward} XP`}
+            {achievement.claimed_at
+              ? `+${achievement.xp_reward} XP earned`
+              : achievement.is_unlocked
+                ? `+${achievement.xp_reward} XP available`
+                : `+${achievement.xp_reward} XP`}
           </Text>
           {!isComplete && achievement.progress !== undefined && (
             <View style={styles.progressContainer}>
@@ -113,24 +123,51 @@ function AchievementCard({ achievement, index, colors }: AchievementCardProps) {
               Unlocked{' '}
               {new Date(achievement.unlocked_at).toLocaleDateString()}
             </Text>
-          ) : isComplete ? (
-            <Text style={[styles.unlockedDate, { color: tierColor }]}>
-              Completed!
-            </Text>
           ) : null}
         </View>
+        {isClaimable && (
+          <View style={styles.claimButtonContainer}>
+            <AnimatedPressable
+              onPress={() => onClaimXp(achievement.id)}
+              disabled={isClaiming}
+              style={
+                isClaiming
+                  ? [styles.claimButton, { backgroundColor: colors.primary }, { opacity: 0.7 }]
+                  : [styles.claimButton, { backgroundColor: colors.primary }]
+              }
+            >
+              {isClaiming ? (
+                <ActivityIndicator color={colors.textOnPrimary} size="small" />
+              ) : (
+                <Text style={[styles.claimButtonText, { color: colors.textOnPrimary }]}>Claim XP</Text>
+              )}
+            </AnimatedPressable>
+          </View>
+        )}
       </View>
     </Animated.View>
   );
 }
 
 export default function AchievementsScreen() {
-  const { achievements, loading, refresh } = useAchievements();
+  const { achievements, loading, refresh, claimAchievementXp, claimingAchievementId } = useAchievements();
   const { colors } = useTheme();
   const router = useRouter();
+  const { showError, showSuccess } = useErrorToast();
 
-  const unlocked = achievements.filter((a) => a.is_unlocked || (a.progress !== undefined && a.progress >= 100));
-  const locked = achievements.filter((a) => !a.is_unlocked && (a.progress === undefined || a.progress < 100));
+  const handleClaimXp = async (achievementId: string) => {
+    const result = await claimAchievementXp(achievementId);
+
+    if (!result.ok) {
+      showError('Failed to claim XP', result.message);
+      return;
+    }
+
+    showSuccess('XP claimed!', 'Achievement reward added to your profile.');
+  };
+
+  const unlocked = achievements.filter((a) => a.is_unlocked);
+  const locked = achievements.filter((a) => !a.is_unlocked);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -176,6 +213,8 @@ export default function AchievementsScreen() {
                 achievement={achievement}
                 index={idx}
                 colors={colors}
+                onClaimXp={handleClaimXp}
+                claimingAchievementId={claimingAchievementId}
               />
             ))}
           </View>
@@ -191,6 +230,8 @@ export default function AchievementsScreen() {
                 achievement={achievement}
                 index={idx + unlocked.length}
                 colors={colors}
+                onClaimXp={handleClaimXp}
+                claimingAchievementId={claimingAchievementId}
               />
             ))}
           </View>
@@ -266,6 +307,7 @@ const styles = StyleSheet.create({
   },
   card: {
     flexDirection: 'row',
+    alignItems: 'center',
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderRadius: radii.lg,
@@ -353,6 +395,22 @@ const styles = StyleSheet.create({
   unlockedDate: {
     fontSize: typography.sizes.xs,
     marginTop: spacing.xs,
+  },
+  claimButtonContainer: {
+    marginLeft: spacing.sm,
+    justifyContent: 'center',
+  },
+  claimButton: {
+    minWidth: 96,
+    height: 36,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  claimButtonText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
   },
 });
 

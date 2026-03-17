@@ -152,12 +152,49 @@ export function useFriends() {
     // Trigger achievement check for both users (friend milestones)
     try {
       if (supabase) {
-        await supabase.functions.invoke('check-achievements', {
+        const { error: selfCheckError } = await supabase.functions.invoke('check-achievements', {
           body: { userId: session.user.id },
         });
-        await supabase.functions.invoke('check-achievements', {
+
+        if (selfCheckError && __DEV__) {
+          console.error('Failed to check achievements for accepting user:', selfCheckError);
+        }
+
+        const { error: otherCheckError } = await supabase.functions.invoke('check-achievements', {
           body: { userId },
         });
+
+        if (otherCheckError && __DEV__) {
+          let detailedMessage = otherCheckError.message || 'Unknown error';
+          const invokeErrorContext = (otherCheckError as any)?.context;
+
+          if (invokeErrorContext && typeof invokeErrorContext === 'object') {
+            try {
+              const payload = await invokeErrorContext.json();
+              if (payload?.error) detailedMessage = payload.error;
+              else if (payload?.message) detailedMessage = payload.message;
+            } catch {
+              try {
+                const text = await invokeErrorContext.text();
+                if (text) detailedMessage = text;
+              } catch {
+                // keep fallback
+              }
+            }
+          }
+
+          console.error('Failed to check achievements for requesting user:', detailedMessage);
+
+          await new Promise((resolve) => setTimeout(resolve, 300));
+
+          const { error: otherRetryError } = await supabase.functions.invoke('check-achievements', {
+            body: { userId },
+          });
+
+          if (otherRetryError) {
+            console.error('Retry failed to check achievements for requesting user:', otherRetryError);
+          }
+        }
       }
     } catch (achError) {
       if (__DEV__) console.error('Failed to check friend achievements:', achError);

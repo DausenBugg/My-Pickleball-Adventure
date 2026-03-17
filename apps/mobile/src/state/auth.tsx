@@ -51,13 +51,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
 
         if (userError || !userData?.user) {
+          const authErrorMessage = userError?.message || '';
+          const isInvalidTokenError = /invalid jwt|jwt|token|unauthorized|refresh token/i.test(authErrorMessage);
+
           if (__DEV__) {
-            console.error('[AuthProvider] Invalid persisted session, clearing local auth state', {
-              message: userError?.message,
+            console.error('[AuthProvider] Failed to validate persisted session', {
+              message: authErrorMessage,
+              isInvalidTokenError,
             });
           }
-          await client.auth.signOut({ scope: 'local' });
-          setSession(null);
+
+          if (isInvalidTokenError) {
+            await client.auth.signOut({ scope: 'local' });
+            setSession(null);
+          } else {
+            setSession(initialSession);
+          }
+
           return;
         }
 

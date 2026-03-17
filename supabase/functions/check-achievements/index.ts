@@ -14,14 +14,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// XP reward by tier for achievement unlocks
-const TIER_XP_REWARDS: Record<string, number> = {
-  bronze: 50,
-  silver: 100,
-  gold: 200,
-  platinum: 500,
-};
-
 serve(async (req) => {
   // Handle preflight (though not needed for mobile)
   if (req.method === 'OPTIONS') {
@@ -84,13 +76,24 @@ serve(async (req) => {
       );
     }
 
-    // Authorization: Users can only check their own achievements
+    // Authorization: users can check their own achievements, or another user's achievements
+    // when any friendship row exists between the two users.
     // (Service-to-service calls from other edge functions use service role)
     if (!isServiceCall && userId !== userIdFromToken) {
-      return new Response(
-        JSON.stringify({ error: 'Not authorized to check achievements for this user' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      const { count: friendshipCount, error: friendshipError } = await supabaseAdmin
+        .from('friendships')
+        .select('id', { count: 'exact', head: true })
+        .or(
+          `and(requester_id.eq.${userIdFromToken},addressee_id.eq.${userId}),` +
+          `and(requester_id.eq.${userId},addressee_id.eq.${userIdFromToken})`
+        );
+
+      if (friendshipError || !friendshipCount) {
+        return new Response(
+          JSON.stringify({ error: 'Not authorized to check achievements for this user' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     const supabaseClient = supabaseAdmin;
@@ -169,7 +172,7 @@ serve(async (req) => {
       }
 
       if (shouldUnlock) {
-        // Unlock achievement (check for duplicate to prevent double XP award)
+        // Unlock achievement
         const { error: unlockError } = await supabaseClient.from('user_achievements').insert({
           user_id: userId,
           achievement_id: achievement.id,
@@ -179,31 +182,6 @@ serve(async (req) => {
           // Unique constraint violation means already unlocked — skip XP award
           console.warn('Achievement already unlocked or insert failed:', unlockError.message);
           continue;
-        }
-
-        // Award XP based on achievement tier
-        const xpReward = TIER_XP_REWARDS[achievement.tier] || 50;
-        const { error: xpInsertError } = await supabaseClient.from('xp_events').insert({
-          user_id: userId,
-          match_id: null,
-          xp_amount: xpReward,
-          reason: `Achievement: ${achievement.name}`,
-        });
-        if (xpInsertError) {
-          console.error('Error inserting achievement XP event:', xpInsertError);
-        }
-
-        // Atomically increment total_xp and recalculate level via RPC
-        // This prevents race conditions where concurrent updates overwrite each other
-        const { data: xpResult, error: xpRpcError } = await supabaseClient
-          .rpc('add_xp_and_recalculate', { p_user_id: userId, p_xp_amount: xpReward });
-
-        if (xpRpcError) {
-          console.error('Error in add_xp_and_recalculate RPC:', xpRpcError);
-        } else if (xpResult && xpResult.length > 0) {
-          // Keep profile in sync for subsequent iterations
-          profile.total_xp = xpResult[0].new_total_xp;
-          profile.level = xpResult[0].new_level;
         }
 
         // Create notification

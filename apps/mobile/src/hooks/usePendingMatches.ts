@@ -284,7 +284,8 @@ export function usePendingMatches() {
         const issuer = payload?.iss as string | undefined;
         if (!issuer) return null;
 
-        const expectedIssuerPrefix = `${supabaseUrl}/auth/v1`;
+        const normalizedSupabaseUrl = supabaseUrl.replace(/\/+$/, '');
+        const expectedIssuerPrefix = `${normalizedSupabaseUrl}/auth/v1`;
         const isMatch = issuer.startsWith(expectedIssuerPrefix);
 
         if (!isMatch) {
@@ -299,8 +300,7 @@ export function usePendingMatches() {
 
     const issuerMismatchMessage = detectIssuerMismatch(liveSessionResult.token);
     if (issuerMismatchMessage) {
-      await client.auth.signOut({ scope: 'local' });
-      setError('Session project mismatch detected. Please sign in again.');
+      setError('Session project mismatch detected. Please refresh the app and sign in again if needed.');
       return false;
     }
 
@@ -320,9 +320,6 @@ export function usePendingMatches() {
           console.error('[usePendingMatches] refreshSession failed', {
             message: refreshError?.message,
           });
-        }
-        if (refreshError && /refresh token|invalid refresh token/i.test(refreshError.message || '')) {
-          await client.auth.signOut({ scope: 'local' });
         }
         setError('Session expired. Please sign out and sign back in.');
         return false;

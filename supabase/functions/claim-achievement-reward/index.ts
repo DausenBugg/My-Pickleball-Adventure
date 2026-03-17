@@ -111,6 +111,28 @@ serve(async (req) => {
 
     const xpReward = TIER_XP_REWARDS[achievement.tier] || 50;
 
+    const { error: xpInsertError } = await supabaseAdmin
+      .from('xp_events')
+      .insert({
+        user_id: userId,
+        match_id: null,
+        xp_amount: xpReward,
+        reason: `Achievement: ${achievement.name}`,
+      });
+
+    if (xpInsertError) {
+      console.error('[claim-achievement-reward] Error inserting XP event:', xpInsertError);
+      throw new Error('Failed to record XP reward');
+    }
+
+    const { error: xpRpcError } = await supabaseAdmin
+      .rpc('add_xp_and_recalculate', { p_user_id: userId, p_xp_amount: xpReward });
+
+    if (xpRpcError) {
+      console.error('[claim-achievement-reward] Error in add_xp_and_recalculate RPC:', xpRpcError);
+      throw new Error('Failed to apply XP reward');
+    }
+
     return new Response(
       JSON.stringify({
         message: 'Reward claimed',

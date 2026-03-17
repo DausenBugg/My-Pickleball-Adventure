@@ -22,6 +22,7 @@ const TIER_XP_REWARDS: Record<string, number> = {
 
 export interface UserAchievement extends Achievement {
   unlocked_at: string;
+  claimed_at: string;
   is_unlocked: boolean;
   progress?: number;
   xp_reward: number;
@@ -32,8 +33,9 @@ export function useAchievements() {
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [claimingAchievementId, setClaimingAchievementId] = useState<string | null>(null);
 
-  const fetchAchievements = async () => {
+  const fetchAchievements = async (shouldSyncUnlocks = true) => {
     if (!session?.user?.id || !supabase) {
       setLoading(false);
       return;
@@ -54,7 +56,7 @@ export function useAchievements() {
       // Get user's unlocked achievements
       const { data: userAchievements, error: userAchError } = await supabase
         .from('user_achievements')
-        .select('achievement_id, earned_at')
+        .select('achievement_id, earned_at, claimed_at')
         .eq('user_id', session.user.id);
 
       if (userAchError) throw userAchError;
@@ -63,7 +65,7 @@ export function useAchievements() {
         userAchievements?.map((ua) => ua.achievement_id) || []
       );
       const unlockedMap = new Map(
-        userAchievements?.map((ua) => [ua.achievement_id, ua.earned_at]) || []
+        userAchievements?.map((ua) => [ua.achievement_id, ua]) || []
       );
 
       // Get user's current stats for progress
@@ -89,7 +91,9 @@ export function useAchievements() {
       const enrichedAchievements: UserAchievement[] =
         allAchievements?.map((ach) => {
           const is_unlocked = unlockedIds.has(ach.id);
-          const unlocked_at = unlockedMap.get(ach.id) || '';
+          const unlockedAchievement = unlockedMap.get(ach.id);
+          const unlocked_at = unlockedAchievement?.earned_at || '';
+          const claimed_at = unlockedAchievement?.claimed_at || '';
 
           let progress = 0;
           if (!is_unlocked) {
@@ -137,10 +141,30 @@ export function useAchievements() {
             ...ach,
             is_unlocked,
             unlocked_at,
+            claimed_at,
             progress: is_unlocked ? 100 : progress,
             xp_reward: TIER_XP_REWARDS[ach.tier] || 50,
           };
         }) || [];
+
+      const hasPendingUnlocks = enrichedAchievements.some(
+        (achievement) => !achievement.is_unlocked && (achievement.progress || 0) >= 100
+      );
+
+      if (shouldSyncUnlocks && hasPendingUnlocks) {
+        const { error: syncError } = await supabase.functions.invoke('check-achievements', {
+          body: { userId: session.user.id },
+        });
+
+        if (!syncError) {
+          await fetchAchievements(false);
+          return;
+        }
+
+        if (__DEV__) {
+          console.error('Failed to sync pending achievement unlocks:', syncError);
+        }
+      }
 
       setAchievements(enrichedAchievements);
     } catch (err: any) {
@@ -155,10 +179,48 @@ export function useAchievements() {
     fetchAchievements();
   }, [session?.user?.id]);
 
+  const claimAchievementXp = async (achievementId: string) => {
+    if (!session?.user?.id || !supabase) return { ok: false, message: 'Not authenticated' };
+
+    setClaimingAchievementId(achievementId);
+
+    try {
+      const { error: invokeError } = await supabase.functions.invoke('claim-achievement-reward', {
+        body: { achievementId },
+      });
+
+      if (invokeError) {
+        let detailedMessage = invokeError.message || 'Failed to claim XP reward';
+        const invokeErrorContext = (invokeError as any)?.context;
+
+        if (invokeErrorContext && typeof invokeErrorContext === 'object') {
+          try {
+            const payload = await invokeErrorContext.json();
+            if (payload?.error) detailedMessage = payload.error;
+            else if (payload?.message) detailedMessage = payload.message;
+          } catch {
+            // keep fallback message
+          }
+        }
+
+        return { ok: false, message: detailedMessage };
+      }
+
+      await fetchAchievements();
+      return { ok: true, message: 'XP reward claimed' };
+    } catch (err: any) {
+      return { ok: false, message: err?.message || 'Failed to claim XP reward' };
+    } finally {
+      setClaimingAchievementId(null);
+    }
+  };
+
   return {
     achievements,
     loading,
     error,
     refresh: fetchAchievements,
+    claimAchievementXp,
+    claimingAchievementId,
   };
 }
