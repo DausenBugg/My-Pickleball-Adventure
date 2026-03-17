@@ -22,7 +22,7 @@ Step-by-step instructions to publish **My Pickleball App** on the Google Play St
 5. Place it at `apps/mobile/google-services.json` (the `app.json` `googleServicesFile` field points here).
 6. In Firebase Console → Project Settings → **Cloud Messaging** tab, ensure FCM v1 API is enabled.
 
-> **Note:** The `google-services.json` file is git-ignored for security. Each developer/CI environment needs its own copy. In CI, the file is decoded from the `GOOGLE_SERVICES_JSON_BASE64` GitHub Secret.
+> **Note:** `google-services.json` is tracked in git (it's client-side Firebase config with API keys restricted by Android app-signing SHA-1, safe to commit). No need to base64-encode it for CI.
 
 ---
 
