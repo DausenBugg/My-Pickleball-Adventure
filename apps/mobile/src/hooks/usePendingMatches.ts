@@ -472,12 +472,61 @@ export function usePendingMatches() {
     }
   };
 
+  const cleanupUnavailableMatch = async (matchId: string, notificationId: string) => {
+    if (!session?.user?.id || !supabase) return false;
+
+    try {
+      const { error: invokeError } = await supabase.functions.invoke('process-match-approval', {
+        body: {
+          matchId,
+          action: 'delete-corrupted-match',
+          notificationId,
+        },
+      });
+
+      if (invokeError) {
+        let detailedMessage = invokeError.message || 'Failed to remove corrupted match';
+        const invokeErrorContext = (invokeError as any)?.context;
+
+        if (invokeErrorContext && typeof invokeErrorContext === 'object') {
+          try {
+            const payload = await invokeErrorContext.json();
+            if (payload?.error) detailedMessage = payload.error;
+            else if (payload?.message) detailedMessage = payload.message;
+          } catch {
+            try {
+              const text = await invokeErrorContext.text();
+              if (text) detailedMessage = text;
+            } catch {
+              // keep fallback
+            }
+          }
+        }
+
+        setError(detailedMessage);
+        if (__DEV__) {
+          console.error('[usePendingMatches] cleanupUnavailableMatch failed:', detailedMessage);
+        }
+        return false;
+      }
+
+      await fetchMatches();
+      return true;
+    } catch (err: any) {
+      const message = err?.message || 'Failed to remove corrupted match';
+      setError(message);
+      if (__DEV__) console.error('[usePendingMatches] cleanupUnavailableMatch error:', err);
+      return false;
+    }
+  };
+
   return {
     matches,
     loading,
     error,
     approveMatch,
     rejectMatch,
+    cleanupUnavailableMatch,
     refresh: fetchMatches,
   };
 }

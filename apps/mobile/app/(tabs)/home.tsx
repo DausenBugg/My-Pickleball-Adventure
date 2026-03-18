@@ -53,6 +53,7 @@ export default function HomeScreen() {
     matches: pendingMatches,
     approveMatch,
     rejectMatch,
+    cleanupUnavailableMatch,
     error: pendingMatchesError,
     refresh: refreshPendingMatches,
   } = usePendingMatches();
@@ -272,6 +273,26 @@ export default function HomeScreen() {
           refreshRating();
           refreshRecentMatches();
         }, 280);
+      }
+    } finally {
+      setProcessingNotificationId(null);
+    }
+  };
+
+  const handleCleanupUnavailableMatchNotification = async (matchId: string, notificationId: string) => {
+    if (processingNotificationId) return;
+    setProcessingNotificationId(notificationId);
+    try {
+      const success = await cleanupUnavailableMatch(matchId, notificationId);
+      if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+        await deleteNotification(notificationId);
+        setTimeout(() => {
+          refreshPendingMatches();
+          refreshNotifications();
+          refreshRecentMatches();
+        }, 200);
       }
     } finally {
       setProcessingNotificationId(null);
@@ -643,38 +664,58 @@ export default function HomeScreen() {
                     ) : (
                       <Text style={[styles.panelDetailText, { color: colors.muted }]}>Match details unavailable.</Text>
                     )}
-                    <View style={styles.panelActions}>
-                      <AnimatedPressable
-                        style={[
-                          styles.panelButton,
-                          { borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface },
-                          { opacity: processingNotificationId !== null ? 0.5 : 1 },
-                        ]}
-                        onPress={() => matchId && handleRejectMatchNotification(matchId, notification.id)}
-                        disabled={processingNotificationId !== null}
-                      >
-                        {processingNotificationId === notification.id ? (
-                          <ActivityIndicator size="small" color={colors.muted} />
-                        ) : (
-                          <Text style={[styles.panelButtonText, { color: colors.muted }]}>Decline</Text>
-                        )}
-                      </AnimatedPressable>
-                      <AnimatedPressable
-                        style={[
-                          styles.panelButton,
-                          { backgroundColor: colors.primary },
-                          { opacity: processingNotificationId !== null ? 0.5 : 1 },
-                        ]}
-                        onPress={() => matchId && handleApproveMatchNotification(matchId, notification.id)}
-                        disabled={processingNotificationId !== null}
-                      >
-                        {processingNotificationId === notification.id ? (
-                          <ActivityIndicator size="small" color={colors.textOnPrimary} />
-                        ) : (
-                          <Text style={[styles.panelButtonText, { color: colors.textOnPrimary }]}>Approve</Text>
-                        )}
-                      </AnimatedPressable>
-                    </View>
+                    {matchSummary ? (
+                      <View style={styles.panelActions}>
+                        <AnimatedPressable
+                          style={[
+                            styles.panelButton,
+                            { borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface },
+                            { opacity: processingNotificationId !== null ? 0.5 : 1 },
+                          ]}
+                          onPress={() => matchId && handleRejectMatchNotification(matchId, notification.id)}
+                          disabled={processingNotificationId !== null}
+                        >
+                          {processingNotificationId === notification.id ? (
+                            <ActivityIndicator size="small" color={colors.muted} />
+                          ) : (
+                            <Text style={[styles.panelButtonText, { color: colors.muted }]}>Decline</Text>
+                          )}
+                        </AnimatedPressable>
+                        <AnimatedPressable
+                          style={[
+                            styles.panelButton,
+                            { backgroundColor: colors.primary },
+                            { opacity: processingNotificationId !== null ? 0.5 : 1 },
+                          ]}
+                          onPress={() => matchId && handleApproveMatchNotification(matchId, notification.id)}
+                          disabled={processingNotificationId !== null}
+                        >
+                          {processingNotificationId === notification.id ? (
+                            <ActivityIndicator size="small" color={colors.textOnPrimary} />
+                          ) : (
+                            <Text style={[styles.panelButtonText, { color: colors.textOnPrimary }]}>Approve</Text>
+                          )}
+                        </AnimatedPressable>
+                      </View>
+                    ) : (
+                      <View style={styles.panelActions}>
+                        <AnimatedPressable
+                          style={[
+                            styles.panelButton,
+                            { backgroundColor: colors.secondary },
+                            { opacity: processingNotificationId !== null || !matchId ? 0.5 : 1 },
+                          ]}
+                          onPress={() => matchId && handleCleanupUnavailableMatchNotification(matchId, notification.id)}
+                          disabled={processingNotificationId !== null || !matchId}
+                        >
+                          {processingNotificationId === notification.id ? (
+                            <ActivityIndicator size="small" color={colors.textOnPrimary} />
+                          ) : (
+                            <Text style={[styles.panelButtonText, { color: colors.textOnPrimary }]}>Remove Corrupted Match</Text>
+                          )}
+                        </AnimatedPressable>
+                      </View>
+                    )}
                   </View>
                 )}
 

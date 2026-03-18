@@ -96,13 +96,101 @@ serve(async (req) => {
       );
     }
 
-    const { matchId } = await req.json();
+    const body = await req.json();
+    const matchId = body?.matchId as string | undefined;
+    const action = body?.action as string | undefined;
+    const notificationId = body?.notificationId as string | undefined;
 
     // Validate UUID format
     if (!matchId || !isValidUUID(matchId)) {
       return new Response(
         JSON.stringify({ error: 'Invalid or missing match ID' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (action === 'delete-corrupted-match') {
+      if (!notificationId || !isValidUUID(notificationId)) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid notification ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: notification, error: notificationError } = await supabaseClient
+        .from('notifications')
+        .select('id, user_id, type, data')
+        .eq('id', notificationId)
+        .single();
+
+      if (notificationError || !notification) {
+        return new Response(
+          JSON.stringify({ error: 'Notification not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (notification.user_id !== userId || notification.type !== 'match_approval') {
+        return new Response(
+          JSON.stringify({ error: 'Not authorized for this notification' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const data = (notification.data ?? {}) as Record<string, unknown>;
+      const notificationMatchId = (data.match_id as string | undefined) || (data.matchId as string | undefined);
+
+      if (!notificationMatchId || notificationMatchId !== matchId) {
+        return new Response(
+          JSON.stringify({ error: 'Notification does not match this match ID' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: pendingMatch, error: pendingMatchError } = await supabaseClient
+        .from('matches')
+        .select('id, status')
+        .eq('id', matchId)
+        .maybeSingle();
+
+      if (pendingMatchError) {
+        console.error('[process-match-approval] Error loading match for cleanup:', pendingMatchError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to load match for cleanup' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!pendingMatch) {
+        return new Response(
+          JSON.stringify({ message: 'Match already deleted', status: 'deleted' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (pendingMatch.status !== 'pending') {
+        return new Response(
+          JSON.stringify({ message: 'Match is not pending', status: pendingMatch.status }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { error: deleteError } = await supabaseClient
+        .from('matches')
+        .delete()
+        .eq('id', matchId);
+
+      if (deleteError) {
+        console.error('[process-match-approval] Error deleting corrupted match:', deleteError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to delete corrupted match' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ message: 'Corrupted pending match deleted', status: 'deleted' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
