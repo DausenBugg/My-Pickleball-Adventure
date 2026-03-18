@@ -17,6 +17,7 @@ import { useErrorToast } from '../src/components/ErrorToast';
 import { useTheme } from '../src/theme';
 import { radii, shadows, spacing, typography } from '../src/theme/tokens';
 import AnimatedPressable from '../src/components/AnimatedPressable';
+import { green } from 'react-native-reanimated/lib/typescript/Colors';
 
 // Tier badge colors
 const TIER_COLORS: Record<string, string> = {
@@ -49,9 +50,8 @@ function AchievementCard({ achievement, index, colors, onClaimXp, claimingAchiev
           isComplete
             ? {
                 borderWidth: 2,
-                borderColor: tierColor,
-                backgroundColor: colors.primaryGhost,
-                ...shadows.md,
+                borderColor: colors.primaryGhost,
+                backgroundColor: colors.primaryGhost
               }
             : { opacity: 0.55, borderWidth: 1, borderColor: colors.borderLight },
         ]}
@@ -61,7 +61,7 @@ function AchievementCard({ achievement, index, colors, onClaimXp, claimingAchiev
             <Ionicons name={(achievement.icon || 'star') as any} size={40} color={tierColor} />
           </View>
           {isComplete && (
-            <View style={[styles.unlockedBadge, { backgroundColor: tierColor, borderColor: colors.cardBackground }]}>
+            <View style={[styles.unlockedBadge, { backgroundColor: tierColor, borderColor: colors.primaryDark }]}>
               <Ionicons name="checkmark" size={10} color="#ffffff" />
             </View>
           )}
@@ -311,7 +311,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderRadius: radii.lg,
-    ...shadows.sm,
   },
   iconContainer: {
     position: 'relative',

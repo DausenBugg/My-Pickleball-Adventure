@@ -51,7 +51,7 @@ curl -i -X POST "https://<PROJECT_REF>.supabase.co/functions/v1/process-match-ap
 Expected result:
 - `200` with one of:
   - `{"message":"Not enough approvals yet"}`
-  - `{"message":"Match rejected","status":"rejected"}`
+  - `{"message":"Match invalidated and deleted","status":"deleted"}`
   - `{"message":"Match approved and XP awarded","status":"approved",...}`
 
 ## 4) Supabase CLI invoke (alternative)
@@ -102,12 +102,14 @@ where match_id = '<MATCH_UUID>'
 order by created_at desc;
 ```
 
-### Match status transition
+### Match outcome transition
 ```sql
 select id, status, finalized_at
 from public.matches
 where id = '<MATCH_UUID>';
 ```
+
+For invalidated matches, this query should return **no rows** because the match is deleted.
 
 ### XP events on approval path
 ```sql

@@ -105,9 +105,30 @@ export function useSubmitMatch() {
           approved: true,
         });
 
-      if (approvalError && __DEV__) {
-        // Non-critical error - match is created, just approval failed
-        console.warn('Failed to add submitter approval:', approvalError);
+      if (approvalError) {
+        const approvalErrorMessage = approvalError.message || 'Failed to add submitter approval';
+        const isRateLimitError = /rate limit exceeded for match approvals/i.test(approvalErrorMessage);
+
+        if (isRateLimitError) {
+          const { error: rollbackError } = await supabase
+            .from('matches')
+            .delete()
+            .eq('id', matchId);
+
+          if (rollbackError && __DEV__) {
+            console.error('Failed to rollback rate-limited match submission:', rollbackError);
+          }
+
+          const message = 'Rate limit exceeded for match approvals. Please wait a minute before submitting another match.';
+          setError(message);
+          setLoading(false);
+          return { data: null, error: message };
+        }
+
+        if (__DEV__) {
+          // Non-critical error - match is created, just approval failed
+          console.warn('Failed to add submitter approval:', approvalError);
+        }
       }
 
       setLoading(false);

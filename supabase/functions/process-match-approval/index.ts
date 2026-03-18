@@ -163,7 +163,8 @@ serve(async (req) => {
     // Check if match meets approval threshold
     const requiredApprovals = match.match_type === 'singles' ? 2 : 3;
     const isApproved = approvedCount >= requiredApprovals;
-    const isRejected = rejectedCount > 0; // Any rejection kills the match
+    const requiredRejections = match.match_type === 'singles' ? 1 : 2;
+    const isRejected = rejectedCount >= requiredRejections;
 
     if (!isApproved && !isRejected) {
       return new Response(
@@ -173,18 +174,18 @@ serve(async (req) => {
     }
 
     if (isRejected) {
-      // Update match status to rejected
+      // Delete invalidated match and cascade related rows.
       const { error: rejectError } = await supabaseClient
         .from('matches')
-        .update({ status: 'rejected', finalized_at: new Date().toISOString() })
+        .delete()
         .eq('id', matchId);
 
       if (rejectError) {
-        console.error('[process-match-approval] Error updating match to rejected:', rejectError);
+        console.error('[process-match-approval] Error deleting rejected match:', rejectError);
       }
 
       return new Response(
-        JSON.stringify({ message: 'Match rejected', status: 'rejected' }),
+        JSON.stringify({ message: 'Match invalidated and deleted', status: 'deleted' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

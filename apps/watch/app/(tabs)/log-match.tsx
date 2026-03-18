@@ -197,8 +197,8 @@ export default function LogMatchScreen() {
       return;
     }
 
-    const userTeam: 'team_a' | 'team_b' = parsedUserScore > parsedOpponentScore ? 'team_a' : 'team_b';
-    const opponentTeam: 'team_a' | 'team_b' = userTeam === 'team_a' ? 'team_b' : 'team_a';
+    const userTeam: 'team_a' | 'team_b' = 'team_a';
+    const opponentTeam: 'team_a' | 'team_b' = 'team_b';
 
     const participants: MatchParticipant[] = [
       { userId: session.user.id, team: userTeam },

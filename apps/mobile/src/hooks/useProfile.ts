@@ -250,6 +250,16 @@ export function calculateXPForLevel(level: number): number {
   return Math.ceil(100 * Math.pow(level, 1.6));
 }
 
+// Calculate current level from total XP.
+// Matches backend add_xp_and_recalculate loop semantics.
+export function calculateLevelFromXP(totalXP: number): number {
+  let level = 1;
+  while (100 * Math.pow(level + 1, 1.6) <= totalXP) {
+    level += 1;
+  }
+  return level;
+}
+
 // Calculate XP needed to reach next level
 export function calculateXPToNextLevel(currentLevel: number, currentXP: number): number {
   const xpForCurrentLevel = calculateXPForLevel(currentLevel);

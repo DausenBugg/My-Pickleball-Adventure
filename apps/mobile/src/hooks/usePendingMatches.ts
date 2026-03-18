@@ -220,11 +220,12 @@ export function usePendingMatches() {
         });
 
         if (!invokeError) {
-          return { ok: true, message: '' };
+          return { ok: true, message: '', status: 200 };
         }
 
         let detailedMessage = invokeError.message || 'Failed to process match approval';
         const invokeErrorContext = (invokeError as any)?.context;
+        const statusCode = typeof invokeErrorContext?.status === 'number' ? invokeErrorContext.status : undefined;
 
         if (invokeErrorContext && typeof invokeErrorContext === 'object') {
           try {
@@ -249,14 +250,23 @@ export function usePendingMatches() {
           });
         }
 
-        return { ok: false, message: detailedMessage };
+        return { ok: false, message: detailedMessage, status: statusCode };
       } catch (networkError: any) {
         const detailedMessage = networkError?.message || 'Network error while processing match approval';
         if (__DEV__) {
           console.error('[usePendingMatches] process-match-approval network error', detailedMessage);
         }
-        return { ok: false, message: detailedMessage };
+        return { ok: false, message: detailedMessage, status: undefined };
       }
+    };
+
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    const isTransientThrottleError = (status: number | undefined, message: string) => {
+      if (status === 503 || status === 429) return true;
+      return /slowdown|throttled|request rate is too high|not enough computing power|insufficient resources/i.test(
+        message
+      );
     };
 
     const liveSessionResult = await getLiveSessionForUser();
@@ -334,9 +344,20 @@ export function usePendingMatches() {
       result = await invokeWithDetails();
     }
 
+    const retryDelays = [300, 700, 1500];
+    for (let attempt = 0; !result.ok && attempt < retryDelays.length; attempt += 1) {
+      if (!isTransientThrottleError(result.status, result.message)) {
+        break;
+      }
+      await sleep(retryDelays[attempt]);
+      result = await invokeWithDetails();
+    }
+
     if (!result.ok) {
       if (jwtErrorRegex.test(result.message)) {
         setError('Session expired. Please sign out and sign back in.');
+      } else if (isTransientThrottleError(result.status, result.message)) {
+        setError('Server is busy right now. Please wait a moment and try approving the match again.');
       } else {
         setError(result.message);
       }

@@ -26,6 +26,7 @@ import { useNotifications } from '../../src/hooks/useNotifications';
 import { useFriends } from '../../src/hooks/useFriends';
 import { useRank } from '../../src/hooks/useRank';
 import {
+  calculateLevelFromXP,
   calculateLevelProgress,
   calculateXPForLevel,
   calculateXPToNextLevel,
@@ -75,6 +76,11 @@ export default function HomeScreen() {
 
   const loading = profileLoading || ratingLoading;
 
+  const currentLevel = useMemo(() => {
+    if (!profile) return 1;
+    return calculateLevelFromXP(profile.total_xp);
+  }, [profile]);
+
   // Refresh profile when tab gains focus and detect level-ups that happened while away
   useFocusEffect(
     useCallback(() => {
@@ -95,29 +101,29 @@ export default function HomeScreen() {
         const stored = await AsyncStorage.getItem('@lastKnownLevel');
         const lastKnownLevel = stored ? parseInt(stored, 10) : null;
 
-        if (lastKnownLevel !== null && profile.level > lastKnownLevel) {
+        if (lastKnownLevel !== null && currentLevel > lastKnownLevel) {
           setShowConfetti(true);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         }
 
-        await AsyncStorage.setItem('@lastKnownLevel', String(profile.level));
+        await AsyncStorage.setItem('@lastKnownLevel', String(currentLevel));
       } catch {
         // AsyncStorage errors are non-critical
       }
     };
 
     detectLevelUp();
-  }, [profile?.level]);
+  }, [currentLevel, profile]);
 
   const xpToNext = useMemo(() => {
     if (!profile) return 0;
-    return calculateXPToNextLevel(profile.level, profile.total_xp);
-  }, [profile]);
+    return calculateXPToNextLevel(currentLevel, profile.total_xp);
+  }, [currentLevel, profile]);
 
   const levelProgress = useMemo(() => {
     if (!profile) return 0;
-    return calculateLevelProgress(profile.level, profile.total_xp);
-  }, [profile]);
+    return calculateLevelProgress(currentLevel, profile.total_xp);
+  }, [currentLevel, profile]);
 
   useEffect(() => {
     if (!pendingMatchesError) return;
@@ -126,13 +132,13 @@ export default function HomeScreen() {
 
   const xpForCurrentLevel = useMemo(() => {
     if (!profile) return 0;
-    return calculateXPForLevel(profile.level);
-  }, [profile]);
+    return calculateXPForLevel(currentLevel);
+  }, [currentLevel, profile]);
 
   const xpForNextLevel = useMemo(() => {
     if (!profile) return 0;
-    return calculateXPForLevel(profile.level + 1);
-  }, [profile]);
+    return calculateXPForLevel(currentLevel + 1);
+  }, [currentLevel, profile]);
 
   const xpInCurrentLevel = useMemo(() => {
     if (!profile) return 0;
@@ -437,7 +443,7 @@ export default function HomeScreen() {
                 strokeWidth={12}
                 progressColor="#ffffff"
                 trackColor="rgba(255,255,255,0.25)"
-                centerLabel={`${profile.level}`}
+                centerLabel={`${currentLevel}`}
                 centerSub={`Level`}
                 centerHint={`${xpInCurrentLevelDisplay} / ${xpNeededForLevelDisplay} XP`}
                 labelColor="#ffffff"
@@ -449,7 +455,7 @@ export default function HomeScreen() {
               />
             </View>
             <Text style={styles.heroHint}>
-              {winsToNext} {winsToNext === 1 ? 'win' : 'wins'} to Level {profile.level + 1}
+              {winsToNext} {winsToNext === 1 ? 'win' : 'wins'} to Level {currentLevel + 1}
             </Text>
           </View>
         </ReAnimated.View>

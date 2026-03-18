@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { useProfile, useRating } from '../../src/hooks/useProfile';
+import { calculateLevelFromXP, useProfile, useRating } from '../../src/hooks/useProfile';
 import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
 import { registerForPushNotificationsAsync, savePushToken } from '../../src/lib/notifications';
 import { useTheme, type ThemeMode } from '../../src/theme/ThemeContext';
@@ -115,6 +115,7 @@ export default function SettingsScreen() {
 
   const themeLabel = mode === 'system' ? 'System' : mode === 'dark' ? 'Dark' : 'Light';
   const themeIcon = mode === 'dark' ? 'moon' : mode === 'light' ? 'sunny' : 'phone-portrait-outline';
+  const currentLevel = profile ? calculateLevelFromXP(profile.total_xp) : 1;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -160,7 +161,7 @@ export default function SettingsScreen() {
               </View>
               <View style={styles.profileStats}>
                 <View style={styles.profileStat}>
-                  <Text style={styles.profileStatValue}>{profile.level}</Text>
+                  <Text style={styles.profileStatValue}>{currentLevel}</Text>
                   <Text style={styles.profileStatLabel}>Level</Text>
                 </View>
                 <View style={styles.profileStatDivider} />
