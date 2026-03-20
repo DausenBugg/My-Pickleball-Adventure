@@ -15,12 +15,7 @@ interface ThemeContextValue {
   setMode: (mode: ThemeMode) => void;
 }
 
-const ThemeContext = createContext<ThemeContextValue>({
-  colors: lightColors,
-  isDark: false,
-  mode: 'system',
-  setMode: () => {},
-});
+const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemScheme = useSystemColorScheme();
@@ -51,14 +46,31 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setMode,
   };
 
-  // Don't render until we've loaded the preference to avoid flash
-  if (!loaded) return null;
+  // Keep provider mounted during bootstrap to avoid context/hook edge cases
+  if (!loaded) {
+    return (
+      <ThemeContext.Provider
+        value={{
+          colors: lightColors,
+          isDark: false,
+          mode: 'system',
+          setMode: () => {},
+        }}
+      >
+        {children}
+      </ThemeContext.Provider>
+    );
+  }
 
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );
 }
 
-export function useTheme() {
-  return useContext(ThemeContext);
+export function useTheme(): ThemeContextValue {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within ThemeProvider');
+  }
+  return context;
 }

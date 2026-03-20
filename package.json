@@ -12,5 +12,14 @@
     "android:mobile": "cd apps/mobile && expo run:android",
     "android:watch": "cd apps/watch && expo run:android"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-test-renderer": "19.1.0"
+  },
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-test-renderer": "19.1.0"
+  }
 }
